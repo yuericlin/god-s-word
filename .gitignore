@@ -1,0 +1,22 @@
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+DerivedData/
+build/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+
+# App secrets (copy from the .template and fill in)
+GodsWord/GoogleOAuth.plist
+
+# macOS
+.DS_Store
+
+# Research downloads (regenerable; see research/README.md)
+research/sword-1.9.0/
+research/sword-src/
+research/modules/
+research/catalog/mods.d/
