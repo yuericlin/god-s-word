@@ -1,0 +1,82 @@
+# Builds God's Word and publishes an unsigned .ipa for sideloading.
+#
+# Install routes for the .ipa:
+#   - Sideloadly / AltStore with a free Apple ID (re-signs on install)
+#   - Xcode: build & run from source on your own device
+# App Store distribution (later) needs the Apple Developer Program + signing
+# configured in Xcode; the unsigned .ipa here is the repo-installable route.
+
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-swift-package:
+    name: Test SwordReader (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.2'
+      - name: Run SwordReader tests
+        run: swift test --package-path SwordReader
+
+  build-ipa:
+    name: Build unsigned .ipa (iOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Archive (unsigned)
+        run: |
+          xcodebuild -project GodsWord.xcodeproj \
+            -scheme GodsWord \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/GodsWord.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO
+
+      - name: Package .ipa
+        run: |
+          APP="build/GodsWord.xcarchive/Products/Applications/God's Word.app"
+          test -d "$APP" || { echo "app bundle not found"; exit 1; }
+          rm -rf build/Payload build/GodsWord-unsigned.ipa
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/
+          (cd build && zip -qry GodsWord-unsigned.ipa Payload)
+
+      - name: Upload .ipa artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GodsWord-unsigned.ipa
+          path: build/GodsWord-unsigned.ipa
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-ipa]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: GodsWord-unsigned.ipa
+          path: dist
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/GodsWord-unsigned.ipa
+          generate_release_notes: true
