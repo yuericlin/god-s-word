@@ -34,7 +34,10 @@ private func readU32LE(_ d: [UInt8], _ o: Int) -> UInt32 {
 }
 
 /// An installed zText Bible module.
-public final class SwordModule {
+///
+/// Conforms to `Sendable` via `@unchecked`: every stored property is immutable
+/// after init except `blockCache`, whose access is serialized by `cacheLock`.
+public final class SwordModule: @unchecked Sendable {
     public let versification: Versification
     private let otVerseIndex: [VerseIndexEntry]
     private let ntVerseIndex: [VerseIndexEntry]
@@ -43,7 +46,10 @@ public final class SwordModule {
     private let otData: [UInt8]
     private let ntData: [UInt8]
     /// Cache of decompressed blocks, keyed by testament * 1_000_000 + block.
+    /// Guarded by cacheLock: readers may hop across actors (ModuleLoader is an
+    /// actor; call sites are main-actor), so unsynchronized mutation is a data race.
     private var blockCache = [Int: [UInt8]]()
+    private let cacheLock = NSLock()
     private let maxCachedBlocks = 4
 
     /// - Parameter moduleDir: directory containing ot.bzv/.bzs/.bzz and nt.*.
@@ -91,7 +97,7 @@ public final class SwordModule {
 
     private func decompressedBlock(testament: Int, block: UInt32) throws -> [UInt8] {
         let key = testament * 1_000_000 + Int(block)
-        if let hit = blockCache[key] { return hit }
+        if let hit = cacheLock.withLock({ blockCache[key] }) { return hit }
         let (index, data): ([BlockIndexEntry], [UInt8]) =
             testament == 1 ? (otBlockIndex, otData) : (ntBlockIndex, ntData)
         guard Int(block) < index.count else { throw SwordModuleError.corruptIndex("block") }
@@ -104,10 +110,12 @@ public final class SwordModule {
         } catch {
             throw SwordModuleError.decompressionFailed
         }
-        if blockCache.count >= maxCachedBlocks {
-            blockCache.removeValue(forKey: blockCache.keys.first!)
+        cacheLock.withLock {
+            if blockCache.count >= maxCachedBlocks {
+                blockCache.removeValue(forKey: blockCache.keys.first!)
+            }
+            blockCache[key] = decompressed
         }
-        blockCache[key] = decompressed
         return decompressed
     }
 
