@@ -4,14 +4,16 @@ import uuid, os
 
 OUT = "/home/hatch/workspace/god-s-word/GodsWord.xcodeproj/project.pbxproj"
 
-def uid():
-    return uuid.uuid4().hex[:24].upper()
+def uid(name):
+    # Deterministic so regenerating the project keeps every ID (and the
+    # scheme's BlueprintIdentifier) stable.
+    return uuid.uuid5(uuid.NAMESPACE_URL, "godsword-pbxproj:" + name).hex[:24].upper()
 
 # ---- collect ids ----
 ids = {}
 def I(name):
     if name not in ids:
-        ids[name] = uid()
+        ids[name] = uid(name)
     return ids[name]
 
 # File references
@@ -46,7 +48,8 @@ for n in ["buildfile:" + s for s in sources] + ["buildfile:" + r for r in resour
     I(n)
 for n in ["PBXProject", "PBXNativeTarget", "SourcesPhase", "ResourcesPhase", "FrameworksPhase",
           "TargetConfigList", "ProjectConfigList", "TargetDebug", "TargetRelease",
-          "ProjectDebug", "ProjectRelease", "SwiftPackageRef", "SwiftPackageDep"]:
+          "ProjectDebug", "ProjectRelease", "SwiftPackageRef", "SwiftPackageDep",
+          "SwiftPackageBuildFile"]:
     I(n)
 
 def fileref(path, ftype, name=None):
@@ -72,8 +75,14 @@ for s in sources:
     A(f'\t\t{I("buildfile:" + s)} /* {os.path.basename(s)} in Sources */ = {{isa = PBXBuildFile; fileRef = {I("fileref:" + s)} /* {os.path.basename(s)} */; }};')
 for r in resources:
     A(f'\t\t{I("buildfile:" + r)} /* {os.path.basename(r)} in Resources */ = {{isa = PBXBuildFile; fileRef = {I("fileref:" + r)} /* {os.path.basename(r)} */; }};')
-A(f'\t\t{I("SwiftPackageDep")} /* SwordReader */ = {{isa = XCSwiftPackageProductDependency; package = {I("SwiftPackageRef")} /* SwordReader */; productName = SwordReader; }};')
+A(f'\t\t{I("SwiftPackageBuildFile")} /* SwordReader in Frameworks */ = {{isa = PBXBuildFile; productRef = {I("SwiftPackageDep")} /* SwordReader */; }};')
 A('/* End PBXBuildFile section */')
+
+# XCSwiftPackageProductDependency (its own section; must NOT go in a build phase's files)
+A('')
+A('/* Begin XCSwiftPackageProductDependency section */')
+A(f'\t\t{I("SwiftPackageDep")} /* SwordReader */ = {{isa = XCSwiftPackageProductDependency; package = {I("SwiftPackageRef")} /* SwordReader */; productName = SwordReader; }};')
+A('/* End XCSwiftPackageProductDependency section */')
 
 # PBXFileReference
 A('')
@@ -93,7 +102,7 @@ A(f'\t\t{I("FrameworksPhase")} /* Frameworks */ = {{')
 A('\t\t\tisa = PBXFrameworksBuildPhase;')
 A('\t\t\tbuildActionMask = 2147483647;')
 A('\t\t\tfiles = (')
-A(f'\t\t\t\t{I("SwiftPackageDep")} /* SwordReader in Frameworks */,')
+A(f'\t\t\t\t{I("SwiftPackageBuildFile")} /* SwordReader in Frameworks */,')
 A('\t\t\t);')
 A('\t\t\trunOnlyForDeploymentPostprocessing = 0;')
 A('\t\t};')
@@ -102,7 +111,7 @@ A('/* End PBXFrameworksBuildPhase section */')
 # PBXGroup
 A('')
 A('/* Begin PBXGroup section */')
-A(f'\t\t{I("group:main")} = {{')
+A(f'\t\t{I("group:main")} /* main */ = {{')
 A('\t\t\tisa = PBXGroup;')
 A('\t\t\tchildren = (')
 A(f'\t\t\t\t{I("group:GodsWord")} /* GodsWord */,')
@@ -335,3 +344,11 @@ used = set(re.findall(r"= ([0-9A-F]{24})(?: /\*|;)", text))
 used |= set(re.findall(r"\( ([0-9A-F]{24}) /\*", text))
 missing = used - defined
 print("defined:", len(defined), "missing refs:", len(missing), missing if missing else "")
+
+# keep the shared scheme pointing at the (deterministic) target id
+scheme_path = "/home/hatch/workspace/god-s-word/GodsWord.xcodeproj/xcshareddata/xcschemes/GodsWord.xcscheme"
+scheme = open(scheme_path).read()
+new_target = I("PBXNativeTarget")
+scheme2 = re.sub(r'BlueprintIdentifier\s*=\s*"[0-9A-F]{24}"', f'BlueprintIdentifier = "{new_target}"', scheme)
+open(scheme_path, "w").write(scheme2)
+print("scheme BlueprintIdentifier ->", new_target)

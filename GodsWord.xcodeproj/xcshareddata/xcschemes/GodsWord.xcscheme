@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "BA5645E601404B6C8A9F786F"
+               BlueprintIdentifier = "9AF1B7E92F74597CBA769CE8"
                BuildableName = "God's Word.app"
                BlueprintName = "God's Word"
                ReferencedContainer = "container:GodsWord.xcodeproj">

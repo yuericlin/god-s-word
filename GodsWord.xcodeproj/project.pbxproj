@@ -7,100 +7,104 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		BDA9265EC191419987A39D4F /* GodsWordApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 217EEC170A1C4FBE8EA86027 /* GodsWordApp.swift */; };
-		226D89E1D4314420A26CD832 /* ModuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8D7E5E1D84746F7A87C6B42 /* ModuleStore.swift */; };
-		1CF738AAE82D4526A1DB23A0 /* PersonalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 266778CF52F04CE8A2120425 /* PersonalData.swift */; };
-		CCEDCEA3FC4E44A38AC82887 /* GoogleDriveBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7981C69931B74631848FF6DC /* GoogleDriveBackup.swift */; };
-		E0308167E209495B85AF0624 /* ModuleLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 876A9E44AE214847A2DB27FB /* ModuleLoader.swift */; };
-		3616E5EF554747DF87198F98 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC0C637CB9441E4BE649E6D /* LibraryView.swift */; };
-		4F091A62B134404DBD2F273D /* BooksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A93B7F3FA347D28CFF92FC /* BooksView.swift */; };
-		ADBD233A92264D18BA42547F /* ChaptersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C924020F3A4D94870D6F36 /* ChaptersView.swift */; };
-		1C17522B750049FBB66366D9 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A63DE00F08744D90B376572E /* ReaderView.swift */; };
-		A68DEAF8FDC64149B4F20A94 /* RepositoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341C090DDE1F4580B5042E32 /* RepositoryView.swift */; };
-		D24C0A24EEC04EADAEBD5D74 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F718E1CCF7BE4551AAD5494F /* SettingsView.swift */; };
-		0EDE32C259644D74818890C3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 03B0D7B975AD4A9BB9782839 /* Assets.xcassets */; };
-		6346470D9225456BBEC45EE3 /* SwordReader */ = {isa = XCSwiftPackageProductDependency; package = F087A06D82874AB5BD7648BB /* SwordReader */; productName = SwordReader; };
+		5D522E73148F5A0D98F5F4F9 /* GodsWordApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ACC1F3F9534563EB982A479 /* GodsWordApp.swift */; };
+		31C3095FC2B95C2AB1AD717F /* ModuleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C96726E368C5AB09F7A0D75 /* ModuleStore.swift */; };
+		15185DA5452F532B8F68041E /* PersonalData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C700113111654EC98DB2193 /* PersonalData.swift */; };
+		D87F6BE35A8A5DC6A64704EF /* GoogleDriveBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2FECB0673E5CFF9BB8B78A /* GoogleDriveBackup.swift */; };
+		FF2FDC1A0A425499B1C81F3B /* ModuleLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FD598E4FECB57C997D143F6 /* ModuleLoader.swift */; };
+		F0541EB7FDB45E1CA4B57ECC /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1265A3BEC5EE5E008AA46C2D /* LibraryView.swift */; };
+		4480D067D1C55ECE90727D77 /* BooksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4640D866555568EA55879C4 /* BooksView.swift */; };
+		05873CC235225784B7C0F264 /* ChaptersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BBA36552A5953DFB2A60413 /* ChaptersView.swift */; };
+		DB0DB1C9B53F5D6689584DB6 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F6FBA764F3551EAD6F022C /* ReaderView.swift */; };
+		663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */; };
+		6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42447FBBBA5658DCA177927D /* SettingsView.swift */; };
+		0D214555E72E554CBF6AEBAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7F476AB55FEF5384B2579B4E /* Assets.xcassets */; };
+		36FF226A84B45E19987DEBD8 /* SwordReader in Frameworks */ = {isa = PBXBuildFile; productRef = E599A9EE70405DC5A2FA9A2C /* SwordReader */; };
 /* End PBXBuildFile section */
 
+/* Begin XCSwiftPackageProductDependency section */
+		E599A9EE70405DC5A2FA9A2C /* SwordReader */ = {isa = XCSwiftPackageProductDependency; package = 842FE27CBD935915AA9D7E13 /* SwordReader */; productName = SwordReader; };
+/* End XCSwiftPackageProductDependency section */
+
 /* Begin PBXFileReference section */
-		217EEC170A1C4FBE8EA86027 /* GodsWordApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GodsWordApp.swift"; sourceTree = "<group>"; };
-		F8D7E5E1D84746F7A87C6B42 /* ModuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModuleStore.swift"; sourceTree = "<group>"; };
-		266778CF52F04CE8A2120425 /* PersonalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalData.swift"; sourceTree = "<group>"; };
-		7981C69931B74631848FF6DC /* GoogleDriveBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GoogleDriveBackup.swift"; sourceTree = "<group>"; };
-		876A9E44AE214847A2DB27FB /* ModuleLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModuleLoader.swift"; sourceTree = "<group>"; };
-		BEC0C637CB9441E4BE649E6D /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LibraryView.swift"; sourceTree = "<group>"; };
-		37A93B7F3FA347D28CFF92FC /* BooksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BooksView.swift"; sourceTree = "<group>"; };
-		A9C924020F3A4D94870D6F36 /* ChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ChaptersView.swift"; sourceTree = "<group>"; };
-		A63DE00F08744D90B376572E /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderView.swift"; sourceTree = "<group>"; };
-		341C090DDE1F4580B5042E32 /* RepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RepositoryView.swift"; sourceTree = "<group>"; };
-		F718E1CCF7BE4551AAD5494F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
-		03B0D7B975AD4A9BB9782839 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; };
-		BB1F934785374BF5AF5C353F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info.plist"; sourceTree = "<group>"; };
-		68DBD872BAB040F79404CED4 /* GoogleOAuth.plist.template */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleOAuth.plist.template"; sourceTree = "<group>"; };
-		B921E0AB15424B17B21B6CE1 /* God's Word.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "God's Word.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		4ACC1F3F9534563EB982A479 /* GodsWordApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GodsWordApp.swift"; sourceTree = "<group>"; };
+		8C96726E368C5AB09F7A0D75 /* ModuleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModuleStore.swift"; sourceTree = "<group>"; };
+		0C700113111654EC98DB2193 /* PersonalData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PersonalData.swift"; sourceTree = "<group>"; };
+		AA2FECB0673E5CFF9BB8B78A /* GoogleDriveBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "GoogleDriveBackup.swift"; sourceTree = "<group>"; };
+		3FD598E4FECB57C997D143F6 /* ModuleLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ModuleLoader.swift"; sourceTree = "<group>"; };
+		1265A3BEC5EE5E008AA46C2D /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LibraryView.swift"; sourceTree = "<group>"; };
+		E4640D866555568EA55879C4 /* BooksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BooksView.swift"; sourceTree = "<group>"; };
+		3BBA36552A5953DFB2A60413 /* ChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ChaptersView.swift"; sourceTree = "<group>"; };
+		28F6FBA764F3551EAD6F022C /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderView.swift"; sourceTree = "<group>"; };
+		EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RepositoryView.swift"; sourceTree = "<group>"; };
+		42447FBBBA5658DCA177927D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
+		7F476AB55FEF5384B2579B4E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; };
+		E6377AC33558587A9F8AAC89 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info.plist"; sourceTree = "<group>"; };
+		93F598839F2B52DB9174BE90 /* GoogleOAuth.plist.template */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleOAuth.plist.template"; sourceTree = "<group>"; };
+		D459AD853FCB5CCCBC8A6FDA /* God's Word.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "God's Word.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A14E98351F304713AE5FB9C5 /* Frameworks */ = {
+		C3FAD99C568354E4991FA0AC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6346470D9225456BBEC45EE3 /* SwordReader in Frameworks */,
+				36FF226A84B45E19987DEBD8 /* SwordReader in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4C402BA472EA4ADAB1962321 = {
+		AFE7E4B13CB4528C96B8702B /* main */ = {
 			isa = PBXGroup;
 			children = (
-				C0BDB4CFF38B44109C73B1D9 /* GodsWord */,
-				49AA44B2665640F19833E652 /* Products */,
+				DC4BF6BDA7295A558AE01DB1 /* GodsWord */,
+				14F6440FB6A45651ADFFF854 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		C0BDB4CFF38B44109C73B1D9 /* GodsWord */ = {
+		DC4BF6BDA7295A558AE01DB1 /* GodsWord */ = {
 			isa = PBXGroup;
 			children = (
-				217EEC170A1C4FBE8EA86027 /* GodsWordApp.swift */,
-				E1ECD9DAED0E4C2A87915945 /* Services */,
-				81DCE4626B784235B534BA13 /* Views */,
-				03B0D7B975AD4A9BB9782839 /* Assets.xcassets */,
-				BB1F934785374BF5AF5C353F /* Info.plist */,
-				68DBD872BAB040F79404CED4 /* GoogleOAuth.plist.template */,
+				4ACC1F3F9534563EB982A479 /* GodsWordApp.swift */,
+				B36CF42DEBAB53FF83D70320 /* Services */,
+				75891A41F0B4589080E578EF /* Views */,
+				7F476AB55FEF5384B2579B4E /* Assets.xcassets */,
+				E6377AC33558587A9F8AAC89 /* Info.plist */,
+				93F598839F2B52DB9174BE90 /* GoogleOAuth.plist.template */,
 			);
 			path = GodsWord;
 			sourceTree = "<group>";
 		};
-		E1ECD9DAED0E4C2A87915945 /* Services */ = {
+		B36CF42DEBAB53FF83D70320 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				F8D7E5E1D84746F7A87C6B42 /* ModuleStore.swift */,
-				266778CF52F04CE8A2120425 /* PersonalData.swift */,
-				7981C69931B74631848FF6DC /* GoogleDriveBackup.swift */,
-				876A9E44AE214847A2DB27FB /* ModuleLoader.swift */,
+				8C96726E368C5AB09F7A0D75 /* ModuleStore.swift */,
+				0C700113111654EC98DB2193 /* PersonalData.swift */,
+				AA2FECB0673E5CFF9BB8B78A /* GoogleDriveBackup.swift */,
+				3FD598E4FECB57C997D143F6 /* ModuleLoader.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
 		};
-		81DCE4626B784235B534BA13 /* Views */ = {
+		75891A41F0B4589080E578EF /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				BEC0C637CB9441E4BE649E6D /* LibraryView.swift */,
-				37A93B7F3FA347D28CFF92FC /* BooksView.swift */,
-				A9C924020F3A4D94870D6F36 /* ChaptersView.swift */,
-				A63DE00F08744D90B376572E /* ReaderView.swift */,
-				341C090DDE1F4580B5042E32 /* RepositoryView.swift */,
-				F718E1CCF7BE4551AAD5494F /* SettingsView.swift */,
+				1265A3BEC5EE5E008AA46C2D /* LibraryView.swift */,
+				E4640D866555568EA55879C4 /* BooksView.swift */,
+				3BBA36552A5953DFB2A60413 /* ChaptersView.swift */,
+				28F6FBA764F3551EAD6F022C /* ReaderView.swift */,
+				EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */,
+				42447FBBBA5658DCA177927D /* SettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
 		};
-		49AA44B2665640F19833E652 /* Products */ = {
+		14F6440FB6A45651ADFFF854 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				B921E0AB15424B17B21B6CE1 /* God's Word.app */,
+				D459AD853FCB5CCCBC8A6FDA /* God's Word.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,13 +112,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		BA5645E601404B6C8A9F786F /* God's Word */ = {
+		9AF1B7E92F74597CBA769CE8 /* God's Word */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BE66CEFBC87649DDB5C11032 /* Build configuration list for PBXNativeTarget "God's Word" */;
+			buildConfigurationList = 20C752B467F35865A7DEB26B /* Build configuration list for PBXNativeTarget "God's Word" */;
 			buildPhases = (
-				7293E537DCE94166A826DC2D /* Sources */,
-				A14E98351F304713AE5FB9C5 /* Frameworks */,
-				A6A3D218835C413F8E8551F0 /* Resources */,
+				C3050D86303554B8A6B6CB9F /* Sources */,
+				C3FAD99C568354E4991FA0AC /* Frameworks */,
+				D45C85045FEB50E99A5CBB5A /* Resources */,
 			);
 			buildRules = (
 			);
@@ -122,75 +126,75 @@
 			);
 			name = "God's Word";
 			packageProductDependencies = (
-				6346470D9225456BBEC45EE3 /* SwordReader */,
+				E599A9EE70405DC5A2FA9A2C /* SwordReader */,
 			);
 			productName = "God's Word";
-			productReference = B921E0AB15424B17B21B6CE1 /* God's Word.app */;
+			productReference = D459AD853FCB5CCCBC8A6FDA /* God's Word.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		E41CF1CE018B4F6DA103EEFC /* Project object */ = {
+		26CF3188E3E659A896965A18 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastUpgradeCheck = 1700;
 			};
-			buildConfigurationList = 2304099D3A5443B6A2CAFF39 /* Build configuration list for PBXProject "GodsWord" */;
+			buildConfigurationList = 22A7080FC67A5A7BAC1AB87E /* Build configuration list for PBXProject "GodsWord" */;
 			compatibilityVersion = "Xcode 16.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = 4C402BA472EA4ADAB1962321;
+			mainGroup = AFE7E4B13CB4528C96B8702B;
 			packageReferences = (
-				F087A06D82874AB5BD7648BB /* SwordReader */,
+				842FE27CBD935915AA9D7E13 /* SwordReader */,
 			);
-			productRefGroup = 49AA44B2665640F19833E652 /* Products */;
+			productRefGroup = 14F6440FB6A45651ADFFF854 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				BA5645E601404B6C8A9F786F /* God's Word */,
+				9AF1B7E92F74597CBA769CE8 /* God's Word */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A6A3D218835C413F8E8551F0 /* Resources */ = {
+		D45C85045FEB50E99A5CBB5A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0EDE32C259644D74818890C3 /* Assets.xcassets in Resources */,
+				0D214555E72E554CBF6AEBAB /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7293E537DCE94166A826DC2D /* Sources */ = {
+		C3050D86303554B8A6B6CB9F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BDA9265EC191419987A39D4F /* GodsWordApp.swift in Sources */,
-				226D89E1D4314420A26CD832 /* ModuleStore.swift in Sources */,
-				1CF738AAE82D4526A1DB23A0 /* PersonalData.swift in Sources */,
-				CCEDCEA3FC4E44A38AC82887 /* GoogleDriveBackup.swift in Sources */,
-				E0308167E209495B85AF0624 /* ModuleLoader.swift in Sources */,
-				3616E5EF554747DF87198F98 /* LibraryView.swift in Sources */,
-				4F091A62B134404DBD2F273D /* BooksView.swift in Sources */,
-				ADBD233A92264D18BA42547F /* ChaptersView.swift in Sources */,
-				1C17522B750049FBB66366D9 /* ReaderView.swift in Sources */,
-				A68DEAF8FDC64149B4F20A94 /* RepositoryView.swift in Sources */,
-				D24C0A24EEC04EADAEBD5D74 /* SettingsView.swift in Sources */,
+				5D522E73148F5A0D98F5F4F9 /* GodsWordApp.swift in Sources */,
+				31C3095FC2B95C2AB1AD717F /* ModuleStore.swift in Sources */,
+				15185DA5452F532B8F68041E /* PersonalData.swift in Sources */,
+				D87F6BE35A8A5DC6A64704EF /* GoogleDriveBackup.swift in Sources */,
+				FF2FDC1A0A425499B1C81F3B /* ModuleLoader.swift in Sources */,
+				F0541EB7FDB45E1CA4B57ECC /* LibraryView.swift in Sources */,
+				4480D067D1C55ECE90727D77 /* BooksView.swift in Sources */,
+				05873CC235225784B7C0F264 /* ChaptersView.swift in Sources */,
+				DB0DB1C9B53F5D6689584DB6 /* ReaderView.swift in Sources */,
+				663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */,
+				6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		7273B2564D4843B1AB7BA6AF /*  */ = {
+		4D10E3B3C25F520B99EE16C7 /*  */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -207,7 +211,7 @@
 			};
 			name = Debug;
 		};
-		0C0C4373F40448D7B73F64E7 /*  */ = {
+		2C2A0F9C8C8552869E2D9538 /*  */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -224,7 +228,7 @@
 			};
 			name = Release;
 		};
-		14037398CD814F2591662142 /* ProjectDebug */ = {
+		AAC3167B0D835BAFB50ED72A /* ProjectDebug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -239,7 +243,7 @@
 			};
 			name = Debug;
 		};
-		C679CC9C533044738D806894 /* ProjectRelease */ = {
+		9C4DFDCFD5FD5257B3A73677 /* ProjectRelease */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -257,20 +261,20 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		BE66CEFBC87649DDB5C11032 /* Build configuration list for PBXNativeTarget */ = {
+		20C752B467F35865A7DEB26B /* Build configuration list for PBXNativeTarget */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				7273B2564D4843B1AB7BA6AF /* Debug */,
-				0C0C4373F40448D7B73F64E7 /* Release */,
+				4D10E3B3C25F520B99EE16C7 /* Debug */,
+				2C2A0F9C8C8552869E2D9538 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2304099D3A5443B6A2CAFF39 /* Build configuration list for PBXProject */ = {
+		22A7080FC67A5A7BAC1AB87E /* Build configuration list for PBXProject */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				14037398CD814F2591662142 /* Debug */,
-				C679CC9C533044738D806894 /* Release */,
+				AAC3167B0D835BAFB50ED72A /* Debug */,
+				9C4DFDCFD5FD5257B3A73677 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
@@ -278,19 +282,19 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		F087A06D82874AB5BD7648BB /* SwordReader */ = {
+		842FE27CBD935915AA9D7E13 /* SwordReader */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../SwordReader;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		6346470D9225456BBEC45EE3 /* SwordReader */ = {
+		E599A9EE70405DC5A2FA9A2C /* SwordReader */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = F087A06D82874AB5BD7648BB /* SwordReader */;
+			package = 842FE27CBD935915AA9D7E13 /* SwordReader */;
 			productName = SwordReader;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
-	rootObject = E41CF1CE018B4F6DA103EEFC /* Project object */;
+	rootObject = 26CF3188E3E659A896965A18 /* Project object */;
 }
