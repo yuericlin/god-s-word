@@ -266,6 +266,7 @@ common_target = {
     "PRODUCT_BUNDLE_IDENTIFIER": "com.yuericlin.godsword",
     "PRODUCT_NAME": '"$(TARGET_NAME)"',
     "SWIFT_EMIT_LOC_STRINGS": "YES",
+    "SWIFT_VERSION": "6.0",
     "TARGETED_DEVICE_FAMILY": "1",
 }
 config("TargetDebug", {**common_target})
