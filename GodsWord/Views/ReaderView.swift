@@ -95,7 +95,7 @@ struct ReaderView: View {
         num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
         num.foregroundColor = .secondary
         num.baselineOffset = personalData.fontSize * 0.25
-        var body = AttributedString(text)
+        let body = AttributedString(text)
         return num + AttributedString(" ") + body
     }
 

@@ -1,6 +1,7 @@
 // SettingsView.swift — reading preferences, Google Drive backup, about.
 
 import SwiftUI
+import SwordReader
 
 struct SettingsView: View {
     @EnvironmentObject private var personalData: PersonalData
