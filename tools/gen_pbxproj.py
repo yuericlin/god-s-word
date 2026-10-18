@@ -315,7 +315,9 @@ A('')
 A('/* Begin XCLocalSwiftPackageReference section */')
 A(f'\t\t{I("SwiftPackageRef")} /* SwordReader */ = {{')
 A('\t\t\tisa = XCLocalSwiftPackageReference;')
-A('\t\t\trelativePath = ../SwordReader;')
+# relativePath is relative to the project directory (the folder containing
+# .xcodeproj), so the package at the repo root is "SwordReader".
+A('\t\t\trelativePath = SwordReader;')
 A('\t\t};')
 A('/* End XCLocalSwiftPackageReference section */')
 A('')

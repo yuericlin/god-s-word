@@ -284,7 +284,7 @@
 /* Begin XCLocalSwiftPackageReference section */
 		842FE27CBD935915AA9D7E13 /* SwordReader */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../SwordReader;
+			relativePath = SwordReader;
 		};
 /* End XCLocalSwiftPackageReference section */
 
