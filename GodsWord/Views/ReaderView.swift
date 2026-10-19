@@ -15,7 +15,9 @@ struct ReaderView: View {
     @State private var loadError: String?
     @State private var showingSettings = false
     @State private var showingFullSettings = false
+    @State private var showingHistory = false
     @State private var availableModules: [InstalledModule] = []
+    @State private var viewSize: CGSize = .zero
 
     /// Binding for the book picker: selecting a book jumps to its chapter 1.
     private var bookPickerSelection: Binding<Int> {
@@ -76,6 +78,7 @@ struct ReaderView: View {
                             .padding()
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
+                        .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
                 }
             }
@@ -89,7 +92,14 @@ struct ReaderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
+        .background(DrawerEdgeGesture { showingSettings = true }.frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
+        .edgeNavigation(
+            onBackward: {
+                // Right-edge swipe right: back to the chapter picker.
+                if !path.isEmpty { path.removeLast() }
+            }
+        )
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {
@@ -164,7 +174,9 @@ struct ReaderView: View {
                 .onEnded { value in
                     guard !showingSettings else { return }
                     // Middle swipes turn chapters. Edge swipes are handled by
-                    // the system (left edge: back) and the forward overlay.
+                    // the drawer (left) and the navigation overlay (right).
+                    let inRightEdge = viewSize.width > 0 && value.startLocation.x > viewSize.width - 20
+                    guard !inRightEdge else { return }
                     if value.translation.width < -60 {
                         go(toChapter: history.chapter + 1)
                     } else if value.translation.width > 60 {
@@ -185,6 +197,20 @@ struct ReaderView: View {
                 showingFullSettings = false
             })
         }
+        .sheet(isPresented: $showingHistory) {
+            NavigationStack {
+                HistoryView(onSelect: { entry in
+                    if let mod = availableModules.first(where: { $0.id == entry.moduleID }) {
+                        history.module = mod
+                        history.testament = entry.testament
+                        history.book = entry.book
+                        history.chapter = entry.chapter
+                    }
+                    showingHistory = false
+                })
+            }
+            .environmentObject(personalData)
+        }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.
@@ -203,6 +229,10 @@ struct ReaderView: View {
                 }
                 ReadingSettingsView()
                 Spacer()
+                Button("History") {
+                    showingSettings = false
+                    showingHistory = true
+                }
                 Button("More Settings…") {
                     showingSettings = false
                     showingFullSettings = true
