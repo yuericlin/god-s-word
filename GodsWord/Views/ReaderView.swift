@@ -254,6 +254,11 @@ struct ReaderView: View {
                 }
         )
         .task(id: chapterKey) { await load() }
+        // Selection lives within a chapter: clear it when the location
+        // changes, but keep it when only the version (module) changes.
+        .onChange(of: history.testament) { selectedVerses = [] }
+        .onChange(of: history.book) { selectedVerses = [] }
+        .onChange(of: history.chapter) { selectedVerses = [] }
         .onAppear { availableModules = store.installedModules() }
         .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
@@ -596,7 +601,6 @@ struct ReaderView: View {
 
     private func load() async {
         loadError = nil
-        selectedVerses = []
         dwellTask?.cancel()
         do {
             let mod = try await ModuleLoader.shared.module(for: history.module)
