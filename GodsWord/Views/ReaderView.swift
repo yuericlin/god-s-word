@@ -16,16 +16,9 @@ struct ReaderView: View {
     @State private var showingSettings = false
     @State private var showingFullSettings = false
     @State private var showingHistory = false
+    @State private var showingBookChapterPicker = false
     @State private var availableModules: [InstalledModule] = []
     @State private var viewSize: CGSize = .zero
-
-    /// Binding for the book picker: selecting a book jumps to its chapter 1.
-    private var bookPickerSelection: Binding<Int> {
-        Binding(
-            get: { history.overallBookIndex },
-            set: { history.setBook(overall: $0) }
-        )
-    }
 
     private var chapterPickerSelection: Binding<Int> {
         Binding(get: { history.chapter }, set: { go(toChapter: $0) })
@@ -119,12 +112,8 @@ struct ReaderView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    Menu {
-                        Picker("Book", selection: bookPickerSelection) {
-                            ForEach(0..<66, id: \.self) { i in
-                                Text(history.bookName(overall: i)).tag(i)
-                            }
-                        }
+                    Button {
+                        showingBookChapterPicker = true
                     } label: {
                         HStack(spacing: 4) {
                             Text(history.bookTitle)
@@ -210,6 +199,14 @@ struct ReaderView: View {
                 })
             }
             .environmentObject(personalData)
+        }
+        .sheet(isPresented: $showingBookChapterPicker) {
+            BookChapterPickerSheet(history: history) { t, b, c in
+                history.testament = t
+                history.book = b
+                history.chapter = c
+                showingBookChapterPicker = false
+            }
         }
     }
 

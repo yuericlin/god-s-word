@@ -75,7 +75,7 @@ struct ChaptersView: View {
 }
 
 /// Two-level picker sheet: books list drills into chapter grids.
-private struct BookChapterPickerSheet: View {
+struct BookChapterPickerSheet: View {
     let history: ReadingHistory
     var onSelect: (Int, Int, Int) -> Void
     @Environment(\.dismiss) private var dismiss
