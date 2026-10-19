@@ -17,6 +17,7 @@ struct ReaderView: View {
     @State private var showingFullSettings = false
     @State private var showingHistory = false
     @State private var showingBookChapterPicker = false
+    @State private var showingBookmarks = false
     @State private var availableModules: [InstalledModule] = []
     @State private var viewSize: CGSize = .zero
 
@@ -75,9 +76,15 @@ struct ReaderView: View {
                     }
                 }
             }
-            // Bookmark ribbons hanging from the top-right corner.
-            BookmarksRibbonsView(history: history)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            // Slide-in bookmarks panel, opened with a right-edge swipe.
+            if showingBookmarks {
+                Color.black.opacity(0.25)
+                    .ignoresSafeArea()
+                    .onTapGesture { showingBookmarks = false }
+                BookmarksPanel(history: history, showing: $showingBookmarks)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                    .transition(.move(edge: .trailing))
+            }
             // Slide-in settings drawer, opened with a left-edge swipe.
             if showingSettings {
                 Color.black.opacity(0.25)
@@ -88,9 +95,14 @@ struct ReaderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
+        .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
         .background(DrawerEdgeGesture { showingSettings = true }.frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .edgeNavigation(
+            onForward: {
+                // Right-edge swipe left: open the bookmarks panel.
+                showingBookmarks = true
+            },
             onBackward: {
                 // Right-edge swipe right: back to the chapter picker.
                 if !path.isEmpty { path.removeLast() }
@@ -164,7 +176,7 @@ struct ReaderView: View {
         .gesture(
             DragGesture(minimumDistance: 40, coordinateSpace: .local)
                 .onEnded { value in
-                    guard !showingSettings else { return }
+                    guard !showingSettings && !showingBookmarks else { return }
                     // Middle swipes turn chapters. Edge swipes are handled by
                     // the drawer (left) and the navigation overlay (right).
                     let inRightEdge = viewSize.width > 0 && value.startLocation.x > viewSize.width - 20

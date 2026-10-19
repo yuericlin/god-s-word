@@ -1,8 +1,9 @@
-// BookmarksView.swift — ribbon bookmarks on the reader.
-// Translucent ribbons hang from the top-right corner: one per bookmark.
-// Single tap jumps to the bookmark; holding one for 3 seconds offers
-// "Mark" (assign the current chapter to it) and "Edit" (name, color,
-// book & chapter).
+// BookmarksView.swift — ribbon bookmarks panel on the reader.
+// A right-edge swipe at the reader slides this panel in from the right.
+// Small translucent ribbons sit at the panel's top-right corner, one per
+// bookmark. Single tap jumps to the bookmark; holding one for 3 seconds
+// offers "Mark" (assign the current chapter to it) and "Edit" (name,
+// color, book & chapter). The reading view itself stays clean.
 
 import SwiftUI
 import UIKit
@@ -11,7 +12,7 @@ import SwordReader
 /// A hanging ribbon: rectangle with a V notch cut out of the bottom.
 struct RibbonShape: Shape {
     func path(in rect: CGRect) -> Path {
-        let notchDepth: CGFloat = 12
+        let notchDepth: CGFloat = 10
         var p = Path()
         p.move(to: CGPoint(x: rect.minX, y: rect.minY))
         p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
@@ -23,39 +24,57 @@ struct RibbonShape: Shape {
     }
 }
 
-/// The row of ribbons pinned to the reader's top-right corner.
-struct BookmarksRibbonsView: View {
+/// Slide-in bookmarks panel, opened with a right-edge swipe on the reader.
+struct BookmarksPanel: View {
     let history: ReadingHistory
+    @Binding var showing: Bool
     @EnvironmentObject private var personalData: PersonalData
     @State private var pendingBookmark: Bookmark?
     @State private var showingOptions = false
     @State private var editingBookmark: Bookmark?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            ForEach(personalData.bookmarks) { bookmark in
-                ribbon(for: bookmark)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Bookmarks").font(.headline)
+                Spacer()
+                Button { showing = false } label: {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.secondary)
+                }
             }
-            // Add a bookmark at the current chapter. The ribbon color
-            // follows the default palette in creation order.
-            Button {
-                let created = personalData.addBookmark(
-                    name: "Bookmark \(personalData.bookmarks.count + 1)",
-                    testament: history.testament,
-                    book: history.book,
-                    chapter: history.chapter)
-                editingBookmark = created
-            } label: {
-                Image(systemName: "plus")
-                    .font(.body)
+            .padding()
+
+            // Small ribbons at the top-right corner, one per bookmark.
+            HStack(alignment: .top, spacing: 6) {
+                ForEach(personalData.bookmarks) { bookmark in
+                    ribbon(for: bookmark)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 16)
+
+            if personalData.bookmarks.isEmpty {
+                Text("No bookmarks yet.")
                     .foregroundStyle(.secondary)
-                    .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
+                    .padding()
             }
-            .padding(.top, 2)
+
+            Spacer()
+
+            Button("Add Bookmark") { addBookmark() }
+                .frame(maxWidth: .infinity)
+                .padding()
         }
-        .padding(.trailing, 10)
+        .frame(width: 300)
+        .frame(maxHeight: .infinity)
+        .background(.regularMaterial)
+        .gesture(
+            DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                .onEnded { value in
+                    if value.translation.width > 40 { showing = false }
+                }
+        )
         .confirmationDialog(
             pendingBookmark.map { "\($0.name) — \(reference(for: $0))" } ?? "Bookmark",
             isPresented: $showingOptions,
@@ -85,7 +104,7 @@ struct BookmarksRibbonsView: View {
     private func ribbon(for bookmark: Bookmark) -> some View {
         RibbonShape()
             .fill(bookmark.color.opacity(0.55))
-            .frame(width: 40, height: 76)
+            .frame(width: 30, height: 54)
             .contentShape(RibbonShape())
             .onTapGesture { jump(to: bookmark) }
             .onLongPressGesture(minimumDuration: 3.0) {
@@ -94,12 +113,22 @@ struct BookmarksRibbonsView: View {
             }
     }
 
+    private func addBookmark() {
+        let created = personalData.addBookmark(
+            name: "Bookmark \(personalData.bookmarks.count + 1)",
+            testament: history.testament,
+            book: history.book,
+            chapter: history.chapter)
+        editingBookmark = created
+    }
+
     private func jump(to bookmark: Bookmark) {
         history.testament = bookmark.testament
         history.book = bookmark.book
         let count = max(history.chapterCount(testament: bookmark.testament,
                                              book: bookmark.book), 1)
         history.chapter = min(max(bookmark.chapter, 1), count)
+        showing = false
     }
 
     private func reference(for bookmark: Bookmark) -> String {
