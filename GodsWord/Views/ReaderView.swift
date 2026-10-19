@@ -113,6 +113,11 @@ struct ReaderView: View {
                     }
                 }
             }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showingSettings = true } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+            }
             ToolbarItem(placement: .bottomBar) {
                 HStack {
                     Button { go(toChapter: chapter - 1) } label: {
