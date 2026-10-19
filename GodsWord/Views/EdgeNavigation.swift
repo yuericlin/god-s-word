@@ -6,17 +6,6 @@
 import SwiftUI
 import UIKit
 
-/// Guards against a single long swipe cascading through multiple levels:
-/// edge navigations are rate-limited to one per 0.5s across all edge zones.
-private var lastEdgeNavigationAt = Date.distantPast
-
-func allowEdgeNavigation() -> Bool {
-    let now = Date()
-    guard now.timeIntervalSince(lastEdgeNavigationAt) > 0.5 else { return false }
-    lastEdgeNavigationAt = now
-    return true
-}
-
 /// Right-edge strip: leftward swipe goes forward, rightward swipe goes backward.
 struct RightEdgeNavigation: ViewModifier {
     var onForward: (() -> Void)?
@@ -32,9 +21,9 @@ struct RightEdgeNavigation: ViewModifier {
                     DragGesture(minimumDistance: 20, coordinateSpace: .local)
                         .onEnded { value in
                             if value.translation.width < -40 {
-                                if allowEdgeNavigation() { onForward?() }
+                                onForward?()
                             } else if value.translation.width > 40 {
-                                if allowEdgeNavigation() { onBackward?() }
+                                onBackward?()
                             }
                         }
                 )
