@@ -24,57 +24,34 @@ struct RibbonShape: Shape {
     }
 }
 
-/// Slide-in bookmarks panel, opened with a right-edge swipe on the reader.
-struct BookmarksPanel: View {
+/// A row of bookmark ribbons: single tap jumps, holding 3 seconds offers
+/// Mark (assign the current chapter) and Edit (name, color, book & chapter).
+struct BookmarkRibbonsRow: View {
     let history: ReadingHistory
-    @Binding var showing: Bool
+    let bookmarks: [Bookmark]
+    var ribbonWidth: CGFloat = 30
+    var ribbonHeight: CGFloat = 54
+    var onJump: (Bookmark) -> Void
+
     @EnvironmentObject private var personalData: PersonalData
     @State private var pendingBookmark: Bookmark?
     @State private var showingOptions = false
     @State private var editingBookmark: Bookmark?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Bookmarks").font(.headline)
-                Spacer()
-                Button { showing = false } label: {
-                    Image(systemName: "xmark")
-                        .foregroundStyle(.secondary)
-                }
+        HStack(alignment: .top, spacing: 6) {
+            ForEach(bookmarks) { bookmark in
+                RibbonShape()
+                    .fill(bookmark.color.opacity(0.55))
+                    .frame(width: ribbonWidth, height: ribbonHeight)
+                    .contentShape(RibbonShape())
+                    .onTapGesture { onJump(bookmark) }
+                    .onLongPressGesture(minimumDuration: 3.0) {
+                        pendingBookmark = bookmark
+                        showingOptions = true
+                    }
             }
-            .padding()
-
-            // Small ribbons at the top-right corner, one per bookmark.
-            HStack(alignment: .top, spacing: 6) {
-                ForEach(personalData.bookmarks) { bookmark in
-                    ribbon(for: bookmark)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.trailing, 16)
-
-            if personalData.bookmarks.isEmpty {
-                Text("No bookmarks yet.")
-                    .foregroundStyle(.secondary)
-                    .padding()
-            }
-
-            Spacer()
-
-            Button("Add Bookmark") { addBookmark() }
-                .frame(maxWidth: .infinity)
-                .padding()
         }
-        .frame(width: 300)
-        .frame(maxHeight: .infinity)
-        .background(.regularMaterial)
-        .gesture(
-            DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                .onEnded { value in
-                    if value.translation.width > 40 { showing = false }
-                }
-        )
         .confirmationDialog(
             pendingBookmark.map { "\($0.name) — \(reference(for: $0))" } ?? "Bookmark",
             isPresented: $showingOptions,
@@ -101,16 +78,66 @@ struct BookmarksPanel: View {
         }
     }
 
-    private func ribbon(for bookmark: Bookmark) -> some View {
-        RibbonShape()
-            .fill(bookmark.color.opacity(0.55))
-            .frame(width: 30, height: 54)
-            .contentShape(RibbonShape())
-            .onTapGesture { jump(to: bookmark) }
-            .onLongPressGesture(minimumDuration: 3.0) {
-                pendingBookmark = bookmark
-                showingOptions = true
+    private func reference(for bookmark: Bookmark) -> String {
+        let overall = bookmark.testament == 1
+            ? bookmark.book - 1 : 39 + bookmark.book - 1
+        guard overall >= 0 && overall < 66 else { return "" }
+        return "\(history.bookName(overall: overall)) \(bookmark.chapter)"
+    }
+}
+
+/// Slide-in bookmarks panel, opened with a right-edge swipe on the reader.
+struct BookmarksPanel: View {
+    let history: ReadingHistory
+    @Binding var showing: Bool
+    @EnvironmentObject private var personalData: PersonalData
+    @State private var editingBookmark: Bookmark?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Bookmarks").font(.headline)
+                Spacer()
+                Button { showing = false } label: {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.secondary)
+                }
             }
+            .padding()
+
+            // Small ribbons at the top-right corner, one per bookmark.
+            BookmarkRibbonsRow(
+                history: history,
+                bookmarks: personalData.bookmarks,
+                onJump: { jump(to: $0) }
+            )
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, 16)
+
+            if personalData.bookmarks.isEmpty {
+                Text("No bookmarks yet.")
+                    .foregroundStyle(.secondary)
+                    .padding()
+            }
+
+            Spacer()
+
+            Button("Add Bookmark") { addBookmark() }
+                .frame(maxWidth: .infinity)
+                .padding()
+        }
+        .frame(width: 300)
+        .frame(maxHeight: .infinity)
+        .background(.regularMaterial)
+        .gesture(
+            DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                .onEnded { value in
+                    if value.translation.width > 40 { showing = false }
+                }
+        )
+        .sheet(item: $editingBookmark) { bookmark in
+            BookmarkEditView(bookmark: bookmark, history: history)
+        }
     }
 
     private func addBookmark() {
@@ -129,13 +156,6 @@ struct BookmarksPanel: View {
                                              book: bookmark.book), 1)
         history.chapter = min(max(bookmark.chapter, 1), count)
         showing = false
-    }
-
-    private func reference(for bookmark: Bookmark) -> String {
-        let overall = bookmark.testament == 1
-            ? bookmark.book - 1 : 39 + bookmark.book - 1
-        guard overall >= 0 && overall < 66 else { return "" }
-        return "\(history.bookName(overall: overall)) \(bookmark.chapter)"
     }
 }
 

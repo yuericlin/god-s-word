@@ -76,6 +76,22 @@ struct ReaderView: View {
                     }
                 }
             }
+            // Ribbons for bookmarks pointing at the chapter being read.
+            // Nothing shows when the current chapter isn't bookmarked.
+            let currentMarks = personalData.bookmarks.filter {
+                $0.testament == history.testament &&
+                $0.book == history.book &&
+                $0.chapter == history.chapter
+            }
+            if !currentMarks.isEmpty {
+                BookmarkRibbonsRow(history: history,
+                                   bookmarks: currentMarks,
+                                   ribbonWidth: 28,
+                                   ribbonHeight: 50,
+                                   onJump: { _ in })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    .padding(.trailing, 10)
+            }
             // Slide-in bookmarks panel, opened with a right-edge swipe.
             if showingBookmarks {
                 Color.black.opacity(0.25)
