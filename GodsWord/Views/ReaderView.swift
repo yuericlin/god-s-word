@@ -94,6 +94,7 @@ struct ReaderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
+        .background(PopGestureDisabler().frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -111,11 +112,6 @@ struct ReaderView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showingSettings = true } label: {
-                    Label("Settings", systemImage: "gearshape")
                 }
             }
             ToolbarItem(placement: .bottomBar) {
@@ -256,6 +252,30 @@ struct ReaderView: View {
                                       for: module.id)
         } catch {
             loadError = error.localizedDescription
+        }
+    }
+}
+
+/// Frees the left edge for the settings drawer swipe by disabling the
+/// navigation controller's interactive pop gesture while the reader is on
+/// screen. The "< Chapters" back button keeps working; the swipe-back is
+/// restored when leaving the reader.
+private struct PopGestureDisabler: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        DisablerViewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+
+    private final class DisablerViewController: UIViewController {
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            navigationController?.interactivePopGestureRecognizer?.isEnabled = false
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            navigationController?.interactivePopGestureRecognizer?.isEnabled = true
         }
     }
 }
