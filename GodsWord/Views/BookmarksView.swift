@@ -216,6 +216,7 @@ struct BookmarksPanel: View {
     }
 
     private func jump(to bookmark: Bookmark) {
+        history.dwellMode = true
         history.testament = bookmark.testament
         history.book = bookmark.book
         let count = max(history.chapterCount(testament: bookmark.testament,

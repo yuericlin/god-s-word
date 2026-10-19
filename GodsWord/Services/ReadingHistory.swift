@@ -13,6 +13,13 @@ final class ReadingHistory {
     var book: Int       // 1-based within the testament
     var chapter: Int    // 1-based
 
+    /// When true (set by a bookmark jump), the reader does not record a
+    /// history entry on load. Instead it starts a 60-second dwell timer:
+    /// the entry is recorded only if the user is still on the chapter when
+    /// it fires — quick flips through chapters leave no trace. Cleared once
+    /// a dwell completes.
+    var dwellMode = false
+
     init(module: InstalledModule, testament: Int = 1, book: Int = 1, chapter: Int = 1) {
         self.module = module
         self.testament = testament

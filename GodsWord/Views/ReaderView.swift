@@ -20,6 +20,7 @@ struct ReaderView: View {
     @State private var showingBookChapterPicker = false
     @State private var showingBookmarks = false
     @State private var strongsKey: String?
+    @State private var dwellTask: Task<Void, Never>?
     @State private var availableModules: [InstalledModule] = []
     @State private var viewSize: CGSize = .zero
 
@@ -229,6 +230,7 @@ struct ReaderView: View {
         )
         .task(id: chapterKey) { await load() }
         .onAppear { availableModules = store.installedModules() }
+        .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
             SettingsView(onSelectHistoryEntry: { entry in
                 if let mod = availableModules.first(where: { $0.id == entry.moduleID }) {
@@ -395,6 +397,7 @@ struct ReaderView: View {
 
     private func load() async {
         loadError = nil
+        dwellTask?.cancel()
         do {
             let mod = try await ModuleLoader.shared.module(for: history.module)
             let rendered = mod.chapter(testament: history.testament, book: history.book,
@@ -419,13 +422,37 @@ struct ReaderView: View {
                                           testament: history.testament,
                                           book: history.book,
                                           chapter: history.chapter)
-            personalData.recordHistory(moduleID: history.module.id,
-                                        bookName: history.bookTitle,
-                                        testament: history.testament,
-                                        book: history.book,
-                                        chapter: history.chapter)
+            if history.dwellMode {
+                // Bookmark jump: record only after a 60-second dwell.
+                // Turning chapters restarts the timer; quick flips are skipped.
+                startDwellTimer(for: chapterKey)
+            } else {
+                personalData.recordHistory(moduleID: history.module.id,
+                                            bookName: history.bookTitle,
+                                            testament: history.testament,
+                                            book: history.book,
+                                            chapter: history.chapter)
+            }
         } catch {
             loadError = error.localizedDescription
+        }
+    }
+
+    /// Records a history entry only if the user is still on the same
+    /// chapter after 60 seconds, then leaves dwell mode.
+    private func startDwellTimer(for key: String) {
+        dwellTask?.cancel()
+        dwellTask = Task {
+            try? await Task.sleep(for: .seconds(60))
+            guard !Task.isCancelled else { return }
+            if key == chapterKey {
+                personalData.recordHistory(moduleID: history.module.id,
+                                            bookName: history.bookTitle,
+                                            testament: history.testament,
+                                            book: history.book,
+                                            chapter: history.chapter)
+                history.dwellMode = false
+            }
         }
     }
 }
