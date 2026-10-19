@@ -3,6 +3,7 @@
 // version menu always reflect the current selection.
 
 import SwiftUI
+import UIKit
 import SwordReader
 
 struct ReaderView: View {
@@ -23,6 +24,12 @@ struct ReaderView: View {
     @State private var dwellTask: Task<Void, Never>?
     @State private var availableModules: [InstalledModule] = []
     @State private var viewSize: CGSize = .zero
+    /// Verse picker: verses the user has tapped. Light sky blue highlight;
+    /// tap again to unselect; long-press a selected verse for Copy/Notes.
+    @State private var selectedVerses: Set<Int> = []
+    @State private var noteVerse: Int?
+    @State private var noteDraft: String = ""
+    @State private var showingNoteEditor = false
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
     /// the current version carries Strong's data.
@@ -63,42 +70,34 @@ struct ReaderView: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 Color.clear.frame(height: 0).id("top")
                                 if personalData.verseByVerse {
-                                    if useStrongs {
-                                        ForEach(verseTokens, id: \.verse) { v in
-                                            Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
-                                                .font(.system(size: personalData.fontSize, design: .serif))
-                                                .lineSpacing(6)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                    // One flow per verse: each verse stays on
+                                    // its own line but words wrap within it.
+                                    ForEach(verses, id: \.verse) { v in
+                                        FlowLayout {
+                                            ForEach(flowTokens(for: v.verse)) { token in
+                                                flowTokenView(token)
+                                            }
                                         }
-                                    } else {
-                                        ForEach(verses, id: \.verse) { v in
-                                            Text(attributedVerse(number: v.verse, text: v.text))
-                                                .font(.system(size: personalData.fontSize, design: .serif))
-                                                .lineSpacing(6)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
                                     }
                                 } else {
-                                    // Paragraph mode: no paragraph info in the modules,
-                                    // so the whole chapter flows as one paragraph.
-                                    Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
-                                        .font(.system(size: personalData.fontSize, design: .serif))
-                                        .lineSpacing(6)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    // Paragraph mode: no paragraph info in the
+                                    // modules, so the whole chapter flows as
+                                    // one paragraph of tappable words.
+                                    FlowLayout {
+                                        ForEach(allFlowTokens) { token in
+                                            flowTokenView(token)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
+                            .font(.system(size: personalData.fontSize, design: .serif))
                             .padding()
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
-                    .environment(\.openURL, OpenURLAction { url in
-                        guard url.scheme == "strongs",
-                              let key = url.host, !key.isEmpty
-                        else { return .systemAction }
-                        strongsKey = key
-                        return .handled
-                    })
                 }
             }
             // Ribbons for bookmarks pointing at the chapter being read.
@@ -272,6 +271,13 @@ struct ReaderView: View {
                 StrongsDefinitionView(key: key)
             }
         }
+        .sheet(isPresented: $showingNoteEditor) {
+            if let verse = noteVerse {
+                VerseNoteEditor(reference: noteReference(verse), text: $noteDraft) { text in
+                    personalData.setVerseNote(text, forKey: noteKey(verse))
+                }
+            }
+        }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.
@@ -336,69 +342,194 @@ struct ReaderView: View {
         history.chapter = c
     }
 
-    private func attributedVerse(number: Int, text: String) -> AttributedString {
-        attributedVerseNumber(number) + AttributedString(" ") + AttributedString(text)
+    // MARK: - Verse picker (flow tokens)
+
+    /// One tappable unit in the reading flow: a word belonging to a verse,
+    /// or a Strong's number anchored after its word.
+    private struct FlowToken: Identifiable {
+        let id: Int
+        let verse: Int
+        let isStrongs: Bool
+        let strongsKey: String?
+        let text: AttributedString
     }
 
-    /// Whole chapter as one flowing paragraph (paragraph mode). Verse numbers
-    /// stay inline; verses are joined with spaces.
-    private func attributedParagraph() -> AttributedString {
-        var out = AttributedString("")
-        for (i, v) in verses.enumerated() {
-            if i > 0 { out += AttributedString(" ") }
-            out += attributedVerse(number: v.verse, text: v.text)
-        }
-        return out
+    /// Light sky blue highlight for selected verses.
+    private var selectionColor: Color {
+        Color(red: 0.53, green: 0.81, blue: 0.98).opacity(0.55)
     }
 
-    /// One Strong's number as small raised linked text, e.g. " H7225".
-    /// Tapping opens the dictionary entry (handled via the openURL environment).
-    private func attributedStrongsNumber(_ key: String) -> AttributedString {
-        var num = AttributedString(" \(key)")
-        num.font = .system(size: personalData.fontSize * 0.55, design: .serif)
-        num.foregroundColor = .secondary
-        num.baselineOffset = personalData.fontSize * 0.22
-        num.underlineStyle = []
-        num.link = URL(string: "strongs://\(key)")
-        return num
+    private var allFlowTokens: [FlowToken] {
+        useStrongs ? strongsFlowTokens() : plainFlowTokens()
     }
 
-    /// Verse text from segments, with Strong's numbers after the segment
-    /// they belong to. Segments concatenate directly (they already carry
-    /// their spacing); numbers render small and raised.
-    private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
-        var out = attributedVerseNumber(number)
-        out += AttributedString(" ")
-        for token in tokens {
-            out += AttributedString(token.text)
-            for key in token.strongs {
-                out += attributedStrongsNumber(key)
+    private func flowTokens(for verse: Int) -> [FlowToken] {
+        allFlowTokens.filter { $0.verse == verse }
+    }
+
+    /// Plain mode: each word is a token; the verse number (and a note dot
+    /// when the verse has a note) prefixes the first word.
+    private func plainFlowTokens() -> [FlowToken] {
+        var tokens: [FlowToken] = []
+        var id = 0
+        for v in verses {
+            var first = true
+            for word in v.text.split(separator: " ", omittingEmptySubsequences: true) {
+                var attr = AttributedString(String(word))
+                if first {
+                    attr = verseNumberPrefix(v.verse) + attr
+                    first = false
+                }
+                tokens.append(FlowToken(id: id, verse: v.verse, isStrongs: false,
+                                        strongsKey: nil, text: attr))
+                id += 1
             }
         }
-        return out
+        return tokens
     }
 
-    /// Whole chapter as one flowing paragraph from word tokens.
-    private func attributedParagraphTokens() -> AttributedString {
-        var out = AttributedString("")
-        for (i, v) in verseTokens.enumerated() {
-            if i > 0 { out += AttributedString(" ") }
-            out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
+    /// Strong's mode: words from the token segments, each Strong's number a
+    /// separate tappable token right after its word.
+    private func strongsFlowTokens() -> [FlowToken] {
+        var tokens: [FlowToken] = []
+        var id = 0
+        for v in verseTokens {
+            var first = true
+            for seg in v.tokens {
+                let words = seg.text.split(separator: " ", omittingEmptySubsequences: true)
+                for (wi, word) in words.enumerated() {
+                    var attr = AttributedString(String(word))
+                    if first {
+                        attr = verseNumberPrefix(v.verse) + attr
+                        first = false
+                    }
+                    tokens.append(FlowToken(id: id, verse: v.verse, isStrongs: false,
+                                            strongsKey: nil, text: attr))
+                    id += 1
+                    if wi == words.count - 1 {
+                        for key in seg.strongs {
+                            var sattr = AttributedString(key)
+                            sattr.font = .system(size: personalData.fontSize * 0.55,
+                                                design: .serif)
+                            sattr.foregroundColor = .secondary
+                            tokens.append(FlowToken(id: id, verse: v.verse, isStrongs: true,
+                                                    strongsKey: key, text: sattr))
+                            id += 1
+                        }
+                    }
+                }
+            }
         }
-        return out
+        return tokens
     }
 
-    /// The raised verse number prefix shared by both verse renderers.
-    private func attributedVerseNumber(_ number: Int) -> AttributedString {
-        var num = AttributedString("\(number) ")
+    /// Raised verse number prefix; a dot marks verses that have a note.
+    private func verseNumberPrefix(_ verse: Int) -> AttributedString {
+        var num = AttributedString("\(verse) ")
         num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
         num.foregroundColor = .secondary
         num.baselineOffset = personalData.fontSize * 0.25
+        if hasNote(verse: verse) {
+            var dot = AttributedString("• ")
+            dot.font = .system(size: personalData.fontSize * 0.65, design: .serif)
+            dot.foregroundColor = .orange
+            num += dot
+        }
         return num
+    }
+
+    @ViewBuilder
+    private func flowTokenView(_ token: FlowToken) -> some View {
+        if token.isStrongs {
+            // Tappable Strong's number; opens the dictionary entry.
+            Text(token.text)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+                .onTapGesture { strongsKey = token.strongsKey }
+        } else {
+            let selected = selectedVerses.contains(token.verse)
+            Text(token.text)
+                .padding(.horizontal, 3)
+                .padding(.vertical, 2)
+                .background(selected ? selectionColor : .clear,
+                            in: RoundedRectangle(cornerRadius: 4))
+                .contentShape(Rectangle())
+                .onTapGesture { toggleSelection(token.verse) }
+                .contextMenu {
+                    if selectedVerses.contains(token.verse) {
+                        Button("Copy") { copySelectedVerses() }
+                        Button("Notes") { openNoteEditor(for: token.verse) }
+                    }
+                }
+        }
+    }
+
+    private func toggleSelection(_ verse: Int) {
+        if selectedVerses.contains(verse) {
+            selectedVerses.remove(verse)
+        } else {
+            selectedVerses.insert(verse)
+        }
+    }
+
+    /// Copies the selected verses as "Book Chapter:1, 3" + "1 text" lines.
+    private func copySelectedVerses() {
+        let sorted = selectedVerses.sorted()
+        guard !sorted.isEmpty else { return }
+        let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
+        let lines = sorted.compactMap { v -> String? in
+            guard let text = verses.first(where: { $0.verse == v })?.text else { return nil }
+            return "\(v) \(text)"
+        }
+        UIPasteboard.general.string = ([ref] + lines).joined(separator: "\n")
+    }
+
+    /// [1,2,3,5] -> "1-3, 5"
+    private func verseListString(_ verses: [Int]) -> String {
+        var parts: [String] = []
+        var start = verses[0]
+        var prev = verses[0]
+        for v in verses.dropFirst() {
+            if v == prev + 1 {
+                prev = v
+            } else {
+                parts.append(start == prev ? "\(start)" : "\(start)-\(prev)")
+                start = v
+                prev = v
+            }
+        }
+        parts.append(start == prev ? "\(start)" : "\(start)-\(prev)")
+        return parts.joined(separator: ", ")
+    }
+
+    // MARK: - Verse notes
+
+    private func noteKey(_ verse: Int) -> String {
+        personalData.verseNoteKey(moduleID: history.module.id,
+                                  testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter,
+                                  verse: verse)
+    }
+
+    private func hasNote(verse: Int) -> Bool {
+        personalData.verseNote(forKey: noteKey(verse)) != nil
+    }
+
+    private func openNoteEditor(for verse: Int) {
+        noteVerse = verse
+        noteDraft = personalData.verseNotes[noteKey(verse)] ?? ""
+        showingNoteEditor = true
+    }
+
+    private func noteReference(_ verse: Int) -> String {
+        "\(history.bookTitle) \(history.chapter):\(verse)"
     }
 
     private func load() async {
         loadError = nil
+        selectedVerses = []
         dwellTask?.cancel()
         do {
             let mod = try await ModuleLoader.shared.module(for: history.module)
