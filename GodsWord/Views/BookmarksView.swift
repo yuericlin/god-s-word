@@ -183,7 +183,7 @@ struct BookmarkEditView: View {
         let b = overallBook < 39 ? overallBook + 1 : overallBook - 39 + 1
         let uiColor = UIColor(color)
         var r: CGFloat = 0, g: CGFloat = 0, bl: CGFloat = 0, a: CGFloat = 0
-        uiColor.getRed(&r, &g, &bl, &a)
+        uiColor.getRed(&r, green: &g, blue: &bl, alpha: &a)
         var updated = bookmark
         updated.name = name.trimmingCharacters(in: .whitespaces).isEmpty
             ? bookmark.name : name.trimmingCharacters(in: .whitespaces)
