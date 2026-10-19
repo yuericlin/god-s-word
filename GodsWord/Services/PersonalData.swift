@@ -104,8 +104,8 @@ public final class PersonalData: ObservableObject {
            let decoded = try? JSONDecoder().decode([Bookmark].self, from: data) {
             marks = decoded
         } else {
-            // Fresh install: start with named ribbons at Genesis 1.
-            marks = Bookmark.defaults
+            // Fresh install: start with zero bookmarks.
+            marks = []
             defaults.set(try? JSONEncoder().encode(marks), forKey: "gw.bookmarks.v1")
         }
         self.bookmarks = marks
@@ -141,6 +141,17 @@ public final class PersonalData: ObservableObject {
         if let i = bookmarks.firstIndex(where: { $0.id == bookmark.id }) {
             bookmarks[i] = bookmark
         }
+    }
+
+    /// Creates a bookmark at the given location. The ribbon color comes
+    /// from the default palette in creation order.
+    @discardableResult
+    public func addBookmark(name: String, testament: Int, book: Int, chapter: Int) -> Bookmark {
+        let c = Bookmark.paletteColor(at: bookmarks.count)
+        let bookmark = Bookmark(name: name, red: c.red, green: c.green, blue: c.blue,
+                                testament: testament, book: book, chapter: chapter)
+        bookmarks.append(bookmark)
+        return bookmark
     }
 
     /// Records a visited chapter. Moves an existing entry for the same

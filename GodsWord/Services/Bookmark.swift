@@ -33,13 +33,18 @@ public struct Bookmark: Codable, Identifiable, Sendable {
         Color(red: red, green: green, blue: blue)
     }
 
-    /// The bookmarks a fresh install starts with: all at Genesis 1,
-    /// ready for the user to name and mark.
-    public static var defaults: [Bookmark] {
-        [
-            Bookmark(name: "Bookmark 1", red: 0.90, green: 0.25, blue: 0.25),
-            Bookmark(name: "Bookmark 2", red: 0.95, green: 0.75, blue: 0.15),
-            Bookmark(name: "Bookmark 3", red: 0.25, green: 0.45, blue: 0.95),
-        ]
+    /// Default ribbon colors, in order, for newly created bookmarks:
+    /// 1. light sky blue, 2. light gold, 3. light purple,
+    /// 4. light silver, 5. light green. Cycles for the 6th and beyond.
+    public static let defaultPalette: [(red: Double, green: Double, blue: Double)] = [
+        (0.53, 0.81, 0.98),  // light sky blue (#87CEFA)
+        (1.00, 0.84, 0.40),  // light gold
+        (0.79, 0.66, 0.91),  // light purple
+        (0.83, 0.83, 0.83),  // light silver
+        (0.56, 0.93, 0.56),  // light green
+    ]
+
+    public static func paletteColor(at index: Int) -> (red: Double, green: Double, blue: Double) {
+        defaultPalette[index % defaultPalette.count]
     }
 }

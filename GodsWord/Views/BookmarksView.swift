@@ -36,6 +36,24 @@ struct BookmarksRibbonsView: View {
             ForEach(personalData.bookmarks) { bookmark in
                 ribbon(for: bookmark)
             }
+            // Add a bookmark at the current chapter. The ribbon color
+            // follows the default palette in creation order.
+            Button {
+                let created = personalData.addBookmark(
+                    name: "Bookmark \(personalData.bookmarks.count + 1)",
+                    testament: history.testament,
+                    book: history.book,
+                    chapter: history.chapter)
+                editingBookmark = created
+            } label: {
+                Image(systemName: "plus")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+            }
+            .padding(.top, 2)
         }
         .padding(.trailing, 10)
         .confirmationDialog(
@@ -67,15 +85,7 @@ struct BookmarksRibbonsView: View {
     private func ribbon(for bookmark: Bookmark) -> some View {
         RibbonShape()
             .fill(bookmark.color.opacity(0.55))
-            .frame(width: 40, height: 88)
-            .overlay {
-                Text(bookmark.name)
-                    .font(.caption2)
-                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-                    .frame(width: 78)
-                    .rotationEffect(.degrees(-90))
-            }
+            .frame(width: 40, height: 76)
             .contentShape(RibbonShape())
             .onTapGesture { jump(to: bookmark) }
             .onLongPressGesture(minimumDuration: 3.0) {
