@@ -17,8 +17,32 @@ struct ReaderView: View {
     @State private var showingFullSettings = false
 
     private var bookTitle: String {
-        let overall = testament == 1 ? book - 1 : 39 + book - 1
-        return module.info.isChinese ? BibleBookNamesZhHans[overall] : Versification.kjv.books[overall].name
+        bookName(overall: testament == 1 ? book - 1 : 39 + book - 1)
+    }
+
+    private func bookName(overall: Int) -> String {
+        module.info.isChinese ? BibleBookNamesZhHans[overall] : Versification.kjv.books[overall].name
+    }
+
+    /// Binding for the book picker: selecting a book jumps to its chapter 1.
+    private var bookPickerSelection: Binding<Int> {
+        Binding(
+            get: { testament == 1 ? book - 1 : 39 + book - 1 },
+            set: { overall in
+                if overall < 39 {
+                    testament = 1
+                    book = overall + 1
+                } else {
+                    testament = 2
+                    book = overall - 39 + 1
+                }
+                chapter = 1
+            }
+        )
+    }
+
+    private var chapterPickerSelection: Binding<Int> {
+        Binding(get: { chapter }, set: { go(toChapter: $0) })
     }
 
     private var v11n: Versification? { module.info.versification }
@@ -70,9 +94,25 @@ struct ReaderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
-        .navigationTitle("\(bookTitle) \(chapter)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Menu {
+                    Picker("Book", selection: bookPickerSelection) {
+                        ForEach(0..<66, id: \.self) { i in
+                            Text(bookName(overall: i)).tag(i)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("\(bookTitle) \(chapter)")
+                            .font(.headline)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
             ToolbarItem(placement: .bottomBar) {
                 HStack {
                     Button { go(toChapter: chapter - 1) } label: {
@@ -80,8 +120,24 @@ struct ReaderView: View {
                     }
                     .disabled(!canGo(toChapter: chapter - 1))
                     Spacer()
-                    Text("\(chapter) / \(chapterCount)")
-                        .font(.caption).foregroundStyle(.secondary)
+                    if chapterCount > 0 {
+                        Menu {
+                            Picker("Chapter", selection: chapterPickerSelection) {
+                                ForEach(1...chapterCount, id: \.self) { c in
+                                    Text("\(c)").tag(c)
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text("\(chapter) / \(chapterCount)")
+                                Image(systemName: "chevron.down")
+                            }
+                            .font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text("\(chapter) / \(chapterCount)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     Spacer()
                     Button { go(toChapter: chapter + 1) } label: {
                         Label("Next", systemImage: "chevron.right")
