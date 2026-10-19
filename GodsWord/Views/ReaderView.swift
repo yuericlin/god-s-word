@@ -94,7 +94,7 @@ struct ReaderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
-        .background(PopGestureDisabler().frame(width: 0, height: 0))
+        .background(DrawerEdgeGesture { showingSettings = true }.frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -256,26 +256,67 @@ struct ReaderView: View {
     }
 }
 
-/// Frees the left edge for the settings drawer swipe by disabling the
-/// navigation controller's interactive pop gesture while the reader is on
-/// screen. The "< Chapters" back button keeps working; the swipe-back is
-/// restored when leaving the reader.
-private struct PopGestureDisabler: UIViewControllerRepresentable {
+/// Gives the settings drawer a hard claim on the left edge while reading.
+/// Installs a dedicated screen-edge pan recognizer on the navigation
+/// controller's view and makes the system's back-swipe wait for it
+/// (`require(toFail:)`), so a left-edge swipe reliably opens the drawer
+/// instead of popping back to the chapter list. Everything is installed on
+/// appear and torn down on disappear, so other screens keep their swipe-back.
+/// The "< Chapters" back button keeps working everywhere.
+private struct DrawerEdgeGesture: UIViewControllerRepresentable {
+    var onOpen: () -> Void
+
     func makeUIViewController(context: Context) -> UIViewController {
-        DisablerViewController()
+        EdgeGestureViewController(onOpen: onOpen)
     }
 
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    func updateUIViewController(_ vc: UIViewController, context: Context) {
+        (vc as? EdgeGestureViewController)?.onOpen = onOpen
+    }
 
-    private final class DisablerViewController: UIViewController {
+    final class EdgeGestureViewController: UIViewController {
+        var onOpen: () -> Void
+        private weak var navView: UIView?
+        private var edgePan: UIScreenEdgePanGestureRecognizer?
+
+        init(onOpen: @escaping () -> Void) {
+            self.onOpen = onOpen
+            super.init(nibName: nil, bundle: nil)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
         override func viewDidAppear(_ animated: Bool) {
             super.viewDidAppear(animated)
-            navigationController?.interactivePopGestureRecognizer?.isEnabled = false
+            guard let navController = navigationController,
+                  let navView = navigationController?.view,
+                  let pop = navController.interactivePopGestureRecognizer else { return }
+            if edgePan == nil {
+                let pan = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgePan(_:)))
+                pan.edges = .left
+                // The drawer wins the left edge; the back button still pops.
+                pop.require(toFail: pan)
+                navView.addGestureRecognizer(pan)
+                edgePan = pan
+            }
+            self.navView = navView
+            navController.interactivePopGestureRecognizer?.isEnabled = false
         }
 
         override func viewWillDisappear(_ animated: Bool) {
             super.viewWillDisappear(animated)
+            if let pan = edgePan {
+                navView?.removeGestureRecognizer(pan)
+                edgePan = nil
+            }
+            navView = nil
             navigationController?.interactivePopGestureRecognizer?.isEnabled = true
+        }
+
+        @objc private func handleEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {
+            if recognizer.state == .ended {
+                onOpen()
+            }
         }
     }
 }
