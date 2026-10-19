@@ -86,12 +86,14 @@ public final class PersonalData: ObservableObject {
         let saved = defaults.double(forKey: fontSizeKey)
         self.fontSize = saved > 0 ? saved : 19
         self.verseByVerse = defaults.bool(forKey: verseByVerseKey)
-        self.historyLog = {
-            guard let data = defaults.data(forKey: historyLogKey),
-                  let log = try? JSONDecoder().decode([HistoryEntry].self, from: data)
-            else { return [] }
-            return log
-        }()
+        let log: [HistoryEntry]
+        if let data = defaults.data(forKey: "gw.historyLog.v1"),
+           let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
+            log = decoded
+        } else {
+            log = []
+        }
+        self.historyLog = log
     }
 
     @Published public var fontSize: Double {
