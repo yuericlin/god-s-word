@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1700"
+   LastUpgradeVersion = "2710"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9AF1B7E92F74597CBA769CE8"
-               BuildableName = "God's Word.app"
-               BlueprintName = "God's Word"
+               BuildableName = "God&apos;s Word.app"
+               BlueprintName = "God&apos;s Word"
                ReferencedContainer = "container:GodsWord.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
