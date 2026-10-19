@@ -11,8 +11,8 @@ public enum StrongsServiceError: Error {
 }
 
 /// Downloads (on first use) and queries Strong's lexicons.
-/// Sendable: mutable state is guarded by `lock`.
-public final class StrongsService: Sendable {
+/// @unchecked Sendable: mutable state is guarded by `lock`.
+public final class StrongsService: @unchecked Sendable {
     public static let shared = StrongsService()
 
     private let store: ModuleStore
