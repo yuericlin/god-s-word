@@ -13,6 +13,8 @@ struct ReaderView: View {
     @EnvironmentObject private var personalData: PersonalData
     @State private var verses: [(verse: Int, text: String)] = []
     @State private var loadError: String?
+    @State private var showingSettings = false
+    @State private var showingFullSettings = false
 
     private var bookTitle: String {
         let overall = testament == 1 ? book - 1 : 39 + book - 1
@@ -26,37 +28,48 @@ struct ReaderView: View {
     }
 
     var body: some View {
-        Group {
-            if let loadError {
-                ContentUnavailableView("Couldn't open chapter", systemImage: "exclamationmark.triangle",
-                                        description: Text(loadError))
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Color.clear.frame(height: 0).id("top")
-                            if personalData.verseByVerse {
-                                ForEach(verses, id: \.verse) { v in
-                                    Text(attributedVerse(number: v.verse, text: v.text))
+        ZStack(alignment: .leading) {
+            Group {
+                if let loadError {
+                    ContentUnavailableView("Couldn't open chapter", systemImage: "exclamationmark.triangle",
+                                            description: Text(loadError))
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Color.clear.frame(height: 0).id("top")
+                                if personalData.verseByVerse {
+                                    ForEach(verses, id: \.verse) { v in
+                                        Text(attributedVerse(number: v.verse, text: v.text))
+                                            .font(.system(size: personalData.fontSize, design: .serif))
+                                            .lineSpacing(6)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                } else {
+                                    // Paragraph mode: no paragraph info in the modules,
+                                    // so the whole chapter flows as one paragraph.
+                                    Text(attributedParagraph())
                                         .font(.system(size: personalData.fontSize, design: .serif))
                                         .lineSpacing(6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                            } else {
-                                // Paragraph mode: no paragraph info in the modules,
-                                // so the whole chapter flows as one paragraph.
-                                Text(attributedParagraph())
-                                    .font(.system(size: personalData.fontSize, design: .serif))
-                                    .lineSpacing(6)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            .padding()
                         }
-                        .padding()
+                        .onChange(of: chapter) { proxy.scrollTo("top", anchor: .top) }
                     }
-                    .onChange(of: chapter) { proxy.scrollTo("top", anchor: .top) }
                 }
             }
+            // Slide-in settings drawer, opened with a left-edge swipe.
+            if showingSettings {
+                Color.black.opacity(0.25)
+                    .ignoresSafeArea()
+                    .onTapGesture { showingSettings = false }
+                settingsDrawer
+                    .transition(.move(edge: .leading))
+            }
         }
+        .animation(.easeInOut(duration: 0.25), value: showingSettings)
         .navigationTitle("\(bookTitle) \(chapter)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -80,11 +93,60 @@ struct ReaderView: View {
         .gesture(
             DragGesture(minimumDistance: 40, coordinateSpace: .local)
                 .onEnded { value in
-                    if value.translation.width < -60 { go(toChapter: chapter + 1) }
+                    guard !showingSettings else { return }
+                    if value.startLocation.x < 28 && value.translation.width > 50 {
+                        // Left-edge swipe: open the settings drawer.
+                        showingSettings = true
+                    } else if value.translation.width < -60 { go(toChapter: chapter + 1) }
                     else if value.translation.width > 60 { go(toChapter: chapter - 1) }
                 }
         )
         .task(id: chapterKey) { await load() }
+        .sheet(isPresented: $showingFullSettings) { SettingsView() }
+    }
+
+    /// Slide-in settings panel with reading options and a link to full settings.
+    /// Closes with the X button, a tap outside, or a left-drag on the edge handle.
+    /// (The close drag lives only on the handle so it never fights the toggle.)
+    private var settingsDrawer: some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Settings").font(.headline)
+                    Spacer()
+                    Button { showingSettings = false } label: {
+                        Image(systemName: "xmark")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                ReadingSettingsView()
+                Spacer()
+                Button("More Settings…") {
+                    showingSettings = false
+                    showingFullSettings = true
+                }
+            }
+            .padding()
+            .frame(width: 288)
+            VStack {
+                Spacer()
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(.secondary.opacity(0.35))
+                    .frame(width: 5, height: 48)
+                Spacer()
+            }
+            .frame(width: 12)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 20, coordinateSpace: .local)
+                    .onEnded { value in
+                        if value.translation.width < -30 { showingSettings = false }
+                    }
+            )
+        }
+        .frame(width: 300)
+        .frame(maxHeight: .infinity)
+        .background(.regularMaterial)
     }
 
     private var chapterKey: String { "\(testament)-\(book)-\(chapter)" }
