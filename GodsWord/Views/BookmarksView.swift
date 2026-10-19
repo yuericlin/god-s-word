@@ -46,7 +46,7 @@ struct BookmarkRibbonsRow: View {
                     .frame(width: ribbonWidth, height: ribbonHeight)
                     .contentShape(RibbonShape())
                     .onTapGesture { onJump(bookmark) }
-                    .onLongPressGesture(minimumDuration: 3.0) {
+                    .onLongPressGesture(minimumDuration: 1.0) {
                         pendingBookmark = bookmark
                         showingOptions = true
                     }
