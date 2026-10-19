@@ -400,15 +400,31 @@ struct ReaderView: View {
         allFlowTokens.filter { $0.verse == verse }
     }
 
+    /// Splits text into flow tokens: space-separated words, except CJK
+    /// text (which has no spaces) splits into individual characters so
+    /// the flow layout can wrap it like a paragraph.
+    private func flowWords(_ text: String) -> [String] {
+        var out: [String] = []
+        for part in text.split(separator: " ", omittingEmptySubsequences: true) {
+            let s = String(part)
+            if s.containsCJK {
+                out.append(contentsOf: s.map { String($0) })
+            } else {
+                out.append(s)
+            }
+        }
+        return out
+    }
+
     /// Plain mode: verse number, optional note icon, then words.
     private func plainFlowTokens() -> [FlowToken] {
         var tokens: [FlowToken] = []
         var id = 0
         for v in verses {
             id = appendVerseHead(v.verse, to: &tokens, id: id)
-            for word in v.text.split(separator: " ", omittingEmptySubsequences: true) {
+            for word in flowWords(v.text) {
                 tokens.append(FlowToken(id: id, verse: v.verse,
-                                        kind: .word(AttributedString(String(word)))))
+                                        kind: .word(AttributedString(word))))
                 id += 1
             }
         }
@@ -423,10 +439,10 @@ struct ReaderView: View {
         for v in verseTokens {
             id = appendVerseHead(v.verse, to: &tokens, id: id)
             for seg in v.tokens {
-                let words = seg.text.split(separator: " ", omittingEmptySubsequences: true)
+                let words = flowWords(seg.text)
                 for (wi, word) in words.enumerated() {
                     tokens.append(FlowToken(id: id, verse: v.verse,
-                                            kind: .word(AttributedString(String(word)))))
+                                            kind: .word(AttributedString(word))))
                     id += 1
                     if wi == words.count - 1 {
                         for key in seg.strongs {
@@ -476,7 +492,7 @@ struct ReaderView: View {
             // bar appears while any verse is selected.
             let selected = selectedVerses.contains(token.verse)
             Text(attr)
-                .padding(.horizontal, 3)
+                .padding(.horizontal, 2)
                 .padding(.vertical, 2)
                 .background(selected ? selectionColor : .clear,
                             in: RoundedRectangle(cornerRadius: 4))
@@ -640,6 +656,18 @@ struct ReaderView: View {
                                             chapter: history.chapter)
                 history.dwellMode = false
             }
+        }
+    }
+}
+
+private extension String {
+    /// True when the string contains CJK characters or punctuation.
+    var containsCJK: Bool {
+        unicodeScalars.contains { v in
+            (0x4E00...0x9FFF).contains(v.value) ||  // CJK Unified Ideographs
+            (0x3400...0x4DBF).contains(v.value) ||  // CJK Extension A
+            (0x3000...0x303F).contains(v.value) ||  // CJK punctuation
+            (0xFF00...0xFFEF).contains(v.value)     // Fullwidth forms
         }
     }
 }

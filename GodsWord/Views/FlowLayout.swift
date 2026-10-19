@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct FlowLayout: Layout {
-    var wordSpacing: CGFloat = 4
+    var wordSpacing: CGFloat = 2
     var lineSpacing: CGFloat = 10
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews,
