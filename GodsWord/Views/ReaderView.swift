@@ -30,6 +30,8 @@ struct ReaderView: View {
     @State private var noteVerse: Int?
     @State private var noteDraft: String = ""
     @State private var showingNoteEditor = false
+    @State private var chapterNoteDraft: String = ""
+    @State private var showingChapterNoteEditor = false
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
     /// the current version carries Strong's data.
@@ -94,11 +96,35 @@ struct ReaderView: View {
                             }
                             .font(.system(size: personalData.fontSize, design: .serif))
                             .padding()
+                            // Long-press on empty reading area (margins, gaps)
+                            // offers a chapter note. Words swallow the
+                            // long-press so it doesn't fire on text.
+                            .contextMenu {
+                                Button("Take Notes") { openChapterNoteEditor() }
+                            }
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
                 }
+            }
+            // Copy/Notes bar while verses are selected. Tapping a word
+            // toggles its verse; the bar acts on the whole selection.
+            if !selectedVerses.isEmpty {
+                HStack(spacing: 24) {
+                    Button("Copy") { copySelectedVerses() }
+                    Button("Notes") { openNoteEditorForSelection() }
+                    Button {
+                        selectedVerses = []
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 90)
             }
             // Ribbons for bookmarks pointing at the chapter being read.
             // Nothing shows when the current chapter isn't bookmarked.
@@ -278,6 +304,11 @@ struct ReaderView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingChapterNoteEditor) {
+            VerseNoteEditor(reference: chapterNoteReference(), text: $chapterNoteDraft) { text in
+                personalData.setChapterNote(text, forKey: chapterNoteKey())
+            }
+        }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.
@@ -344,14 +375,18 @@ struct ReaderView: View {
 
     // MARK: - Verse picker (flow tokens)
 
-    /// One tappable unit in the reading flow: a word belonging to a verse,
-    /// or a Strong's number anchored after its word.
+    /// One tappable unit in the reading flow: a word (or verse number)
+    /// belonging to a verse, a Strong's number anchored after its word,
+    /// or the tiny note icon marking a verse that has a note.
     private struct FlowToken: Identifiable {
+        enum Kind {
+            case word(AttributedString)
+            case strongs(key: String, text: AttributedString)
+            case noteIcon(verse: Int)
+        }
         let id: Int
         let verse: Int
-        let isStrongs: Bool
-        let strongsKey: String?
-        let text: AttributedString
+        let kind: Kind
     }
 
     /// Light sky blue highlight for selected verses.
@@ -367,21 +402,15 @@ struct ReaderView: View {
         allFlowTokens.filter { $0.verse == verse }
     }
 
-    /// Plain mode: each word is a token; the verse number (and a note dot
-    /// when the verse has a note) prefixes the first word.
+    /// Plain mode: verse number, optional note icon, then words.
     private func plainFlowTokens() -> [FlowToken] {
         var tokens: [FlowToken] = []
         var id = 0
         for v in verses {
-            var first = true
+            id = appendVerseHead(v.verse, to: &tokens, id: id)
             for word in v.text.split(separator: " ", omittingEmptySubsequences: true) {
-                var attr = AttributedString(String(word))
-                if first {
-                    attr = verseNumberPrefix(v.verse) + attr
-                    first = false
-                }
-                tokens.append(FlowToken(id: id, verse: v.verse, isStrongs: false,
-                                        strongsKey: nil, text: attr))
+                tokens.append(FlowToken(id: id, verse: v.verse,
+                                        kind: .word(AttributedString(String(word)))))
                 id += 1
             }
         }
@@ -394,17 +423,12 @@ struct ReaderView: View {
         var tokens: [FlowToken] = []
         var id = 0
         for v in verseTokens {
-            var first = true
+            id = appendVerseHead(v.verse, to: &tokens, id: id)
             for seg in v.tokens {
                 let words = seg.text.split(separator: " ", omittingEmptySubsequences: true)
                 for (wi, word) in words.enumerated() {
-                    var attr = AttributedString(String(word))
-                    if first {
-                        attr = verseNumberPrefix(v.verse) + attr
-                        first = false
-                    }
-                    tokens.append(FlowToken(id: id, verse: v.verse, isStrongs: false,
-                                            strongsKey: nil, text: attr))
+                    tokens.append(FlowToken(id: id, verse: v.verse,
+                                            kind: .word(AttributedString(String(word)))))
                     id += 1
                     if wi == words.count - 1 {
                         for key in seg.strongs {
@@ -412,8 +436,8 @@ struct ReaderView: View {
                             sattr.font = .system(size: personalData.fontSize * 0.55,
                                                 design: .serif)
                             sattr.foregroundColor = .secondary
-                            tokens.append(FlowToken(id: id, verse: v.verse, isStrongs: true,
-                                                    strongsKey: key, text: sattr))
+                            tokens.append(FlowToken(id: id, verse: v.verse,
+                                                    kind: .strongs(key: key, text: sattr)))
                             id += 1
                         }
                     }
@@ -423,45 +447,63 @@ struct ReaderView: View {
         return tokens
     }
 
-    /// Raised verse number prefix; a dot marks verses that have a note.
-    private func verseNumberPrefix(_ verse: Int) -> AttributedString {
-        var num = AttributedString("\(verse) ")
+    /// Verse number token plus the tiny note icon when the verse has a note.
+    /// Returns the next id.
+    private func appendVerseHead(_ verse: Int, to tokens: inout [FlowToken], id: Int) -> Int {
+        var id = id
+        tokens.append(FlowToken(id: id, verse: verse,
+                                kind: .word(verseNumberAttr(verse))))
+        id += 1
+        if hasNote(verse: verse) {
+            tokens.append(FlowToken(id: id, verse: verse, kind: .noteIcon(verse: verse)))
+            id += 1
+        }
+        return id
+    }
+
+    /// Raised verse number.
+    private func verseNumberAttr(_ verse: Int) -> AttributedString {
+        var num = AttributedString("\(verse)")
         num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
         num.foregroundColor = .secondary
         num.baselineOffset = personalData.fontSize * 0.25
-        if hasNote(verse: verse) {
-            var dot = AttributedString("• ")
-            dot.font = .system(size: personalData.fontSize * 0.65, design: .serif)
-            dot.foregroundColor = .orange
-            num += dot
-        }
         return num
     }
 
     @ViewBuilder
     private func flowTokenView(_ token: FlowToken) -> some View {
-        if token.isStrongs {
-            // Tappable Strong's number; opens the dictionary entry.
-            Text(token.text)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 8)
-                .contentShape(Rectangle())
-                .onTapGesture { strongsKey = token.strongsKey }
-        } else {
+        switch token.kind {
+        case .word(let attr):
+            // Tapping a word toggles the verse's selection; the Copy/Notes
+            // bar appears while any verse is selected.
             let selected = selectedVerses.contains(token.verse)
-            Text(token.text)
+            Text(attr)
                 .padding(.horizontal, 3)
                 .padding(.vertical, 2)
                 .background(selected ? selectionColor : .clear,
                             in: RoundedRectangle(cornerRadius: 4))
                 .contentShape(Rectangle())
                 .onTapGesture { toggleSelection(token.verse) }
-                .contextMenu {
-                    if selectedVerses.contains(token.verse) {
-                        Button("Copy") { copySelectedVerses() }
-                        Button("Notes") { openNoteEditor(for: token.verse) }
-                    }
-                }
+                // Swallow long-press so the empty-area menu doesn't fire on words.
+                .onLongPressGesture { }
+        case .strongs(let key, let attr):
+            // Tapping a Strong's number opens its dictionary entry.
+            Text(attr)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
+                .onTapGesture { strongsKey = key }
+                .onLongPressGesture { }
+        case .noteIcon(let verse):
+            // Tiny sticky-note marker; tapping opens the verse's note.
+            Image(systemName: "note")
+                .font(.system(size: personalData.fontSize * 0.45))
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 2)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+                .onTapGesture { openNoteEditor(for: verse) }
+                .onLongPressGesture { }
         }
     }
 
@@ -523,8 +565,33 @@ struct ReaderView: View {
         showingNoteEditor = true
     }
 
+    /// Notes from the selection bar anchor to the first selected verse,
+    /// so a multi-verse note shows its icon only there.
+    private func openNoteEditorForSelection() {
+        guard let first = selectedVerses.min() else { return }
+        openNoteEditor(for: first)
+    }
+
     private func noteReference(_ verse: Int) -> String {
         "\(history.bookTitle) \(history.chapter):\(verse)"
+    }
+
+    // MARK: - Chapter notes
+
+    private func chapterNoteKey() -> String {
+        personalData.chapterNoteKey(moduleID: history.module.id,
+                                    testament: history.testament,
+                                    book: history.book,
+                                    chapter: history.chapter)
+    }
+
+    private func openChapterNoteEditor() {
+        chapterNoteDraft = personalData.chapterNotes[chapterNoteKey()] ?? ""
+        showingChapterNoteEditor = true
+    }
+
+    private func chapterNoteReference() -> String {
+        "\(history.bookTitle) \(history.chapter)"
     }
 
     private func load() async {
