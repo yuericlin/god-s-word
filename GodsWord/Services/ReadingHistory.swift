@@ -34,6 +34,10 @@ final class ReadingHistory {
     }
 
     var chapterCount: Int {
+        chapterCount(testament: testament, book: book)
+    }
+
+    func chapterCount(testament: Int, book: Int) -> Int {
         module.info.versification?.book(testament: testament, book: book)?.chapters ?? 0
     }
 

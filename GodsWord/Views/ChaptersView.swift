@@ -8,80 +8,44 @@ import SwordReader
 struct ChaptersView: View {
     let history: ReadingHistory
     @Binding var path: NavigationPath
-    @EnvironmentObject private var personalData: PersonalData
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 5)
 
-    /// Book picker: selecting a book jumps to its last-read chapter.
-    private var bookSelection: Binding<Int> {
-        Binding(
-            get: { history.overallBookIndex },
-            set: { overall in
-                let newTestament = overall < 39 ? 1 : 2
-                let newBook = overall < 39 ? overall + 1 : overall - 39 + 1
-                history.testament = newTestament
-                history.book = newBook
-                // Jump to the last-read chapter for this book, not chapter 1.
-                if let last = personalData.historyLog.first(where: {
-                    $0.moduleID == history.module.id &&
-                    $0.testament == newTestament && $0.book == newBook
-                }) {
-                    history.chapter = min(last.chapter, max(history.chapterCount, 1))
-                } else {
-                    history.chapter = 1
+    /// Two-level book menu: tap a book to see its chapters, tap a chapter
+    /// to open the reader. Selecting a book defaults to its last-read chapter.
+    private var bookMenu: some View {
+        Menu {
+            ForEach(0..<66, id: \.self) { i in
+                let t = i < 39 ? 1 : 2
+                let b = i < 39 ? i + 1 : i - 39 + 1
+                let count = max(history.chapterCount(testament: t, book: b), 1)
+                Menu(history.bookName(overall: i)) {
+                    ForEach(1...count, id: \.self) { c in
+                        Button("\(c)") {
+                            history.testament = t
+                            history.book = b
+                            history.chapter = c
+                            path.append(Route.reader)
+                        }
+                    }
                 }
             }
-        )
-    }
-
-    /// Chapter picker: selecting a chapter opens the reader.
-    private var chapterSelection: Binding<Int> {
-        Binding(
-            get: { history.chapter },
-            set: { c in
-                history.chapter = c
-                path.append(Route.reader)
+        } label: {
+            HStack(spacing: 4) {
+                Text("\(history.bookTitle) \(history.chapter)")
+                    .font(.headline)
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
-        )
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Top: pick both book and chapter.
-            HStack(spacing: 16) {
-                Menu {
-                    Picker("Book", selection: bookSelection) {
-                        ForEach(0..<66, id: \.self) { i in
-                            Text(history.bookName(overall: i)).tag(i)
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(history.bookTitle)
-                            .font(.headline)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Menu {
-                    Picker("Chapter", selection: chapterSelection) {
-                        ForEach(1...max(history.chapterCount, 1), id: \.self) { c in
-                            Text("\(c)").tag(c)
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("Ch \(history.chapter)")
-                            .font(.headline)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.vertical, 12)
+            // Top: two-level book menu (book -> chapter).
+            bookMenu
+                .padding(.vertical, 12)
 
             Divider()
 
