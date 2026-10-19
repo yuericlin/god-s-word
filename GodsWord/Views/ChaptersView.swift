@@ -87,14 +87,28 @@ struct BookChapterPickerSheet: View {
                 Section("Old Testament") {
                     ForEach(0..<39, id: \.self) { i in
                         NavigationLink(value: i) {
-                            Text(history.bookName(overall: i))
+                            HStack {
+                                Text(history.bookName(overall: i))
+                                if i == history.overallBookIndex {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
                         }
                     }
                 }
                 Section("New Testament") {
                     ForEach(39..<66, id: \.self) { i in
                         NavigationLink(value: i) {
-                            Text(history.bookName(overall: i))
+                            HStack {
+                                Text(history.bookName(overall: i))
+                                if i == history.overallBookIndex {
+                                    Spacer()
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
                         }
                     }
                 }
@@ -110,6 +124,7 @@ struct BookChapterPickerSheet: View {
                 let t = overall < 39 ? 1 : 2
                 let b = overall < 39 ? overall + 1 : overall - 39 + 1
                 let count = max(history.chapterCount(testament: t, book: b), 1)
+                let isCurrentBook = overall == history.overallBookIndex
                 ScrollView {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
                         ForEach(1...count, id: \.self) { c in
@@ -119,7 +134,9 @@ struct BookChapterPickerSheet: View {
                                 Text("\(c)")
                                     .font(.body)
                                     .frame(maxWidth: .infinity, minHeight: 44)
-                                    .background(Color(.secondarySystemBackground))
+                                    .background(isCurrentBook && c == history.chapter
+                                        ? Color.accentColor.opacity(0.25)
+                                        : Color(.secondarySystemBackground))
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                             .buttonStyle(.plain)
