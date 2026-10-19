@@ -30,8 +30,6 @@ struct ReaderView: View {
     @State private var noteVerse: Int?
     @State private var noteDraft: String = ""
     @State private var showingNoteEditor = false
-    @State private var chapterNoteDraft: String = ""
-    @State private var showingChapterNoteEditor = false
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
     /// the current version carries Strong's data.
@@ -309,11 +307,6 @@ struct ReaderView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingChapterNoteEditor) {
-            VerseNoteEditor(reference: chapterNoteReference(), text: $chapterNoteDraft) { text in
-                personalData.setChapterNote(text, forKey: chapterNoteKey())
-            }
-        }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.
@@ -581,22 +574,12 @@ struct ReaderView: View {
         "\(history.bookTitle) \(history.chapter):\(verse)"
     }
 
-    // MARK: - Chapter notes
-
-    private func chapterNoteKey() -> String {
-        personalData.chapterNoteKey(moduleID: history.module.id,
-                                    testament: history.testament,
-                                    book: history.book,
-                                    chapter: history.chapter)
-    }
-
+    /// A chapter note is a note from the first verse to the last;
+    /// anchor it at the first verse like any multi-verse note.
     private func openChapterNoteEditor() {
-        chapterNoteDraft = personalData.chapterNotes[chapterNoteKey()] ?? ""
-        showingChapterNoteEditor = true
-    }
-
-    private func chapterNoteReference() -> String {
-        "\(history.bookTitle) \(history.chapter)"
+        if let first = verses.first?.verse {
+            openNoteEditor(for: first)
+        }
     }
 
     private func load() async {

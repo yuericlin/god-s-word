@@ -43,7 +43,7 @@ public struct HistoryEntry: Codable, Identifiable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 6
+    public var version: Int = 5
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -51,13 +51,11 @@ public struct BackupPayload: Codable, Sendable {
     public var installedModuleIDs: [String]
     public var bookmarks: [Bookmark]
     public var verseNotes: [String: String]
-    public var chapterNotes: [String: String]
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
                 positions: [String: ReadingPosition], installedModuleIDs: [String],
                 bookmarks: [Bookmark] = [], verseNotes: [String: String] = [:],
-                chapterNotes: [String: String] = [:],
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -66,12 +64,11 @@ public struct BackupPayload: Codable, Sendable {
         self.installedModuleIDs = installedModuleIDs
         self.bookmarks = bookmarks
         self.verseNotes = verseNotes
-        self.chapterNotes = chapterNotes
         self.backedUpAt = backedUpAt
     }
 
     // Custom decoding so backups written before verseByVerse / showStrongs /
-    // bookmarks / notes existed still load.
+    // bookmarks / verseNotes existed still load.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
@@ -82,7 +79,6 @@ public struct BackupPayload: Codable, Sendable {
         installedModuleIDs = try c.decode([String].self, forKey: .installedModuleIDs)
         bookmarks = try c.decodeIfPresent([Bookmark].self, forKey: .bookmarks) ?? []
         verseNotes = try c.decodeIfPresent([String: String].self, forKey: .verseNotes) ?? [:]
-        chapterNotes = try c.decodeIfPresent([String: String].self, forKey: .chapterNotes) ?? [:]
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -97,7 +93,6 @@ public final class PersonalData: ObservableObject {
     private let lastReadingKey = "gw.lastReading.v1"
     private let bookmarksKey = "gw.bookmarks.v1"
     private let verseNotesKey = "gw.verseNotes.v1"
-    private let chapterNotesKey = "gw.chapterNotes.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -125,7 +120,6 @@ public final class PersonalData: ObservableObject {
         }
         self.bookmarks = marks
         self.verseNotes = defaults.dictionary(forKey: verseNotesKey) as? [String: String] ?? [:]
-        self.chapterNotes = defaults.dictionary(forKey: chapterNotesKey) as? [String: String] ?? [:]
     }
 
     @Published public var fontSize: Double {
@@ -187,29 +181,6 @@ public final class PersonalData: ObservableObject {
             verseNotes[key] = text
         } else {
             verseNotes.removeValue(forKey: key)
-        }
-    }
-
-    /// Chapter-level notes (from long-pressing empty reading area), keyed by
-    /// "<moduleID>:<testament>:<book>:<chapter>". Persisted in UserDefaults.
-    @Published public var chapterNotes: [String: String] {
-        didSet {
-            defaults.set(chapterNotes, forKey: chapterNotesKey)
-        }
-    }
-
-    /// Builds the storage key for a chapter note.
-    public func chapterNoteKey(moduleID: String, testament: Int, book: Int,
-                               chapter: Int) -> String {
-        "\(moduleID):\(testament):\(book):\(chapter)"
-    }
-
-    /// Stores a chapter note; an empty/nil text removes it.
-    public func setChapterNote(_ text: String?, forKey key: String) {
-        if let text, !text.isEmpty {
-            chapterNotes[key] = text
-        } else {
-            chapterNotes.removeValue(forKey: key)
         }
     }
 
@@ -311,7 +282,6 @@ public final class PersonalData: ObservableObject {
                       installedModuleIDs: installedModuleIDs,
                       bookmarks: bookmarks,
                       verseNotes: verseNotes,
-                      chapterNotes: chapterNotes,
                       backedUpAt: Date())
     }
 
@@ -328,9 +298,6 @@ public final class PersonalData: ObservableObject {
         // Same guard for notes.
         if !payload.verseNotes.isEmpty {
             verseNotes = payload.verseNotes
-        }
-        if !payload.chapterNotes.isEmpty {
-            chapterNotes = payload.chapterNotes
         }
     }
 }
