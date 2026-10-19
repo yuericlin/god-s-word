@@ -183,7 +183,6 @@
 				4480D067D1C55ECE90727D77 /* BooksView.swift in Sources */,
 				05873CC235225784B7C0F264 /* ChaptersView.swift in Sources */,
 				DB0DB1C9B53F5D6689584DB6 /* ReaderView.swift in Sources */,
-				67FAF9C86F125E808C6566CE /* ReadingSettingsView.swift in Sources */,
 				663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */,
 				6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */,
 			);
