@@ -75,6 +75,9 @@ struct ReaderView: View {
                     }
                 }
             }
+            // Bookmark ribbons hanging from the top-right corner.
+            BookmarksRibbonsView(history: history)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             // Slide-in settings drawer, opened with a left-edge swipe.
             if showingSettings {
                 Color.black.opacity(0.25)

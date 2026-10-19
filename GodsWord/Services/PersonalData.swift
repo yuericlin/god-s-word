@@ -43,24 +43,27 @@ public struct HistoryEntry: Codable, Identifiable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 2
+    public var version: Int = 3
     public var fontSize: Double
     public var verseByVerse: Bool
     public var positions: [String: ReadingPosition]  // moduleID -> position
     public var installedModuleIDs: [String]
+    public var bookmarks: [Bookmark]
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false,
                 positions: [String: ReadingPosition], installedModuleIDs: [String],
-                backedUpAt: Date) {
+                bookmarks: [Bookmark] = [], backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
         self.positions = positions
         self.installedModuleIDs = installedModuleIDs
+        self.bookmarks = bookmarks
         self.backedUpAt = backedUpAt
     }
 
-    // Custom decoding so backups written before verseByVerse existed still load.
+    // Custom decoding so backups written before verseByVerse / bookmarks
+    // existed still load.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
@@ -68,6 +71,7 @@ public struct BackupPayload: Codable, Sendable {
         verseByVerse = try c.decodeIfPresent(Bool.self, forKey: .verseByVerse) ?? false
         positions = try c.decode([String: ReadingPosition].self, forKey: .positions)
         installedModuleIDs = try c.decode([String].self, forKey: .installedModuleIDs)
+        bookmarks = try c.decodeIfPresent([Bookmark].self, forKey: .bookmarks) ?? []
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -79,6 +83,7 @@ public final class PersonalData: ObservableObject {
     private let verseByVerseKey = "gw.verseByVerse.v1"
     private let historyLogKey = "gw.historyLog.v1"
     private let lastReadingKey = "gw.lastReading.v1"
+    private let bookmarksKey = "gw.bookmarks.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -94,6 +99,16 @@ public final class PersonalData: ObservableObject {
             log = []
         }
         self.historyLog = log
+        let marks: [Bookmark]
+        if let data = defaults.data(forKey: "gw.bookmarks.v1"),
+           let decoded = try? JSONDecoder().decode([Bookmark].self, from: data) {
+            marks = decoded
+        } else {
+            // Fresh install: start with named ribbons at Genesis 1.
+            marks = Bookmark.defaults
+            defaults.set(try? JSONEncoder().encode(marks), forKey: "gw.bookmarks.v1")
+        }
+        self.bookmarks = marks
     }
 
     @Published public var fontSize: Double {
@@ -111,6 +126,20 @@ public final class PersonalData: ObservableObject {
     @Published public var historyLog: [HistoryEntry] {
         didSet {
             defaults.set(try? JSONEncoder().encode(historyLog), forKey: historyLogKey)
+        }
+    }
+
+    /// Named ribbon bookmarks. Persisted in UserDefaults.
+    @Published public var bookmarks: [Bookmark] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(bookmarks), forKey: bookmarksKey)
+        }
+    }
+
+    /// Replaces the bookmark with the same id.
+    public func updateBookmark(_ bookmark: Bookmark) {
+        if let i = bookmarks.firstIndex(where: { $0.id == bookmark.id }) {
+            bookmarks[i] = bookmark
         }
     }
 
@@ -186,6 +215,7 @@ public final class PersonalData: ObservableObject {
                       verseByVerse: verseByVerse,
                       positions: positions,
                       installedModuleIDs: installedModuleIDs,
+                      bookmarks: bookmarks,
                       backedUpAt: Date())
     }
 
@@ -193,5 +223,10 @@ public final class PersonalData: ObservableObject {
         fontSize = payload.fontSize
         verseByVerse = payload.verseByVerse
         positions = payload.positions
+        // Old backups predate bookmarks (decode yields []); don't let
+        // those wipe the current ribbons.
+        if !payload.bookmarks.isEmpty {
+            bookmarks = payload.bookmarks
+        }
     }
 }
