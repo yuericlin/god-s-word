@@ -24,13 +24,31 @@ struct RibbonShape: Shape {
     }
 }
 
-/// A row of bookmark ribbons: single tap jumps, holding 3 seconds offers
-/// Mark (assign the current chapter) and Edit (name, color, book & chapter).
+/// A ribbon laid horizontally: rectangle with a V notch cut out of the right end.
+struct HorizontalRibbonShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let notchDepth: CGFloat = 12
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX - notchDepth, y: rect.midY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// A row of bookmark ribbons: single tap jumps, holding 1 second offers
+/// Mark, Edit and Delete. Two styles: mini (small vertical ribbons, color
+/// only, for the reading view) and labeled (horizontal ribbons showing
+/// name plus book and chapter, for the bookmarks panel).
 struct BookmarkRibbonsRow: View {
+    enum Style { case mini, labeled }
+
     let history: ReadingHistory
     let bookmarks: [Bookmark]
-    var ribbonWidth: CGFloat = 30
-    var ribbonHeight: CGFloat = 54
+    var style: Style = .mini
     var onJump: (Bookmark) -> Void
 
     @EnvironmentObject private var personalData: PersonalData
@@ -39,17 +57,20 @@ struct BookmarkRibbonsRow: View {
     @State private var editingBookmark: Bookmark?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
-            ForEach(bookmarks) { bookmark in
-                RibbonShape()
-                    .fill(bookmark.color.opacity(0.55))
-                    .frame(width: ribbonWidth, height: ribbonHeight)
-                    .contentShape(RibbonShape())
-                    .onTapGesture { onJump(bookmark) }
-                    .onLongPressGesture(minimumDuration: 1.0) {
-                        pendingBookmark = bookmark
-                        showingOptions = true
+        Group {
+            switch style {
+            case .mini:
+                HStack(alignment: .top, spacing: 6) {
+                    ForEach(bookmarks) { bookmark in
+                        miniRibbon(for: bookmark)
                     }
+                }
+            case .labeled:
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(bookmarks) { bookmark in
+                        labeledRibbon(for: bookmark)
+                    }
+                }
             }
         }
         .confirmationDialog(
@@ -83,6 +104,46 @@ struct BookmarkRibbonsRow: View {
         }
     }
 
+    /// Small vertical ribbon, color only.
+    private func miniRibbon(for bookmark: Bookmark) -> some View {
+        RibbonShape()
+            .fill(bookmark.color.opacity(0.55))
+            .frame(width: 24, height: 44)
+            .contentShape(RibbonShape())
+            .onTapGesture { onJump(bookmark) }
+            .onLongPressGesture(minimumDuration: 1.0) {
+                pendingBookmark = bookmark
+                showingOptions = true
+            }
+    }
+
+    /// Horizontal ribbon showing the bookmark's name plus book and chapter.
+    private func labeledRibbon(for bookmark: Bookmark) -> some View {
+        HorizontalRibbonShape()
+            .fill(bookmark.color.opacity(0.55))
+            .frame(height: 52)
+            .overlay(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(bookmark.name)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text(reference(for: bookmark))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .padding(.leading, 16)
+                .padding(.trailing, 28)
+            }
+            .contentShape(HorizontalRibbonShape())
+            .onTapGesture { onJump(bookmark) }
+            .onLongPressGesture(minimumDuration: 1.0) {
+                pendingBookmark = bookmark
+                showingOptions = true
+            }
+    }
+
     private func reference(for bookmark: Bookmark) -> String {
         let overall = bookmark.testament == 1
             ? bookmark.book - 1 : 39 + bookmark.book - 1
@@ -110,14 +171,14 @@ struct BookmarksPanel: View {
             }
             .padding()
 
-            // Small ribbons at the top-right corner, one per bookmark.
+            // Horizontal ribbons, one per bookmark, showing name plus book and chapter.
             BookmarkRibbonsRow(
                 history: history,
                 bookmarks: personalData.bookmarks,
+                style: .labeled,
                 onJump: { jump(to: $0) }
             )
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.trailing, 16)
+            .padding(.horizontal)
 
             if personalData.bookmarks.isEmpty {
                 Text("No bookmarks yet.")

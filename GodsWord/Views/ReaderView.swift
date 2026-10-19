@@ -86,8 +86,7 @@ struct ReaderView: View {
             if !currentMarks.isEmpty {
                 BookmarkRibbonsRow(history: history,
                                    bookmarks: currentMarks,
-                                   ribbonWidth: 28,
-                                   ribbonHeight: 50,
+                                   style: .mini,
                                    onJump: { _ in })
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     .padding(.trailing, 10)
