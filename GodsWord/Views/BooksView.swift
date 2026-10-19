@@ -23,7 +23,10 @@ struct BooksView: View {
         }
         .navigationTitle(history.module.info.description)
         .navigationBarTitleDisplayMode(.inline)
-        .stepBackOnRightEdge(path: $path)
+        .forwardOnRightEdge {
+            // Right-edge swipe: forward to the chapter picker.
+            path.append(Route.chapters)
+        }
     }
 
     private func bookButton(overall: Int, testament: Int, book: Int) -> some View {

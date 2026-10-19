@@ -33,6 +33,9 @@ struct ChaptersView: View {
         }
         .navigationTitle(history.bookTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .stepBackOnRightEdge(path: $path)
+        .forwardOnRightEdge {
+            // Right-edge swipe: forward to the reader.
+            path.append(Route.reader)
+        }
     }
 }

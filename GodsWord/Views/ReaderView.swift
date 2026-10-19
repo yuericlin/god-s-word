@@ -16,7 +16,6 @@ struct ReaderView: View {
     @State private var showingSettings = false
     @State private var showingFullSettings = false
     @State private var availableModules: [InstalledModule] = []
-    @State private var viewSize: CGSize = .zero
 
     /// Binding for the book picker: selecting a book jumps to its chapter 1.
     private var bookPickerSelection: Binding<Int> {
@@ -76,7 +75,6 @@ struct ReaderView: View {
                             }
                             .padding()
                         }
-                        .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
                     }
                 }
@@ -91,7 +89,6 @@ struct ReaderView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
-        .background(DrawerEdgeGesture { showingSettings = true }.frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
@@ -166,19 +163,11 @@ struct ReaderView: View {
             DragGesture(minimumDistance: 40, coordinateSpace: .local)
                 .onEnded { value in
                     guard !showingSettings else { return }
-                    let w = viewSize.width
-                    if value.startLocation.x < 28 && value.translation.width > 50 {
-                        // Left-edge swipe: open the settings drawer (fallback;
-                        // the UIKit edge recognizer handles it primarily).
-                        showingSettings = true
-                    } else if w > 0 && value.startLocation.x > w - 20 && value.translation.width < -40 {
-                        // Right-edge swipe: step back to the chapter picker.
-                        if !path.isEmpty, allowStepBack() { path.removeLast() }
-                    } else if value.translation.width < -60 {
-                        // Middle swipe left: next chapter.
+                    // Middle swipes turn chapters. Edge swipes are handled by
+                    // the system (left edge: back) and the forward overlay.
+                    if value.translation.width < -60 {
                         go(toChapter: history.chapter + 1)
                     } else if value.translation.width > 60 {
-                        // Middle swipe right: previous chapter.
                         go(toChapter: history.chapter - 1)
                     }
                 }
@@ -302,71 +291,6 @@ struct ReaderView: View {
                                         chapter: history.chapter)
         } catch {
             loadError = error.localizedDescription
-        }
-    }
-}
-
-/// Gives the settings drawer a hard claim on the left edge while reading.
-/// Installs a dedicated screen-edge pan recognizer on the navigation
-/// controller's view and makes the system's back-swipe wait for it
-/// (`require(toFail:)`), so a left-edge swipe reliably opens the drawer
-/// instead of popping back to the chapter list. Everything is installed on
-/// appear and torn down on disappear, so other screens keep their swipe-back.
-/// The "< Chapters" back button keeps working everywhere.
-private struct DrawerEdgeGesture: UIViewControllerRepresentable {
-    var onOpen: () -> Void
-
-    func makeUIViewController(context: Context) -> UIViewController {
-        EdgeGestureViewController(onOpen: onOpen)
-    }
-
-    func updateUIViewController(_ vc: UIViewController, context: Context) {
-        (vc as? EdgeGestureViewController)?.onOpen = onOpen
-    }
-
-    final class EdgeGestureViewController: UIViewController {
-        var onOpen: () -> Void
-        private weak var navView: UIView?
-        private var edgePan: UIScreenEdgePanGestureRecognizer?
-
-        init(onOpen: @escaping () -> Void) {
-            self.onOpen = onOpen
-            super.init(nibName: nil, bundle: nil)
-        }
-
-        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
-            guard let navController = navigationController,
-                  let navView = navigationController?.view,
-                  let pop = navController.interactivePopGestureRecognizer else { return }
-            if edgePan == nil {
-                let pan = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgePan(_:)))
-                pan.edges = .left
-                // The drawer wins the left edge; the back button still pops.
-                pop.require(toFail: pan)
-                navView.addGestureRecognizer(pan)
-                edgePan = pan
-            }
-            self.navView = navView
-            navController.interactivePopGestureRecognizer?.isEnabled = false
-        }
-
-        override func viewWillDisappear(_ animated: Bool) {
-            super.viewWillDisappear(animated)
-            if let pan = edgePan {
-                navView?.removeGestureRecognizer(pan)
-                edgePan = nil
-            }
-            navView = nil
-            navigationController?.interactivePopGestureRecognizer?.isEnabled = true
-        }
-
-        @objc private func handleEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {
-            if recognizer.state == .ended {
-                onOpen()
-            }
         }
     }
 }

@@ -97,6 +97,12 @@ struct LibraryView: View {
                     }
                 }
             }
+            .forwardOnRightEdge {
+                // Right-edge swipe: forward to the book picker (if reading).
+                if history != nil {
+                    path.append(Route.books)
+                }
+            }
         }
         .onAppear(perform: refresh)
     }
