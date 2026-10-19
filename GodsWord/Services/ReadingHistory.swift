@@ -1,0 +1,51 @@
+// ReadingHistory.swift — shared, observable record of the current reading
+// selection (version/book/chapter). The version picker, book picker, chapter
+// picker, and the reader all read from and write to this one object, so
+// stepping back through the pickers always reflects the current selection.
+
+import SwiftUI
+import SwordReader
+
+@Observable
+final class ReadingHistory {
+    var module: InstalledModule
+    var testament: Int  // 1 = Old Testament, 2 = New Testament
+    var book: Int       // 1-based within the testament
+    var chapter: Int    // 1-based
+
+    init(module: InstalledModule, testament: Int = 1, book: Int = 1, chapter: Int = 1) {
+        self.module = module
+        self.testament = testament
+        self.book = book
+        self.chapter = chapter
+    }
+
+    /// 0-based index across the whole Bible (0–65).
+    var overallBookIndex: Int {
+        testament == 1 ? book - 1 : 39 + book - 1
+    }
+
+    func bookName(overall: Int) -> String {
+        module.info.isChinese ? BibleBookNamesZhHans[overall] : Versification.kjv.books[overall].name
+    }
+
+    var bookTitle: String {
+        bookName(overall: overallBookIndex)
+    }
+
+    var chapterCount: Int {
+        module.info.versification?.book(testament: testament, book: book)?.chapters ?? 0
+    }
+
+    /// Select a book by its 0-based overall index; jumps to its chapter 1.
+    func setBook(overall: Int) {
+        if overall < 39 {
+            testament = 1
+            book = overall + 1
+        } else {
+            testament = 2
+            book = overall - 39 + 1
+        }
+        chapter = 1
+    }
+}

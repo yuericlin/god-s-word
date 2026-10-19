@@ -1,37 +1,46 @@
 // BooksView.swift — the 66 books, grouped Old / New Testament.
+// Reads the shared ReadingHistory so the current book stays highlighted.
 
 import SwiftUI
 import SwordReader
 
 struct BooksView: View {
-    let module: InstalledModule
+    let history: ReadingHistory
     @Binding var path: NavigationPath
-
-    private var useChinese: Bool { module.info.isChinese }
-
-    private func bookName(overallIndex: Int) -> String {
-        if useChinese { return BibleBookNamesZhHans[overallIndex] }
-        return Versification.kjv.books[overallIndex].name
-    }
 
     var body: some View {
         List {
             Section("Old Testament") {
                 ForEach(0 ..< 39, id: \.self) { i in
-                    NavigationLink(value: Route.chapters(moduleID: module.id, testament: 1, book: i + 1)) {
-                        Text(bookName(overallIndex: i))
-                    }
+                    bookButton(overall: i, testament: 1, book: i + 1)
                 }
             }
             Section("New Testament") {
                 ForEach(0 ..< 27, id: \.self) { i in
-                    NavigationLink(value: Route.chapters(moduleID: module.id, testament: 2, book: i + 1)) {
-                        Text(bookName(overallIndex: 39 + i))
-                    }
+                    bookButton(overall: 39 + i, testament: 2, book: i + 1)
                 }
             }
         }
-        .navigationTitle(module.info.description)
+        .navigationTitle(history.module.info.description)
         .navigationBarTitleDisplayMode(.inline)
+        .stepBackOnRightEdge(path: $path)
+    }
+
+    private func bookButton(overall: Int, testament: Int, book: Int) -> some View {
+        Button {
+            history.testament = testament
+            history.book = book
+            history.chapter = 1
+            path.append(Route.chapters)
+        } label: {
+            HStack {
+                Text(history.bookName(overall: overall))
+                if history.overallBookIndex == overall {
+                    Spacer()
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
     }
 }

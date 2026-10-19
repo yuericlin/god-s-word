@@ -1,54 +1,50 @@
 // ReaderView.swift — renders one chapter at a time.
+// Reads and writes the shared ReadingHistory, so the pickers and the
+// version menu always reflect the current selection.
 
 import SwiftUI
 import SwordReader
 
 struct ReaderView: View {
-    let module: InstalledModule
-    @State var testament: Int
-    @State var book: Int
-    @State var chapter: Int
+    let history: ReadingHistory
     @Binding var path: NavigationPath
 
+    @Environment(\.moduleStore) private var store
     @EnvironmentObject private var personalData: PersonalData
     @State private var verses: [(verse: Int, text: String)] = []
     @State private var loadError: String?
     @State private var showingSettings = false
     @State private var showingFullSettings = false
-
-    private var bookTitle: String {
-        bookName(overall: testament == 1 ? book - 1 : 39 + book - 1)
-    }
-
-    private func bookName(overall: Int) -> String {
-        module.info.isChinese ? BibleBookNamesZhHans[overall] : Versification.kjv.books[overall].name
-    }
+    @State private var availableModules: [InstalledModule] = []
+    @State private var viewSize: CGSize = .zero
 
     /// Binding for the book picker: selecting a book jumps to its chapter 1.
     private var bookPickerSelection: Binding<Int> {
         Binding(
-            get: { testament == 1 ? book - 1 : 39 + book - 1 },
-            set: { overall in
-                if overall < 39 {
-                    testament = 1
-                    book = overall + 1
-                } else {
-                    testament = 2
-                    book = overall - 39 + 1
-                }
-                chapter = 1
-            }
+            get: { history.overallBookIndex },
+            set: { history.setBook(overall: $0) }
         )
     }
 
     private var chapterPickerSelection: Binding<Int> {
-        Binding(get: { chapter }, set: { go(toChapter: $0) })
+        Binding(get: { history.chapter }, set: { go(toChapter: $0) })
     }
 
-    private var v11n: Versification? { module.info.versification }
-
-    private var chapterCount: Int {
-        v11n?.book(testament: testament, book: book)?.chapters ?? 0
+    /// Binding for the version picker next to the book title. Keeps the same
+    /// reference, clamped to the new version's chapter count.
+    private var versionSelection: Binding<String> {
+        Binding(
+            get: { history.module.id },
+            set: { newID in
+                guard newID != history.module.id,
+                      let mod = availableModules.first(where: { $0.id == newID }) else { return }
+                history.module = mod
+                let count = history.chapterCount
+                if history.chapter > count {
+                    history.chapter = max(count, 1)
+                }
+            }
+        )
     }
 
     var body: some View {
@@ -80,7 +76,8 @@ struct ReaderView: View {
                             }
                             .padding()
                         }
-                        .onChange(of: chapter) { proxy.scrollTo("top", anchor: .top) }
+                        .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
+                        .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
                     }
                 }
             }
@@ -98,52 +95,70 @@ struct ReaderView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Menu {
-                    Picker("Book", selection: bookPickerSelection) {
-                        ForEach(0..<66, id: \.self) { i in
-                            Text(bookName(overall: i)).tag(i)
+                HStack(spacing: 8) {
+                    Menu {
+                        Picker("Version", selection: versionSelection) {
+                            ForEach(availableModules, id: \.id) { mod in
+                                Text(mod.id).tag(mod.id)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 2) {
+                            Text(history.module.id)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.down")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("\(bookTitle) \(chapter)")
-                            .font(.headline)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                    Menu {
+                        Picker("Book", selection: bookPickerSelection) {
+                            ForEach(0..<66, id: \.self) { i in
+                                Text(history.bookName(overall: i)).tag(i)
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(history.bookTitle)
+                                .font(.headline)
+                            Image(systemName: "chevron.down")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
             ToolbarItem(placement: .bottomBar) {
                 HStack {
-                    Button { go(toChapter: chapter - 1) } label: {
+                    Button { go(toChapter: history.chapter - 1) } label: {
                         Label("Previous", systemImage: "chevron.left")
                     }
-                    .disabled(!canGo(toChapter: chapter - 1))
+                    .disabled(!canGo(toChapter: history.chapter - 1))
                     Spacer()
-                    if chapterCount > 0 {
+                    if history.chapterCount > 0 {
                         Menu {
                             Picker("Chapter", selection: chapterPickerSelection) {
-                                ForEach(1...chapterCount, id: \.self) { c in
+                                ForEach(1...history.chapterCount, id: \.self) { c in
                                     Text("\(c)").tag(c)
                                 }
                             }
                         } label: {
                             HStack(spacing: 4) {
-                                Text("\(chapter) / \(chapterCount)")
+                                Text("\(history.chapter) / \(history.chapterCount)")
                                 Image(systemName: "chevron.down")
                             }
                             .font(.caption).foregroundStyle(.secondary)
                         }
                     } else {
-                        Text("\(chapter) / \(chapterCount)")
+                        Text("\(history.chapter) / \(history.chapterCount)")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button { go(toChapter: chapter + 1) } label: {
+                    Button { go(toChapter: history.chapter + 1) } label: {
                         Label("Next", systemImage: "chevron.right")
                     }
-                    .disabled(!canGo(toChapter: chapter + 1))
+                    .disabled(!canGo(toChapter: history.chapter + 1))
                 }
             }
         }
@@ -151,14 +166,25 @@ struct ReaderView: View {
             DragGesture(minimumDistance: 40, coordinateSpace: .local)
                 .onEnded { value in
                     guard !showingSettings else { return }
+                    let w = viewSize.width
                     if value.startLocation.x < 28 && value.translation.width > 50 {
-                        // Left-edge swipe: open the settings drawer.
+                        // Left-edge swipe: open the settings drawer (fallback;
+                        // the UIKit edge recognizer handles it primarily).
                         showingSettings = true
-                    } else if value.translation.width < -60 { go(toChapter: chapter + 1) }
-                    else if value.translation.width > 60 { go(toChapter: chapter - 1) }
+                    } else if w > 0 && value.startLocation.x > w - 20 && value.translation.width < -40 {
+                        // Right-edge swipe: step back to the chapter picker.
+                        if !path.isEmpty { path.removeLast() }
+                    } else if value.translation.width < -60 {
+                        // Middle swipe left: next chapter.
+                        go(toChapter: history.chapter + 1)
+                    } else if value.translation.width > 60 {
+                        // Middle swipe right: previous chapter.
+                        go(toChapter: history.chapter - 1)
+                    }
                 }
         )
         .task(id: chapterKey) { await load() }
+        .onAppear { availableModules = store.installedModules() }
         .sheet(isPresented: $showingFullSettings) { SettingsView() }
     }
 
@@ -206,16 +232,18 @@ struct ReaderView: View {
         .background(.regularMaterial)
     }
 
-    private var chapterKey: String { "\(testament)-\(book)-\(chapter)" }
+    private var chapterKey: String {
+        "\(history.module.id)-\(history.testament)-\(history.book)-\(history.chapter)"
+    }
 
     private func canGo(toChapter c: Int) -> Bool {
         // Same-book navigation only; cross-book comes via the chapter picker.
-        c >= 1 && c <= chapterCount
+        c >= 1 && c <= history.chapterCount
     }
 
     private func go(toChapter c: Int) {
         guard canGo(toChapter: c) else { return }
-        chapter = c
+        history.chapter = c
     }
 
     private func attributedVerse(number: Int, text: String) -> AttributedString {
@@ -241,15 +269,18 @@ struct ReaderView: View {
     private func load() async {
         loadError = nil
         do {
-            let mod = try await ModuleLoader.shared.module(for: module)
-            let rendered = mod.chapter(testament: testament, book: book, chapter: chapter)
+            let mod = try await ModuleLoader.shared.module(for: history.module)
+            let rendered = mod.chapter(testament: history.testament, book: history.book,
+                                       chapter: history.chapter)
             guard !rendered.isEmpty else {
                 loadError = "This chapter has no text in this version."
                 return
             }
             verses = rendered
-            personalData.savePosition(ReadingPosition(testament: testament, book: book, chapter: chapter),
-                                      for: module.id)
+            personalData.savePosition(ReadingPosition(testament: history.testament,
+                                                      book: history.book,
+                                                      chapter: history.chapter),
+                                      for: history.module.id)
         } catch {
             loadError = error.localizedDescription
         }

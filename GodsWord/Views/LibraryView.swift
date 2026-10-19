@@ -3,10 +3,13 @@
 import SwiftUI
 import SwordReader
 
+/// Drill-down order: versions -> books -> chapters -> reader.
+/// The screens share one ReadingHistory, so stepping back always shows the
+/// current selection.
 enum Route: Hashable {
-    case books(moduleID: String)
-    case chapters(moduleID: String, testament: Int, book: Int)
-    case reader(moduleID: String, testament: Int, book: Int, chapter: Int)
+    case books
+    case chapters
+    case reader
 }
 
 struct LibraryView: View {
@@ -14,6 +17,7 @@ struct LibraryView: View {
     @EnvironmentObject private var personalData: PersonalData
     @State private var modules: [InstalledModule] = []
     @State private var path = NavigationPath()
+    @State private var history: ReadingHistory?
     @State private var showingRepository = false
     @State private var showingSettings = false
 
@@ -29,10 +33,20 @@ struct LibraryView: View {
                 } else {
                     List {
                         ForEach(modules) { mod in
-                            NavigationLink(value: Route.books(moduleID: mod.id)) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(mod.info.description).font(.headline)
-                                    Text(mod.info.id).font(.caption).foregroundStyle(.secondary)
+                            Button {
+                                history = ReadingHistory(module: mod)
+                                path.append(Route.books)
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(mod.info.description).font(.headline)
+                                        Text(mod.info.id).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    if history?.module.id == mod.id {
+                                        Spacer()
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }
@@ -60,18 +74,14 @@ struct LibraryView: View {
                 SettingsView()
             }
             .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .books(let moduleID):
-                    if let mod = modules.first(where: { $0.id == moduleID }) {
-                        BooksView(module: mod, path: $path)
-                    }
-                case .chapters(let moduleID, let testament, let book):
-                    if let mod = modules.first(where: { $0.id == moduleID }) {
-                        ChaptersView(module: mod, testament: testament, book: book, path: $path)
-                    }
-                case .reader(let moduleID, let testament, let book, let chapter):
-                    if let mod = modules.first(where: { $0.id == moduleID }) {
-                        ReaderView(module: mod, testament: testament, book: book, chapter: chapter, path: $path)
+                if let history {
+                    switch route {
+                    case .books:
+                        BooksView(history: history, path: $path)
+                    case .chapters:
+                        ChaptersView(history: history, path: $path)
+                    case .reader:
+                        ReaderView(history: history, path: $path)
                     }
                 }
             }

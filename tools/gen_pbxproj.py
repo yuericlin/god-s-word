@@ -23,6 +23,7 @@ sources = [
     "GodsWord/Services/PersonalData.swift",
     "GodsWord/Services/GoogleDriveBackup.swift",
     "GodsWord/Services/ModuleLoader.swift",
+    "GodsWord/Services/ReadingHistory.swift",
     "GodsWord/Views/LibraryView.swift",
     "GodsWord/Views/BooksView.swift",
     "GodsWord/Views/ChaptersView.swift",
@@ -30,6 +31,7 @@ sources = [
     "GodsWord/Views/ReadingSettingsView.swift",
     "GodsWord/Views/RepositoryView.swift",
     "GodsWord/Views/SettingsView.swift",
+    "GodsWord/Views/StepBackEdge.swift",
 ]
 resources = [
     "GodsWord/Assets.xcassets",
