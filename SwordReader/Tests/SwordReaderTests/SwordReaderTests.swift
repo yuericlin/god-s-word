@@ -233,17 +233,17 @@ final class StrongsTests: XCTestCase {
 
     func testTokensFromKJVGen1v1() {
         // Real KJV Genesis 1:1 raw markup (verified against CrossWire).
+        // Segments split at <w> boundaries; concatenating reproduces plain.
         let raw = #"<w lemma="strong:H07225">In the beginning</w> <w lemma="strong:H0430">God</w> <w lemma="strong:H0853 strong:H01254" morph="strongMorph:TH8804">created</w> <w lemma="strong:H08064">the heaven</w> <w lemma="strong:H0853">and</w> <w lemma="strong:H0776">the earth</w>."#
         let tokens = OsisTokens.tokensWithStrongs(from: raw)
         let texts = tokens.map { $0.text }
-        XCTAssertEqual(texts, ["In", "the", "beginning", "God", "created",
-                               "the", "heaven", "and", "the", "earth."])
+        XCTAssertEqual(texts, ["In the beginning", " ", "God", " ", "created",
+                               " ", "the heaven", " ", "and", " ", "the earth", "."])
         XCTAssertEqual(tokens[0].strongs, ["H7225"])
-        XCTAssertEqual(tokens[1].strongs, ["H7225"])
+        XCTAssertEqual(tokens[2].strongs, ["H430"])
         XCTAssertEqual(tokens[4].strongs, ["H853", "H1254"])
-        XCTAssertEqual(tokens[9].strongs, ["H776"])
-        // Rejoining reproduces the plain text.
-        XCTAssertEqual(texts.joined(separator: " "), OsisPlain.plainText(from: raw))
+        XCTAssertEqual(tokens[10].strongs, ["H776"])
+        XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
     }
 
     func testStrongsNumberParsing() {
@@ -329,13 +329,13 @@ final class StrongsTests: XCTestCase {
         XCTAssertEqual(OsisPlain.plainText(from: "<w>x</w>"), "x")
     }
 
-    /// Verse starting with a <w> tag: flushTextRun sees an empty run.
+    /// Verse starting with a <w> tag: no leading segment.
     func testTokensVerseStartingWithW() {
         let tokens = OsisTokens.tokensWithStrongs(
             from: "<w lemma=\"strong:H07225\">In</w> <w lemma=\"strong:H0430\">God</w>")
-        XCTAssertEqual(tokens.map(\.text), ["In", "God"])
+        XCTAssertEqual(tokens.map(\.text), ["In", " ", "God"])
         XCTAssertEqual(tokens[0].strongs, ["H7225"])
-        XCTAssertEqual(tokens[1].strongs, ["H430"])
+        XCTAssertEqual(tokens[2].strongs, ["H430"])
     }
 
     /// Leading whitespace and empty <w></w> pairs must not crash either.
@@ -351,9 +351,9 @@ final class StrongsTests: XCTestCase {
     func testTokensSelfClosingW() {
         let raw = #"<w lemma="strong:G3588" src="18"/><w lemma="strong:G1161">de</w> <w lemma="strong:G2424">Jesus</w>"#
         let tokens = OsisTokens.tokensWithStrongs(from: raw)
-        XCTAssertEqual(tokens.map(\.text), ["de", "Jesus"])
+        XCTAssertEqual(tokens.map(\.text), ["de", " ", "Jesus"])
         XCTAssertEqual(tokens[0].strongs, ["G1161"])
-        XCTAssertEqual(tokens[1].strongs, ["G2424"])
+        XCTAssertEqual(tokens[2].strongs, ["G2424"])
     }
 
     /// Punctuation glued to words in the plain text stays glued, with the
@@ -362,8 +362,24 @@ final class StrongsTests: XCTestCase {
         let raw = #"<w lemma="strong:H06625">And Pathrusim</w>, (<w lemma="strong:H03695">and Casluhim</w>)"#
         let tokens = OsisTokens.tokensWithStrongs(from: raw)
         let texts = tokens.map { $0.text }
-        XCTAssertEqual(texts, ["And", "Pathrusim,", "(and", "Casluhim)"])
+        XCTAssertEqual(texts, ["And Pathrusim", ", (", "and Casluhim", ")"])
+        XCTAssertEqual(tokens[0].strongs, ["H6625"])
         XCTAssertEqual(tokens[2].strongs, ["H3695"])
-        XCTAssertEqual(texts.joined(separator: " "), OsisPlain.plainText(from: raw))
+        XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
+    }
+
+    /// Chinese (no spaces): numbers distribute to each <w> word instead of
+    /// piling onto one space-separated "word". Real ChiUns Gen 1:1 markup.
+    func testTokensChineseDistributes() {
+        let raw = #"<w lemma="strong:H09002 strong:H07225">起初</w>，　<w lemma="strong:H0430">神</w><w lemma="strong:H01254 strong:H8804 strong:H0853">创造</w><w lemma="strong:H08064 strong:H0853">天</w><w lemma="strong:H0776">地</w>。"#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        let texts = tokens.map { $0.text }
+        XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
+        XCTAssertEqual(texts, ["起初", "，　", "神", "创造", "天", "地", "。"])
+        XCTAssertEqual(tokens[0].strongs, ["H9002", "H7225"])
+        XCTAssertEqual(tokens[2].strongs, ["H430"])
+        XCTAssertEqual(tokens[3].strongs, ["H1254", "H8804", "H853"])
+        XCTAssertEqual(tokens[4].strongs, ["H8064", "H853"])
+        XCTAssertEqual(tokens[5].strongs, ["H776"])
     }
 }

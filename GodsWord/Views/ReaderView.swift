@@ -363,11 +363,13 @@ struct ReaderView: View {
         return num
     }
 
-    /// Verse text from word tokens, with tappable Strong's numbers inline.
+    /// Verse text from segments, with Strong's numbers after the segment
+    /// they belong to. Segments concatenate directly (they already carry
+    /// their spacing); numbers render small and raised.
     private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
         var out = attributedVerseNumber(number)
-        for (i, token) in tokens.enumerated() {
-            if i > 0 { out += AttributedString(" ") }
+        out += AttributedString(" ")
+        for token in tokens {
             out += AttributedString(token.text)
             for key in token.strongs {
                 out += attributedStrongsNumber(key)

@@ -45,6 +45,19 @@ public struct ModuleInfo: Sendable {
         conf.allValues["GlobalOptionFilter"]?.contains("OSISStrongs") ?? false
     }
 
+    /// Directory holding the module's data files, relative to the module
+    /// root with no leading "./" and a trailing "/". Bible DataPaths end
+    /// with "/" and are already directories; lexicon DataPaths name the
+    /// file base (e.g. ".../strongshebrew/strongshebrew"), so the last
+    /// component is dropped.
+    public var dataDir: String {
+        var p = dataPath
+        if p.hasPrefix("./") { p = String(p.dropFirst(2)) }
+        if p.hasSuffix("/") { return p }
+        guard let slash = p.lastIndex(of: "/") else { return "" }
+        return String(p[...slash])
+    }
+
     private let conf: SwordConf
 
     public init(conf: SwordConf) {

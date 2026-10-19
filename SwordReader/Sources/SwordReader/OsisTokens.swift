@@ -9,7 +9,10 @@
 
 import Foundation
 
-/// One word of verse text with its Strong's numbers (possibly empty).
+/// One run of verse text with the Strong's numbers anchored after it.
+/// `text` is a `<w>`'s inner text (carrying its numbers) or the plain text
+/// between `<w>`s (empty numbers) — concatenating segments reproduces the
+/// plain verse text exactly.
 public struct WordToken: Sendable {
     public let text: String
     /// Normalized Strong's numbers, e.g. ["H7225", "G26"].
@@ -22,15 +25,16 @@ public struct WordToken: Sendable {
 }
 
 public enum OsisTokens {
-    /// Tokenizes OSIS verse markup, capturing Strong's numbers.
+    /// Tokenizes OSIS verse markup into segments, capturing Strong's numbers.
     ///
-    /// Words come from the plain-text rendering itself, so rejoining the
-    /// tokens with spaces always reproduces the plain verse text. Each
-    /// `<w>...</w>` is located in that plain text (in document order) and
-    /// its Strong's numbers attach to every plain word it overlaps —
-    /// covering multi-word `<w>`s ("In the beginning"), punctuation glued
-    /// to words ("(For", "David.Hear"), and self-closing `<w/>` tags,
-    /// which carry no word and are skipped.
+    /// The plain text is split at `<w>...</w>` boundaries (located in
+    /// document order): each `<w>` becomes a segment carrying its numbers,
+    /// and the text between `<w>`s becomes a number-less segment. This
+    /// distributes numbers next to the words they belong to — including
+    /// Chinese, which has no spaces to split on — instead of piling them
+    /// onto space-separated words. Concatenating the segments reproduces
+    /// the plain verse text exactly. Self-closing `<w/>` tags carry no
+    /// word and are skipped.
     public static func tokensWithStrongs(from osis: String) -> [WordToken] {
         let s = OsisPlain.removeNotes(osis)
         let plain = OsisPlain.plainText(from: s)
@@ -70,17 +74,18 @@ public enum OsisTokens {
             i = close.upperBound
         }
 
-        // Plain words (single spaces: plainText collapses whitespace).
+        // Split the plain text at the <w> boundaries.
         var tokens = [WordToken]()
-        var wi = plain.startIndex
-        while wi < plain.endIndex {
-            let wEnd = plain[wi...].firstIndex(of: " ") ?? plain.endIndex
-            var strongs = [String]()
-            for r in ranges where r.range.lowerBound < wEnd && r.range.upperBound > wi {
-                for st in r.strongs where !strongs.contains(st) { strongs.append(st) }
+        var pos = plain.startIndex
+        for r in ranges {
+            if pos < r.range.lowerBound {
+                tokens.append(WordToken(text: String(plain[pos ..< r.range.lowerBound])))
             }
-            tokens.append(WordToken(text: String(plain[wi ..< wEnd]), strongs: strongs))
-            wi = wEnd == plain.endIndex ? wEnd : plain.index(after: wEnd)
+            tokens.append(WordToken(text: String(plain[r.range]), strongs: r.strongs))
+            pos = r.range.upperBound
+        }
+        if pos < plain.endIndex {
+            tokens.append(WordToken(text: String(plain[pos...])))
         }
         return tokens
     }

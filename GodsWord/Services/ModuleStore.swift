@@ -43,8 +43,7 @@ public final class ModuleStore: Sendable {
             else { continue }
             let conf = SwordConf(text: text)
             let info = ModuleInfo(conf: conf)
-            let dataPath = info.dataPath.replacingOccurrences(of: "./", with: "")
-            let moduleDir = dir.appendingPathComponent(dataPath, isDirectory: true)
+            let moduleDir = dir.appendingPathComponent(info.dataDir, isDirectory: true)
             out.append(InstalledModule(id: info.id, info: info, moduleDir: moduleDir))
         }
         return out.sorted { $0.info.description < $1.info.description }
@@ -80,9 +79,8 @@ public final class ModuleStore: Sendable {
               let finalText = try? String(contentsOf: finalConf, encoding: .utf8)
         else { throw ModuleStoreError.noConfFound }
         let info = ModuleInfo(conf: SwordConf(text: finalText))
-        let dataPath = info.dataPath.replacingOccurrences(of: "./", with: "")
         return InstalledModule(id: info.id, info: info,
-                               moduleDir: dest.appendingPathComponent(dataPath, isDirectory: true))
+                               moduleDir: dest.appendingPathComponent(info.dataDir, isDirectory: true))
     }
 
     public func delete(_ moduleID: String) throws {
