@@ -12,12 +12,32 @@ struct SettingsView: View {
     @State private var message: String?
     @State private var showingRestoreConfirm = false
     @State private var pendingRestore: BackupPayload?
+    /// Called when the user taps a history entry; the presenter navigates.
+    var onSelectHistoryEntry: ((HistoryEntry) -> Void)?
 
     var body: some View {
         NavigationStack {
             List {
                 Section("Reading") {
                     ReadingSettingsView()
+                }
+
+                Section("History") {
+                    NavigationLink {
+                        HistoryView(onSelect: { entry in
+                            dismiss()
+                            onSelectHistoryEntry?(entry)
+                        })
+                    } label: {
+                        HStack {
+                            Text("Reading History")
+                            Spacer()
+                            if !personalData.historyLog.isEmpty {
+                                Text("\(personalData.historyLog.count)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
 
                 Section {

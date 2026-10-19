@@ -32,6 +32,7 @@ sources = [
     "GodsWord/Views/RepositoryView.swift",
     "GodsWord/Views/SettingsView.swift",
     "GodsWord/Views/StepBackEdge.swift",
+    "GodsWord/Views/HistoryView.swift",
 ]
 resources = [
     "GodsWord/Assets.xcassets",

@@ -173,7 +173,7 @@ struct ReaderView: View {
                         showingSettings = true
                     } else if w > 0 && value.startLocation.x > w - 20 && value.translation.width < -40 {
                         // Right-edge swipe: step back to the chapter picker.
-                        if !path.isEmpty { path.removeLast() }
+                        if !path.isEmpty, allowStepBack() { path.removeLast() }
                     } else if value.translation.width < -60 {
                         // Middle swipe left: next chapter.
                         go(toChapter: history.chapter + 1)
@@ -185,7 +185,17 @@ struct ReaderView: View {
         )
         .task(id: chapterKey) { await load() }
         .onAppear { availableModules = store.installedModules() }
-        .sheet(isPresented: $showingFullSettings) { SettingsView() }
+        .sheet(isPresented: $showingFullSettings) {
+            SettingsView(onSelectHistoryEntry: { entry in
+                if let mod = availableModules.first(where: { $0.id == entry.moduleID }) {
+                    history.module = mod
+                    history.testament = entry.testament
+                    history.book = entry.book
+                    history.chapter = entry.chapter
+                }
+                showingFullSettings = false
+            })
+        }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.
@@ -281,6 +291,15 @@ struct ReaderView: View {
                                                       book: history.book,
                                                       chapter: history.chapter),
                                       for: history.module.id)
+            personalData.saveLastReading(moduleID: history.module.id,
+                                          testament: history.testament,
+                                          book: history.book,
+                                          chapter: history.chapter)
+            personalData.recordHistory(moduleID: history.module.id,
+                                        bookName: history.bookTitle,
+                                        testament: history.testament,
+                                        book: history.book,
+                                        chapter: history.chapter)
         } catch {
             loadError = error.localizedDescription
         }

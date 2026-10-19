@@ -4,6 +4,17 @@
 
 import SwiftUI
 
+/// Guards against a single long swipe cascading through multiple levels:
+/// step-backs are rate-limited to one per 0.5s across all edge zones.
+private var lastStepBackAt = Date.distantPast
+
+func allowStepBack() -> Bool {
+    let now = Date()
+    guard now.timeIntervalSince(lastStepBackAt) > 0.5 else { return false }
+    lastStepBackAt = now
+    return true
+}
+
 struct StepBackEdge: ViewModifier {
     @Binding var path: NavigationPath
 
@@ -16,7 +27,7 @@ struct StepBackEdge: ViewModifier {
                 .gesture(
                     DragGesture(minimumDistance: 20, coordinateSpace: .local)
                         .onEnded { value in
-                            if value.translation.width < -40, !path.isEmpty {
+                            if value.translation.width < -40, !path.isEmpty, allowStepBack() {
                                 path.removeLast()
                             }
                         }

@@ -20,6 +20,7 @@ struct LibraryView: View {
     @State private var history: ReadingHistory?
     @State private var showingRepository = false
     @State private var showingSettings = false
+    @State private var didRestoreLastReading = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -71,7 +72,18 @@ struct LibraryView: View {
                 RepositoryView()
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsView()
+                SettingsView(onSelectHistoryEntry: { entry in
+                    if let mod = modules.first(where: { $0.id == entry.moduleID }) {
+                        history = ReadingHistory(module: mod,
+                                                 testament: entry.testament,
+                                                 book: entry.book,
+                                                 chapter: entry.chapter)
+                        path = NavigationPath()
+                        path.append(Route.books)
+                        path.append(Route.chapters)
+                        path.append(Route.reader)
+                    }
+                })
             }
             .navigationDestination(for: Route.self) { route in
                 if let history {
@@ -91,6 +103,28 @@ struct LibraryView: View {
 
     private func refresh() {
         modules = store.installedModules()
+        restoreLastReading()
+    }
+
+    /// On first launch, picks up where the user left off.
+    private func restoreLastReading() {
+        guard !didRestoreLastReading else { return }
+        didRestoreLastReading = true
+        guard let last = personalData.loadLastReading(),
+              last.testament == 1 || last.testament == 2,
+              let mod = modules.first(where: { $0.id == last.moduleID })
+        else { return }
+        let maxBook = last.testament == 1 ? 39 : 27
+        guard last.book >= 1 && last.book <= maxBook else { return }
+        let h = ReadingHistory(module: mod, testament: last.testament,
+                               book: last.book, chapter: max(last.chapter, 1))
+        if h.chapter > h.chapterCount {
+            h.chapter = max(h.chapterCount, 1)
+        }
+        history = h
+        path.append(Route.books)
+        path.append(Route.chapters)
+        path.append(Route.reader)
     }
 
     private func delete(at offsets: IndexSet) {
