@@ -143,6 +143,11 @@ public final class PersonalData: ObservableObject {
         }
     }
 
+    /// Removes the bookmark with the same id.
+    public func deleteBookmark(_ bookmark: Bookmark) {
+        bookmarks.removeAll { $0.id == bookmark.id }
+    }
+
     /// Creates a bookmark at the given location. The ribbon color comes
     /// from the default palette in creation order.
     @discardableResult

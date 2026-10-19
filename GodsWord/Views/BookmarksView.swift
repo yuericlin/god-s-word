@@ -69,6 +69,11 @@ struct BookmarkRibbonsRow: View {
             Button("Edit") {
                 editingBookmark = pendingBookmark
             }
+            Button("Delete", role: .destructive) {
+                if let b = pendingBookmark {
+                    personalData.deleteBookmark(b)
+                }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Mark assigns the chapter you are reading to this bookmark. Edit changes its name, color, book and chapter.")
