@@ -153,4 +153,27 @@ public final class SwordModule: @unchecked Sendable {
         }
         return out
     }
+
+    /// Word tokens with Strong's numbers for one verse, or nil when the
+    /// module has no entry for the verse.
+    public func verseTokens(testament: Int, book: Int, chapter: Int, verse: Int) -> [WordToken]? {
+        rawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
+            .map { OsisTokens.tokensWithStrongs(from: $0) }
+    }
+
+    /// All verses of a chapter as (verseNumber, word tokens), skipping empty entries.
+    public func chapterTokens(testament: Int, book: Int, chapter: Int)
+        -> [(verse: Int, tokens: [WordToken])]
+    {
+        guard let count = versification.verseCount(testament: testament, book: book, chapter: chapter)
+        else { return [] }
+        var out = [(verse: Int, tokens: [WordToken])]()
+        out.reserveCapacity(count)
+        for v in 1 ... count {
+            if let t = verseTokens(testament: testament, book: book, chapter: chapter, verse: v) {
+                out.append((verse: v, tokens: t))
+            }
+        }
+        return out
+    }
 }

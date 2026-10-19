@@ -62,7 +62,7 @@ public enum OsisPlain {
     }
 
     /// Removes <note ...>...</note> blocks (footnotes, cross-references).
-    private static func removeNotes(_ s: String) -> String {
+    static func removeNotes(_ s: String) -> String {
         var out = ""
         out.reserveCapacity(s.count)
         var i = s.startIndex

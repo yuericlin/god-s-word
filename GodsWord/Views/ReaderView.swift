@@ -12,14 +12,22 @@ struct ReaderView: View {
     @Environment(\.moduleStore) private var store
     @EnvironmentObject private var personalData: PersonalData
     @State private var verses: [(verse: Int, text: String)] = []
+    @State private var verseTokens: [(verse: Int, tokens: [WordToken])] = []
     @State private var loadError: String?
     @State private var showingSettings = false
     @State private var showingFullSettings = false
     @State private var showingHistory = false
     @State private var showingBookChapterPicker = false
     @State private var showingBookmarks = false
+    @State private var strongsKey: String?
     @State private var availableModules: [InstalledModule] = []
     @State private var viewSize: CGSize = .zero
+
+    /// Whether to render tappable Strong's numbers: the toggle is on and
+    /// the current version carries Strong's data.
+    private var useStrongs: Bool {
+        personalData.showStrongs && history.module.info.supportsStrongs
+    }
 
     private var chapterPickerSelection: Binding<Int> {
         Binding(get: { history.chapter }, set: { go(toChapter: $0) })
@@ -54,16 +62,25 @@ struct ReaderView: View {
                             VStack(alignment: .leading, spacing: 12) {
                                 Color.clear.frame(height: 0).id("top")
                                 if personalData.verseByVerse {
-                                    ForEach(verses, id: \.verse) { v in
-                                        Text(attributedVerse(number: v.verse, text: v.text))
-                                            .font(.system(size: personalData.fontSize, design: .serif))
-                                            .lineSpacing(6)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    if useStrongs {
+                                        ForEach(verseTokens, id: \.verse) { v in
+                                            Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                .font(.system(size: personalData.fontSize, design: .serif))
+                                                .lineSpacing(6)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    } else {
+                                        ForEach(verses, id: \.verse) { v in
+                                            Text(attributedVerse(number: v.verse, text: v.text))
+                                                .font(.system(size: personalData.fontSize, design: .serif))
+                                                .lineSpacing(6)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
                                     }
                                 } else {
                                     // Paragraph mode: no paragraph info in the modules,
                                     // so the whole chapter flows as one paragraph.
-                                    Text(attributedParagraph())
+                                    Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
                                         .font(.system(size: personalData.fontSize, design: .serif))
                                         .lineSpacing(6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -74,6 +91,13 @@ struct ReaderView: View {
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
+                    .environment(\.openURL, OpenURLAction { url in
+                        guard url.scheme == "strongs",
+                              let key = url.host, !key.isEmpty
+                        else { return .systemAction }
+                        strongsKey = key
+                        return .handled
+                    })
                 }
             }
             // Ribbons for bookmarks pointing at the chapter being read.
@@ -238,6 +262,14 @@ struct ReaderView: View {
                 showingBookChapterPicker = false
             }
         }
+        .sheet(isPresented: Binding(
+            get: { strongsKey != nil },
+            set: { if !$0 { strongsKey = nil } }
+        )) {
+            if let key = strongsKey {
+                StrongsDefinitionView(key: key)
+            }
+        }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.
@@ -254,7 +286,7 @@ struct ReaderView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                ReadingSettingsView()
+                ReadingSettingsView(showStrongsOption: history.module.info.supportsStrongs)
                 Spacer()
                 Button("History") {
                     showingSettings = false
@@ -303,12 +335,7 @@ struct ReaderView: View {
     }
 
     private func attributedVerse(number: Int, text: String) -> AttributedString {
-        var num = AttributedString("\(number) ")
-        num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
-        num.foregroundColor = .secondary
-        num.baselineOffset = personalData.fontSize * 0.25
-        let body = AttributedString(text)
-        return num + AttributedString(" ") + body
+        attributedVerseNumber(number) + AttributedString(" ") + AttributedString(text)
     }
 
     /// Whole chapter as one flowing paragraph (paragraph mode). Verse numbers
@@ -322,6 +349,50 @@ struct ReaderView: View {
         return out
     }
 
+    /// One Strong's number as small raised linked text, e.g. " H7225".
+    /// Tapping opens the dictionary entry (handled via the openURL environment).
+    private func attributedStrongsNumber(_ key: String) -> AttributedString {
+        var num = AttributedString(" \(key)")
+        num.font = .system(size: personalData.fontSize * 0.55, design: .serif)
+        num.foregroundColor = .secondary
+        num.baselineOffset = personalData.fontSize * 0.22
+        num.underlineStyle = []
+        num.link = URL(string: "strongs://\(key)")
+        return num
+    }
+
+    /// Verse text from word tokens, with tappable Strong's numbers inline.
+    private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
+        var out = attributedVerseNumber(number)
+        for (i, token) in tokens.enumerated() {
+            if i > 0 { out += AttributedString(" ") }
+            out += AttributedString(token.text)
+            for key in token.strongs {
+                out += attributedStrongsNumber(key)
+            }
+        }
+        return out
+    }
+
+    /// Whole chapter as one flowing paragraph from word tokens.
+    private func attributedParagraphTokens() -> AttributedString {
+        var out = AttributedString("")
+        for (i, v) in verseTokens.enumerated() {
+            if i > 0 { out += AttributedString(" ") }
+            out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
+        }
+        return out
+    }
+
+    /// The raised verse number prefix shared by both verse renderers.
+    private func attributedVerseNumber(_ number: Int) -> AttributedString {
+        var num = AttributedString("\(number) ")
+        num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
+        num.foregroundColor = .secondary
+        num.baselineOffset = personalData.fontSize * 0.25
+        return num
+    }
+
     private func load() async {
         loadError = nil
         do {
@@ -333,6 +404,13 @@ struct ReaderView: View {
                 return
             }
             verses = rendered
+            if history.module.info.supportsStrongs {
+                verseTokens = mod.chapterTokens(testament: history.testament,
+                                                book: history.book,
+                                                chapter: history.chapter)
+            } else {
+                verseTokens = []
+            }
             personalData.savePosition(ReadingPosition(testament: history.testament,
                                                       book: history.book,
                                                       chapter: history.chapter),

@@ -39,6 +39,12 @@ public struct ModuleInfo: Sendable {
         language.lowercased().hasPrefix("zh")
     }
 
+    /// Whether the module carries Strong's numbers
+    /// (GlobalOptionFilter=OSISStrongs in its .conf).
+    public var supportsStrongs: Bool {
+        conf.allValues["GlobalOptionFilter"]?.contains("OSISStrongs") ?? false
+    }
+
     private let conf: SwordConf
 
     public init(conf: SwordConf) {

@@ -208,3 +208,112 @@ final class ZipReaderTests: XCTestCase {
         XCTAssertEqual(try reader.data(for: reader.entries[0]), content)
     }
 }
+
+final class StrongsTests: XCTestCase {
+    func testConfCollectsRepeatedKeys() {
+        let conf = SwordConf(text: "[KJV]\nGlobalOptionFilter=OSISFootnotes\nGlobalOptionFilter=OSISStrongs\n")
+        XCTAssertEqual(conf["GlobalOptionFilter"], "OSISFootnotes") // first wins, unchanged
+        XCTAssertEqual(conf.allValues["GlobalOptionFilter"], ["OSISFootnotes", "OSISStrongs"])
+    }
+
+    func testSupportsStrongs() {
+        let withStrongs = ModuleInfo(conf: SwordConf(text: "[KJV]\nGlobalOptionFilter=OSISStrongs\n"))
+        XCTAssertTrue(withStrongs.supportsStrongs)
+        let without = ModuleInfo(conf: SwordConf(text: "[ABC]\nGlobalOptionFilter=OSISFootnotes\n"))
+        XCTAssertFalse(without.supportsStrongs)
+    }
+
+    func testNormalizeStrongs() {
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H07225"), "H7225")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:G26"), "G26")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H00001"), "H1")
+        XCTAssertNil(OsisTokens.normalizeStrongs("x-lemma:H1"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:H0"))
+    }
+
+    func testTokensFromKJVGen1v1() {
+        // Real KJV Genesis 1:1 raw markup (verified against CrossWire).
+        let raw = #"<w lemma="strong:H07225">In the beginning</w> <w lemma="strong:H0430">God</w> <w lemma="strong:H0853 strong:H01254" morph="strongMorph:TH8804">created</w> <w lemma="strong:H08064">the heaven</w> <w lemma="strong:H0853">and</w> <w lemma="strong:H0776">the earth</w>."#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        let texts = tokens.map { $0.text }
+        XCTAssertEqual(texts, ["In", "the", "beginning", "God", "created",
+                               "the", "heaven", "and", "the", "earth."])
+        XCTAssertEqual(tokens[0].strongs, ["H7225"])
+        XCTAssertEqual(tokens[1].strongs, ["H7225"])
+        XCTAssertEqual(tokens[4].strongs, ["H853", "H1254"])
+        XCTAssertEqual(tokens[9].strongs, ["H776"])
+        // Rejoining reproduces the plain text.
+        XCTAssertEqual(texts.joined(separator: " "), OsisPlain.plainText(from: raw))
+    }
+
+    func testStrongsNumberParsing() {
+        XCTAssertEqual(StrongsLexicon.strongsNumber(from: "H07225"), 7225)
+        XCTAssertEqual(StrongsLexicon.strongsNumber(from: "G26"), 26)
+        XCTAssertEqual(StrongsLexicon.strongsNumber(from: "h1"), 1)
+        XCTAssertNil(StrongsLexicon.strongsNumber(from: "7225"))
+        XCTAssertNil(StrongsLexicon.strongsNumber(from: "X12"))
+    }
+
+    func testCleanDefinition() {
+        let raw = "00001\\\n 1  'ab  awb\r\n\r\n a primitive word; father."
+        XCTAssertEqual(StrongsLexicon.cleanDefinition(raw), "1 'ab awb a primitive word; father.")
+        let xml = "<entryFree><orth>x</orth> <def>hello <b>world</b></def>"
+        XCTAssertEqual(StrongsLexicon.cleanDefinition(xml), "x hello world")
+    }
+
+    // MARK: - Lexicon fixtures
+
+    private func tempDir() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Tiny RawLD lexicon: records 0..2 -> preamble, H1, H2.
+    func testRawLDLookup() throws {
+        let dir = try tempDir()
+        let parts = ["preamble", "00001\\\n 1 'ab -- father.", "00002\\\n 2 'ab -- aramaic father."]
+        var dat = Data()
+        var idx = Data()
+        for p in parts {
+            let bytes = [UInt8](p.utf8)
+            var off = UInt32(dat.count).littleEndian
+            var size = UInt16(bytes.count).littleEndian
+            idx.append(Data(bytes: &off, count: 4))
+            idx.append(Data(bytes: &size, count: 2))
+            dat.append(contentsOf: bytes)
+        }
+        try idx.write(to: dir.appendingPathComponent("test.idx"))
+        try dat.write(to: dir.appendingPathComponent("test.dat"))
+        let lex = try StrongsLexicon.load(moduleDir: dir)
+        XCTAssertEqual(lex.definition(for: "H1"), "1 'ab -- father.")
+        XCTAssertEqual(lex.definition(for: "H00002"), "2 'ab -- aramaic father.")
+        XCTAssertNil(lex.definition(for: "H3"))
+        XCTAssertNil(lex.definition(for: "G1"))
+    }
+
+    /// Tiny zLD lexicon (base64 fixture): records 0..2 -> preamble, G1, G2.
+    func testZLDLookup() throws {
+        let dir = try tempDir()
+        let files = [
+            ("g.idx", "AAAAAA8AAAAPAAAADwAAAB4AAAAPAAAA"),
+            ("g.dat", "MDAwMDANCgAAAAAAAAAAMDAwMDENCgAAAAABAAAAMDAwMDINCgAAAAACAAAA"),
+            ("g.zdx", "AAAAAGgAAAA="),
+            ("g.zdt", "eJxjZmBgkAFiDiBWAWJrII6H0gVFqYm5STmpNql5JUWVbkWpqQp5tkqGSnY2+UUlGXaJOQUZiTb6YLaCTUpqml1aZlFxiUJOaklJapGNPkgEVasRTGtSagmqzuLU5Py8FBStAKuhLWg="),
+        ]
+        for (name, b64) in files {
+            try Data(base64Encoded: b64)!.write(to: dir.appendingPathComponent(name))
+        }
+        let lex = try StrongsLexicon.load(moduleDir: dir)
+        XCTAssertEqual(lex.definition(for: "G1"), "alpha first letter")
+        XCTAssertEqual(lex.definition(for: "G2"), "beta second letter")
+        XCTAssertNil(lex.definition(for: "G3"))
+        XCTAssertNil(lex.definition(for: "H1"))
+    }
+
+    func testLexiconMissingIdx() throws {
+        let dir = try tempDir()
+        XCTAssertThrowsError(try StrongsLexicon.load(moduleDir: dir))
+    }
+}
