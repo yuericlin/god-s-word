@@ -316,4 +316,54 @@ final class StrongsTests: XCTestCase {
         let dir = try tempDir()
         XCTAssertThrowsError(try StrongsLexicon.load(moduleDir: dir))
     }
+
+    // MARK: - Crash regressions (Oct 19, 2026)
+
+    /// plainText must survive empty / whitespace-only input instead of
+    /// fatal-erroring in removeLast(). Triggered by the tokenizer's
+    /// flushTextRun on verses starting with <w>.
+    func testPlainTextEmptyAndBlank() {
+        XCTAssertEqual(OsisPlain.plainText(from: ""), "")
+        XCTAssertEqual(OsisPlain.plainText(from: "   "), "")
+        XCTAssertEqual(OsisPlain.plainText(from: "  a  "), "a")
+        XCTAssertEqual(OsisPlain.plainText(from: "<w>x</w>"), "x")
+    }
+
+    /// Verse starting with a <w> tag: flushTextRun sees an empty run.
+    func testTokensVerseStartingWithW() {
+        let tokens = OsisTokens.tokensWithStrongs(
+            from: "<w lemma=\"strong:H07225\">In</w> <w lemma=\"strong:H0430\">God</w>")
+        XCTAssertEqual(tokens.map(\.text), ["In", "God"])
+        XCTAssertEqual(tokens[0].strongs, ["H7225"])
+        XCTAssertEqual(tokens[1].strongs, ["H430"])
+    }
+
+    /// Leading whitespace and empty <w></w> pairs must not crash either.
+    func testTokensBlankRuns() {
+        let tokens = OsisTokens.tokensWithStrongs(
+            from: " <w lemma=\"strong:H07225\"></w><w lemma=\"strong:H0430\">God</w>")
+        XCTAssertEqual(tokens.map(\.text), ["God"])
+        XCTAssertEqual(tokens[0].strongs, ["H430"])
+    }
+
+    /// Self-closing <w/> carries no word: skipped, and must not swallow
+    /// the following <w>...</w> into its (empty) range.
+    func testTokensSelfClosingW() {
+        let raw = #"<w lemma="strong:G3588" src="18"/><w lemma="strong:G1161">de</w> <w lemma="strong:G2424">Jesus</w>"#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        XCTAssertEqual(tokens.map(\.text), ["de", "Jesus"])
+        XCTAssertEqual(tokens[0].strongs, ["G1161"])
+        XCTAssertEqual(tokens[1].strongs, ["G2424"])
+    }
+
+    /// Punctuation glued to words in the plain text stays glued, with the
+    /// number staying on the word it belongs to.
+    func testTokensPunctuationGlue() {
+        let raw = #"<w lemma="strong:H06625">And Pathrusim</w>, (<w lemma="strong:H03695">and Casluhim</w>)"#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        let texts = tokens.map { $0.text }
+        XCTAssertEqual(texts, ["And", "Pathrusim,", "(and", "Casluhim)"])
+        XCTAssertEqual(tokens[2].strongs, ["H3695"])
+        XCTAssertEqual(texts.joined(separator: " "), OsisPlain.plainText(from: raw))
+    }
 }

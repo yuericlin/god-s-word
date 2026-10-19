@@ -57,7 +57,10 @@ public enum OsisPlain {
             }
             i = stripped.index(after: i)
         }
-        if lastWasSpace { out.removeLast() }
+        // Trim one trailing space. (Guard on content, not on lastWasSpace:
+        // an empty or all-whitespace input leaves `out` empty, and
+        // removeLast() on an empty string is a fatal error.)
+        if out.last == " " { out.removeLast() }
         return out
     }
 

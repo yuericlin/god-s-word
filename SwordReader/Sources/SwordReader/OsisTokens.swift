@@ -1,10 +1,11 @@
 // OsisTokens.swift
 // Splits SWORD OSIS verse markup into word tokens, capturing Strong's
 // numbers from <w lemma="strong:H07225 ...">word</w> tags.
-// A <w> whose inner text holds several words (e.g. "In the beginning")
-// yields one token per word, each carrying the same Strong's numbers.
-// Punctuation-only runs outside <w> merge into the preceding token so
-// rejoining tokens with spaces reproduces the plain verse text.
+// Words are taken from the plain-text rendering (so rejoining them with
+// spaces always reproduces the plain verse text); each <w>'s Strong's
+// numbers attach to every plain word its content overlaps. A <w> whose
+// inner text holds several words (e.g. "In the beginning") yields one
+// token per word, each carrying the same Strong's numbers.
 
 import Foundation
 
@@ -22,70 +23,66 @@ public struct WordToken: Sendable {
 
 public enum OsisTokens {
     /// Tokenizes OSIS verse markup, capturing Strong's numbers.
+    ///
+    /// Words come from the plain-text rendering itself, so rejoining the
+    /// tokens with spaces always reproduces the plain verse text. Each
+    /// `<w>...</w>` is located in that plain text (in document order) and
+    /// its Strong's numbers attach to every plain word it overlaps —
+    /// covering multi-word `<w>`s ("In the beginning"), punctuation glued
+    /// to words ("(For", "David.Hear"), and self-closing `<w/>` tags,
+    /// which carry no word and are skipped.
     public static func tokensWithStrongs(from osis: String) -> [WordToken] {
         let s = OsisPlain.removeNotes(osis)
-        var tokens = [WordToken]()
+        let plain = OsisPlain.plainText(from: s)
+
+        // (plain range, Strong's) for each <w>, in document order.
+        var ranges = [(range: Range<String.Index>, strongs: [String])]()
+        var searchFrom = plain.startIndex
         var i = s.startIndex
         let end = s.endIndex
-        var textRun = ""
-        func flushTextRun() {
-            let clean = OsisPlain.plainText(from: textRun)
-            for part in clean.split(separator: " ") {
-                appendWord(String(part), strongs: [], to: &tokens)
-            }
-            textRun = ""
-        }
         while i < end {
-            if s[i] == "<" {
-                if isWOpenTag(at: i, in: s) {
-                    flushTextRun()
-                    guard let tagEnd = s[i...].firstIndex(of: ">") else { break }
-                    let strongs = strongsFromWTag(String(s[i...tagEnd]))
-                    let innerStart = s.index(after: tagEnd)
-                    if let close = s.range(of: "</w>", options: .caseInsensitive,
-                                           range: innerStart ..< end) {
-                        let clean = OsisPlain.plainText(from: String(s[innerStart ..< close.lowerBound]))
-                        for part in clean.split(separator: " ") {
-                            appendWord(String(part), strongs: strongs, to: &tokens)
-                        }
-                        i = close.upperBound
-                    } else {
-                        i = s.index(after: tagEnd)
-                    }
-                } else {
-                    // Skip any other tag.
-                    flushTextRun()
-                    if let tagEnd = s[i...].firstIndex(of: ">") {
-                        i = s.index(after: tagEnd)
-                    } else {
-                        break
-                    }
-                }
-            } else {
-                textRun.append(s[i])
+            guard let lt = s[i...].firstIndex(of: "<") else { break }
+            i = lt
+            guard isWOpenTag(at: i, in: s),
+                  let tagEnd = s[i...].firstIndex(of: ">")
+            else {
                 i = s.index(after: i)
+                continue
             }
+            let tag = s[i...tagEnd]
+            let innerStart = s.index(after: tagEnd)
+            // Self-closing <w .../> has no word; its numbers anchor nothing.
+            guard !tag.hasSuffix("/>"),
+                  let close = s.range(of: "</w>", options: .caseInsensitive,
+                                      range: innerStart ..< end)
+            else {
+                i = innerStart
+                continue
+            }
+            let strongs = strongsFromWTag(String(tag))
+            let innerPlain = OsisPlain.plainText(from: String(s[innerStart ..< close.lowerBound]))
+            if !innerPlain.isEmpty,
+               let r = plain.range(of: innerPlain,
+                                   range: searchFrom ..< plain.endIndex) {
+                ranges.append((r, strongs))
+                searchFrom = r.upperBound
+            }
+            i = close.upperBound
         }
-        flushTextRun()
+
+        // Plain words (single spaces: plainText collapses whitespace).
+        var tokens = [WordToken]()
+        var wi = plain.startIndex
+        while wi < plain.endIndex {
+            let wEnd = plain[wi...].firstIndex(of: " ") ?? plain.endIndex
+            var strongs = [String]()
+            for r in ranges where r.range.lowerBound < wEnd && r.range.upperBound > wi {
+                for st in r.strongs where !strongs.contains(st) { strongs.append(st) }
+            }
+            tokens.append(WordToken(text: String(plain[wi ..< wEnd]), strongs: strongs))
+            wi = wEnd == plain.endIndex ? wEnd : plain.index(after: wEnd)
+        }
         return tokens
-    }
-
-    /// Appends a word, merging punctuation-only runs (".", ",", ...) into
-    /// the preceding token so the text rejoins cleanly.
-    private static func appendWord(_ word: String, strongs: [String],
-                                   to tokens: inout [WordToken]) {
-        if strongs.isEmpty, isPunctuationOnly(word), let last = tokens.last {
-            tokens[tokens.count - 1] = WordToken(text: last.text + word,
-                                                 strongs: last.strongs)
-        } else {
-            tokens.append(WordToken(text: word, strongs: strongs))
-        }
-    }
-
-    private static func isPunctuationOnly(_ s: String) -> Bool {
-        !s.isEmpty && s.unicodeScalars.allSatisfy {
-            CharacterSet.punctuationCharacters.contains($0)
-        }
     }
 
     /// True when s[i] starts a `<w ...>` opening tag (case-insensitive).
