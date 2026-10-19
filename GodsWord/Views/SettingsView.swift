@@ -23,6 +23,7 @@ struct SettingsView: View {
                         Stepper("\(Int(personalData.fontSize)) pt",
                                 value: $personalData.fontSize, in: 12 ... 32, step: 1)
                     }
+                    Toggle("Verse by verse", isOn: $personalData.verseByVerse)
                     Text("The quick brown fox jumps over the lazy dog.")
                         .font(.system(size: personalData.fontSize, design: .serif))
                         .foregroundStyle(.secondary)
@@ -45,7 +46,7 @@ struct SettingsView: View {
                             .disabled(working)
                         Button("Sign out", role: .destructive) { driveBackup.signOut() }
                     } else {
-                        Text("Back up your reading data — text size, reading positions, " +
+                        Text("Back up your reading data — text size, layout, reading positions, " +
                              "and which Bibles you installed — to a private folder in your " +
                              "Google Drive. Nothing is uploaded until you sign in and tap Back up.")
                             .font(.callout).foregroundStyle(.secondary)
@@ -83,7 +84,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This replaces your text size, reading positions, and installed-Bible list with the backup. Bible texts will be re-downloaded as needed.")
+                Text("This replaces your text size, layout, reading positions, and installed-Bible list with the backup. Bible texts will be re-downloaded as needed.")
             }
         }
     }

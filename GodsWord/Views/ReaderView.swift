@@ -34,17 +34,26 @@ struct ReaderView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
-                            ForEach(verses, id: \.verse) { v in
-                                Text(attributedVerse(number: v.verse, text: v.text))
+                            Color.clear.frame(height: 0).id("top")
+                            if personalData.verseByVerse {
+                                ForEach(verses, id: \.verse) { v in
+                                    Text(attributedVerse(number: v.verse, text: v.text))
+                                        .font(.system(size: personalData.fontSize, design: .serif))
+                                        .lineSpacing(6)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            } else {
+                                // Paragraph mode: no paragraph info in the modules,
+                                // so the whole chapter flows as one paragraph.
+                                Text(attributedParagraph())
                                     .font(.system(size: personalData.fontSize, design: .serif))
                                     .lineSpacing(6)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .id(v.verse)
                             }
                         }
                         .padding()
                     }
-                    .onChange(of: chapter) { proxy.scrollTo(1, anchor: .top) }
+                    .onChange(of: chapter) { proxy.scrollTo("top", anchor: .top) }
                 }
             }
         }
@@ -97,6 +106,17 @@ struct ReaderView: View {
         num.baselineOffset = personalData.fontSize * 0.25
         let body = AttributedString(text)
         return num + AttributedString(" ") + body
+    }
+
+    /// Whole chapter as one flowing paragraph (paragraph mode). Verse numbers
+    /// stay inline; verses are joined with spaces.
+    private func attributedParagraph() -> AttributedString {
+        var out = AttributedString("")
+        for (i, v) in verses.enumerated() {
+            if i > 0 { out += AttributedString(" ") }
+            out += attributedVerse(number: v.verse, text: v.text)
+        }
+        return out
     }
 
     private func load() async {
