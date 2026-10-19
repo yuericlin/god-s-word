@@ -227,8 +227,17 @@ final class StrongsTests: XCTestCase {
         XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H07225"), "H7225")
         XCTAssertEqual(OsisTokens.normalizeStrongs("strong:G26"), "G26")
         XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H00001"), "H1")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H09001"), "H9001")
         XCTAssertNil(OsisTokens.normalizeStrongs("x-lemma:H1"))
         XCTAssertNil(OsisTokens.normalizeStrongs("strong:H0"))
+        // Morphology codes in ChiUns lemmas are not Strong's numbers.
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:H8804"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:H8675"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:G5656"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:G5773"))
+        // Boundary: real maxima pass.
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H8674"), "H8674")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:G5624"), "G5624")
     }
 
     func testTokensFromKJVGen1v1() {
@@ -375,11 +384,24 @@ final class StrongsTests: XCTestCase {
         let tokens = OsisTokens.tokensWithStrongs(from: raw)
         let texts = tokens.map { $0.text }
         XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
-        XCTAssertEqual(texts, ["起初", "，　", "神", "创造", "天", "地", "。"])
+        XCTAssertEqual(texts, ["起初", "， ", "神", "创造", "天", "地", "。"])
         XCTAssertEqual(tokens[0].strongs, ["H9002", "H7225"])
         XCTAssertEqual(tokens[2].strongs, ["H430"])
-        XCTAssertEqual(tokens[3].strongs, ["H1254", "H8804", "H853"])
+        XCTAssertEqual(tokens[3].strongs, ["H1254", "H853"])  // H8804 is morphology: filtered
         XCTAssertEqual(tokens[4].strongs, ["H8064", "H853"])
         XCTAssertEqual(tokens[5].strongs, ["H776"])
+    }
+
+    /// ChiUns-specific extensions (Hebrew inseparable prepositions) resolve
+    /// to built-in definitions; anything else falls through to nil.
+    func testChiUnsExtensionDefinitions() {
+        XCTAssertNotNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H9001"))
+        XCTAssertNotNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H9002"))
+        XCTAssertNotNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H9003"))
+        XCTAssertTrue(StrongsLexicon.chiUnsExtensionDefinition(for: "H9001")!.contains("לְ"))
+        XCTAssertTrue(StrongsLexicon.chiUnsExtensionDefinition(for: "H9002")!.contains("בְּ"))
+        XCTAssertTrue(StrongsLexicon.chiUnsExtensionDefinition(for: "H9003")!.contains("כְּ"))
+        XCTAssertNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H7225"))
+        XCTAssertNil(StrongsLexicon.chiUnsExtensionDefinition(for: "G26"))
     }
 }

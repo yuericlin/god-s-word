@@ -113,13 +113,21 @@ public enum OsisTokens {
     }
 
     /// "strong:H07225" -> "H7225". Returns nil for non-Strong's lemmas.
+    /// ChiUns lemmas also carry morphology codes (Hebrew 8675+, Greek
+    /// 5625+), which are not Strong's numbers and are dropped. Its own
+    /// 9001-9004 extensions (Hebrew inseparable prepositions) are kept.
     static func normalizeStrongs(_ s: String) -> String? {
         let parts = s.split(separator: ":", maxSplits: 1)
         guard parts.count == 2, parts[0].lowercased() == "strong" else { return nil }
         let key = parts[1].uppercased()
-        guard let first = key.first, first.isLetter else { return nil }
+        guard let first = key.first, first == "H" || first == "G" else { return nil }
         let digits = key.dropFirst().drop(while: { $0 == "0" })
-        guard !digits.isEmpty else { return nil }
+        guard !digits.isEmpty, let n = Int(digits) else { return nil }
+        if first == "H" {
+            guard n <= 8674 || (9001...9004).contains(n) else { return nil }
+        } else {
+            guard n <= 5624 else { return nil }
+        }
         return String(first) + digits
     }
 }

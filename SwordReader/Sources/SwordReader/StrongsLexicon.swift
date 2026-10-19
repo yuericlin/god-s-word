@@ -69,6 +69,10 @@ public final class StrongsLexicon: @unchecked Sendable {
     /// or nil when the key is malformed or absent.
     public func definition(for key: String) -> String? {
         guard let n = Self.strongsNumber(from: key), n >= 1 else { return nil }
+        let prefix = key.uppercased().hasPrefix("H") ? "H" : "G"
+        if let custom = Self.chiUnsExtensionDefinition(for: "\(prefix)\(n)") {
+            return custom
+        }
         let raw: String?
         switch backing {
         case .rawLD(let idx, let dat):
@@ -77,6 +81,39 @@ public final class StrongsLexicon: @unchecked Sendable {
             raw = zLDEntry(n: n, idx: idx, dat: dat, zdx: zdx, zdt: zdt)
         }
         return raw.map { Self.cleanDefinition($0) }
+    }
+
+    /// Definitions for ChiUns-specific Strong's extensions. The three
+    /// Hebrew inseparable prepositions (לְ בְּ כְּ) are written as prefixes
+    /// and carry no standard Strong's number, so ChiUns assigns 9001-9003
+    /// (verified against the module: H9001=לְ "to/for", H9002=בְּ "in/with",
+    /// H9003=כְּ "as/like"; H9004 appears once, a variant of בְּ).
+    static func chiUnsExtensionDefinition(for normalizedKey: String) -> String? {
+        switch normalizedKey {
+        case "H9001":
+            return """
+                לְ (lamed)
+                和合本特有编号：希伯来文不可分介系词，作前缀用，意为「向、给、为、到」。标准史特朗希伯来文编号只到 H8674，介系词本身无独立编号。
+
+                ChiUns-specific number for the Hebrew inseparable preposition lamed ("to, for"). No standard Strong's entry.
+                """
+        case "H9002":
+            return """
+                בְּ (bet)
+                和合本特有编号：希伯来文不可分介系词，作前缀用，意为「在…里、用、藉着」。标准史特朗编号无此条。
+
+                ChiUns-specific number for the Hebrew inseparable preposition bet ("in, with, by"). No standard Strong's entry.
+                """
+        case "H9003", "H9004":
+            return """
+                כְּ (kaf)
+                和合本特有编号：希伯来文不可分介系词，作前缀用，意为「像、如、按照」。标准史特朗编号无此条。
+
+                ChiUns-specific number for the Hebrew inseparable preposition kaf ("as, like, according to"). No standard Strong's entry.
+                """
+        default:
+            return nil
+        }
     }
 
     /// "H07225" -> 7225, "G26" -> 26, nil for anything else.
