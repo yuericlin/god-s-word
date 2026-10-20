@@ -12,6 +12,9 @@ struct SettingsView: View {
     @State private var message: String?
     @State private var showingRestoreConfirm = false
     @State private var pendingRestore: BackupPayload?
+    @State private var showingImporter = false
+    @State private var showingExportShare = false
+    @State private var exportFolder: URL?
     /// Called when the user taps a history entry; the presenter navigates.
     var onSelectHistoryEntry: ((HistoryEntry) -> Void)?
 
@@ -73,7 +76,28 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    if !GoogleDriveBackup.isConfigured {
+                    Button("Export Data") {
+                        do {
+                            exportFolder = try personalData.exportToDocuments()
+                            showingExportShare = true
+                            message = "Exported to Documents/god-s-word-export/"
+                        } catch {
+                            message = "Export failed: \(error.localizedDescription)"
+                        }
+                    }
+                    Button("Import Data") {
+                        showingImporter = true
+                    }
+                    if let message, message.hasPrefix("Export") || message.hasPrefix("Import") {
+                        Text(message).font(.callout).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Manual backup")
+                } footer: {
+                    Text("Export saves JSON files to On My iPhone > GodsWord > god-s-word-export/. Share them via AirDrop or Files. Import restores from selected JSON files.")
+                }
+
+                Section {
                         Text("Google sign-in isn't configured in this build yet. " +
                              "Add your GoogleOAuth.plist (see README) to enable Drive backup.")
                             .font(.callout).foregroundStyle(.secondary)
@@ -115,6 +139,22 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .fileImporter(isPresented: $showingImporter,
+                          allowedContentTypes: [.json],
+                          allowsMultipleSelection: true) { result in
+                do {
+                    let urls = try result.get()
+                    try personalData.importFrom(urls: urls)
+                    message = "Import complete: \(urls.count) file(s)."
+                } catch {
+                    message = "Import failed: \(error.localizedDescription)"
+                }
+            }
+            .sheet(isPresented: $showingExportShare) {
+                if let folder = exportFolder {
+                    ShareSheet(items: [folder])
                 }
             }
             .confirmationDialog("Restore backup?",
@@ -198,4 +238,16 @@ struct SettingsView: View {
         }
         message = "Backup restored."
     }
+}
+
+/// Wraps UIActivityViewController for sharing the export folder.
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController,
+                                context: Context) {}
 }

@@ -370,4 +370,77 @@ public final class PersonalData: ObservableObject {
             historyLog = h
         }
     }
+
+    // MARK: - Manual export/import (Files app)
+
+    /// Exports all data as JSON files to Documents/god-s-word-export/.
+    /// Returns the folder URL for sharing via the Files app or AirDrop.
+    public func exportToDocuments() throws -> URL {
+        let fm = FileManager.default
+        let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let folder = docs.appendingPathComponent("god-s-word-export",
+                                                 isDirectory: true)
+        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+
+        try encoder.encode(bookmarks)
+            .write(to: folder.appendingPathComponent("bookmarks.json"))
+        try encoder.encode(verseNotes)
+            .write(to: folder.appendingPathComponent("notes.json"))
+        try encoder.encode(historyLog)
+            .write(to: folder.appendingPathComponent("history.json"))
+        let settings = iCloudSettings(
+            fontSize: fontSize, verseByVerse: verseByVerse,
+            showStrongs: showStrongs,
+            repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
+            installedModuleIDs: [])
+        try encoder.encode(settings)
+            .write(to: folder.appendingPathComponent("settings.json"))
+        return folder
+    }
+
+    /// Imports data from JSON files (selected via document picker).
+    /// Only non-empty values are applied (never wipes with empty files).
+    public func importFrom(urls: [URL]) throws {
+        for url in urls {
+            // Handle both "bookmarks.json" and "bookmarks.json.gz".
+            var name = url.deletingPathExtension().lastPathComponent
+            if url.pathExtension == "gz" {
+                name = URL(fileURLWithPath: name).deletingPathExtension()
+                    .lastPathComponent
+            }
+            let data = try Data(contentsOf: url)
+            let json: Data
+            if url.pathExtension == "gz" {
+                guard let d = try? (data as NSData)
+                    .decompressed(using: .zlib) as Data else { continue }
+                json = d
+            } else {
+                json = data
+            }
+            switch name {
+            case "bookmarks":
+                let b = try JSONDecoder().decode([Bookmark].self, from: json)
+                if !b.isEmpty { bookmarks = b }
+            case "notes":
+                let n = try JSONDecoder().decode([String: String].self,
+                                                 from: json)
+                if !n.isEmpty { verseNotes = n }
+            case "history":
+                let h = try JSONDecoder().decode([HistoryEntry].self,
+                                                 from: json)
+                if !h.isEmpty { historyLog = h }
+            case "settings":
+                let s = try JSONDecoder().decode(iCloudSettings.self,
+                                                 from: json)
+                fontSize = s.fontSize
+                verseByVerse = s.verseByVerse
+                showStrongs = s.showStrongs
+            default:
+                continue
+            }
+        }
+    }
 }
