@@ -277,7 +277,8 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-IC-9:** Private/custom Bible versions are stored as JSON (or gzipped
   JSON) in `god-s-word/private-repo/`.
 - **REQ-IC-10:** When iCloud is enabled, private Bibles are automatically
-  downloaded to local `Application Support/PrivateModules/`.
+  downloaded to local `Application Support/PrivateModules/`. Downloads ONLY
+  occur when the iCloud toggle is enabled — never when disabled.
 - **REQ-IC-11:** Private Bible JSON schema:
   ```json
   {

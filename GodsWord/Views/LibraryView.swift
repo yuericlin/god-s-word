@@ -110,6 +110,12 @@ struct LibraryView: View {
     private func refresh() {
         modules = store.installedModules()
         restoreLastReading()
+        // Sync private Bibles from iCloud (only if the toggle is enabled).
+        if iCloudSync.shared.isEnabled {
+            DispatchQueue.global(qos: .background).async {
+                iCloudSync.shared.syncPrivateModulesToLocal()
+            }
+        }
     }
 
     /// On first launch, picks up where the user left off.
