@@ -162,13 +162,10 @@ struct BookmarksPanel: View {
     @Environment(\.moduleStore) private var store
     @State private var editingBookmark: Bookmark?
 
-    /// Config for the note editor sheet (nil = not shown).
-    private struct NoteEditorConfig: Identifiable {
-        let id: String  // the verse-note storage key
-        let reference: String
-        let initialText: String
-    }
-    @State private var noteEditorConfig: NoteEditorConfig?
+    /// Note editor state (mirrors ReaderView's reliable Bool-based pattern).
+    @State private var showingNoteEditor = false
+    @State private var noteEditorKey = ""
+    @State private var noteEditorReference = ""
     @State private var noteDraft = ""
 
     /// A verse note parsed from its storage key.
@@ -290,13 +287,12 @@ struct BookmarksPanel: View {
         .sheet(item: $editingBookmark) { bookmark in
             BookmarkEditView(bookmark: bookmark, history: history)
         }
-        .sheet(item: $noteEditorConfig) { config in
+        .sheet(isPresented: $showingNoteEditor) {
             VerseNoteEditor(
-                reference: config.reference,
+                reference: noteEditorReference,
                 text: $noteDraft,
                 onSave: { text in
-                    personalData.setVerseNote(text, forKey: config.id)
-                    noteEditorConfig = nil
+                    personalData.setVerseNote(text, forKey: noteEditorKey)
                 }
             )
             .environmentObject(personalData)
@@ -322,20 +318,18 @@ struct BookmarksPanel: View {
             book: history.book,
             chapter: history.chapter,
             verse: verse)
+        noteEditorKey = key
+        noteEditorReference = "\(history.bookTitle) \(history.chapter):\(verse)"
         noteDraft = personalData.verseNote(forKey: key) ?? ""
-        noteEditorConfig = NoteEditorConfig(
-            id: key,
-            reference: "\(history.bookTitle) \(history.chapter):\(verse)",
-            initialText: noteDraft)
+        showingNoteEditor = true
     }
 
     /// Opens the note editor for an existing note from the Notes list.
     private func editNote(_ entry: NoteEntry) {
+        noteEditorKey = entry.key
+        noteEditorReference = noteReference(entry)
         noteDraft = entry.text
-        noteEditorConfig = NoteEditorConfig(
-            id: entry.key,
-            reference: noteReference(entry),
-            initialText: entry.text)
+        showingNoteEditor = true
     }
 
     private func jump(to bookmark: Bookmark) {
