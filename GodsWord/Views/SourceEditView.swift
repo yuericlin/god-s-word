@@ -117,7 +117,7 @@ struct SourceEditView: View {
                 case .success(let url):
                     do {
                         let bookmark = try url.bookmarkData(
-                            options: [.withSecurityScope],
+                            options: .minimalBookmark,
                             includingResourceValuesForKeys: nil,
                             relativeTo: nil)
                         folderBookmark = bookmark

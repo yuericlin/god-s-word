@@ -12,7 +12,7 @@ struct RepositoryView: View {
     @State private var errorMessage: String?
     @State private var downloading: Set<String> = []
     @State private var installedIDs: Set<String> = []
-    @State private var selectedSourceID = BibleSourceStore.crossWire.id
+    @State private var selectedSourceID = BibleSource.crossWire.id
 
     /// All remote (repository) sources the user can download from.
     private var repositorySources: [BibleSource] {
@@ -20,11 +20,11 @@ struct RepositoryView: View {
     }
 
     private var selectedSource: BibleSource {
-        repositorySources.first { $0.id == selectedSourceID } ?? BibleSourceStore.crossWire
+        repositorySources.first { $0.id == selectedSourceID } ?? BibleSource.crossWire
     }
 
     private var repository: SwordRepository {
-        let url = selectedSource.repositoryURL ?? BibleSourceStore.crossWire.repositoryURL!
+        let url = selectedSource.repositoryURL ?? BibleSource.crossWire.repositoryURL!
         return SwordRepository(name: selectedSource.name, baseURL: url)
     }
 

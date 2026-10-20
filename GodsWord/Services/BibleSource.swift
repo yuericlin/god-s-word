@@ -21,6 +21,14 @@ struct BibleSource: Identifiable, Codable, Equatable {
     var kind: SourceKind
     var isBuiltIn: Bool
 
+    /// The two built-in sources.
+    static let crossWire = BibleSource(
+        id: "crosswire", name: "CrossWire",
+        kind: .repository(URL(string: "https://crosswire.org/ftpmirror/pub/sword/raw")!),
+        isBuiltIn: true)
+    static let `private` = BibleSource(
+        id: "private", name: "Private", kind: .appFolder, isBuiltIn: true)
+
     /// The repository URL for URL sources; nil for local sources.
     var repositoryURL: URL? {
         if case .repository(let url) = kind { return url }
@@ -38,15 +46,9 @@ struct BibleSource: Identifiable, Codable, Equatable {
 
 /// The registry of sources: the two built-ins plus the user's custom ones,
 /// and which source each downloaded module came from.
+@MainActor
 final class BibleSourceStore {
     static let shared = BibleSourceStore()
-
-    static let crossWire = BibleSource(
-        id: "crosswire", name: "CrossWire",
-        kind: .repository(URL(string: "https://crosswire.org/ftpmirror/pub/sword/raw")!),
-        isBuiltIn: true)
-    static let `private` = BibleSource(
-        id: "private", name: "Private", kind: .appFolder, isBuiltIn: true)
 
     private struct Persisted: Codable {
         var customSources: [BibleSource]
@@ -71,7 +73,7 @@ final class BibleSourceStore {
 
     /// All sources: CrossWire, Private, then custom sources by name.
     var allSources: [BibleSource] {
-        let builtIns = [Self.crossWire, Self.`private`].map { base in
+        let builtIns = [BibleSource.crossWire, BibleSource.`private`].map { base in
             persisted.editedBuiltIns.first { $0.id == base.id } ?? base
         }
         return builtIns + persisted.customSources.sorted { $0.name < $1.name }
@@ -101,7 +103,7 @@ final class BibleSourceStore {
         guard !source.isBuiltIn else { return }
         persisted.customSources.removeAll { $0.id == source.id }
         for (mod, src) in persisted.moduleSources where src == source.id {
-            persisted.moduleSources[mod] = Self.crossWire.id
+            persisted.moduleSources[mod] = BibleSource.crossWire.id
         }
         write()
     }
@@ -109,7 +111,7 @@ final class BibleSourceStore {
     // MARK: - Downloaded-module source tagging
 
     func sourceID(forModule moduleID: String) -> String {
-        persisted.moduleSources[moduleID] ?? Self.crossWire.id
+        persisted.moduleSources[moduleID] ?? BibleSource.crossWire.id
     }
 
     func setSourceID(_ sourceID: String, forModule moduleID: String) {
@@ -137,7 +139,7 @@ extension BibleSource {
         case .folder(let bookmark):
             var stale = false
             return try? URL(resolvingBookmarkData: bookmark,
-                            options: [.withSecurityScope],
+                            options: [],
                             relativeTo: nil, bookmarkDataIsStale: &stale)
         }
     }
