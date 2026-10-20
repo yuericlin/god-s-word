@@ -156,6 +156,8 @@ struct BookmarkRibbonsRow: View {
 struct BookmarksPanel: View {
     let history: ReadingHistory
     @Binding var showing: Bool
+    /// Verses currently selected in the reader; "Add Note" anchors to these if non-empty.
+    let selectedVerses: Set<Int>
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var editingBookmark: Bookmark?
@@ -282,8 +284,9 @@ struct BookmarksPanel: View {
             BookmarkEditView(bookmark: bookmark, history: history)
         }
         .sheet(isPresented: $addingNote) {
+            let verse = selectedVerses.min() ?? 1
             VerseNoteEditor(
-                reference: "\(history.bookTitle) \(history.chapter):1",
+                reference: "\(history.bookTitle) \(history.chapter):\(verse)",
                 text: $noteDraft,
                 onSave: { text in
                     let key = personalData.verseNoteKey(
@@ -291,7 +294,7 @@ struct BookmarksPanel: View {
                         testament: history.testament,
                         book: history.book,
                         chapter: history.chapter,
-                        verse: 1)
+                        verse: verse)
                     personalData.setVerseNote(text, forKey: key)
                 }
             )
@@ -308,14 +311,16 @@ struct BookmarksPanel: View {
         editingBookmark = created
     }
 
-    /// Opens the note editor for the current chapter (anchored at verse 1).
+    /// Opens the note editor: scoped to the selected verses if any,
+    /// otherwise to the entire chapter (anchored at verse 1).
     private func addNote() {
+        let verse = selectedVerses.min() ?? 1
         let key = personalData.verseNoteKey(
             moduleID: history.module.id,
             testament: history.testament,
             book: history.book,
             chapter: history.chapter,
-            verse: 1)
+            verse: verse)
         noteDraft = personalData.verseNote(forKey: key) ?? ""
         addingNote = true
     }

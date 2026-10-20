@@ -173,7 +173,8 @@ struct ReaderView: View {
                 Color.black.opacity(0.25)
                     .ignoresSafeArea()
                     .onTapGesture { showingBookmarks = false }
-                BookmarksPanel(history: history, showing: $showingBookmarks)
+                BookmarksPanel(history: history, showing: $showingBookmarks,
+                               selectedVerses: selectedVerses)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .transition(.move(edge: .trailing))
             }
