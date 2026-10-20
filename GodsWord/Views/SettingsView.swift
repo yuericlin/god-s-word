@@ -43,7 +43,16 @@ struct SettingsView: View {
                 Section {
                     Toggle("iCloud Sync", isOn: Binding(
                         get: { iCloudSync.shared.isEnabled },
-                        set: { iCloudSync.shared.isEnabled = $0 }
+                        set: { newValue in
+                            iCloudSync.shared.isEnabled = newValue
+                            if newValue {
+                                // Immediately sync all data so the JSON files
+                                // (and the folder) appear in iCloud Drive.
+                                personalData.syncAllToiCloud(
+                                    repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
+                                    installedModuleIDs: store.installedModules().map { $0.id })
+                            }
+                        }
                     ))
                     .disabled(!iCloudSync.shared.isAvailable)
                     if !iCloudSync.shared.isAvailable {

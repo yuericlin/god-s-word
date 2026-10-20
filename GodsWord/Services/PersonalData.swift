@@ -332,9 +332,19 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(historyLog, as: .history)
     }
 
-    /// Call when settings change (font size, toggles, installed modules).
-    public func syncSettingsToiCloud(repositoryURL: String,
-                                     installedModuleIDs: [String]) {
+    /// Syncs all data to iCloud immediately (called when the toggle is enabled).
+    /// Ensures the JSON files exist so the folder becomes visible in Files.
+    public func syncAllToiCloud(repositoryURL: String,
+                                installedModuleIDs: [String]) {
+        guard iCloudSync.shared.isEnabled else { return }
+        iCloudSync.shared.ensureFolders()
+        // Save even empty collections so the files (and folder) appear.
+        try? iCloudSync.shared.save(bookmarks, as: .bookmarks)
+        try? iCloudSync.shared.save(verseNotes, as: .notes)
+        try? iCloudSync.shared.save(historyLog, as: .history)
+        syncSettingsToiCloud(repositoryURL: repositoryURL,
+                              installedModuleIDs: installedModuleIDs)
+    }
         guard iCloudSync.shared.isEnabled else { return }
         let settings = iCloudSettings(
             fontSize: fontSize, verseByVerse: verseByVerse,
