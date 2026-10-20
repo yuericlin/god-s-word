@@ -10,6 +10,7 @@
 import Foundation
 
 /// iCloud Drive sync state and file operations.
+@MainActor
 public final class iCloudSync: ObservableObject {
     public static let shared = iCloudSync()
 
@@ -20,11 +21,10 @@ public final class iCloudSync: ObservableObject {
             if isEnabled {
                 ensureFolders()
                 // Download any private Bibles from iCloud to local.
-                DispatchQueue.global(qos: .background).async {
-                    let count = self.syncPrivateModulesToLocal()
-                    if count > 0 {
-                        print("[iCloudSync] Downloaded \(count) private Bible(s) to local")
-                    }
+                // File operations are quick (small JSON files); safe on main.
+                let count = syncPrivateModulesToLocal()
+                if count > 0 {
+                    print("[iCloudSync] Downloaded \(count) private Bible(s) to local")
                 }
             }
         }

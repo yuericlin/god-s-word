@@ -112,9 +112,7 @@ struct LibraryView: View {
         restoreLastReading()
         // Sync private Bibles from iCloud (only if the toggle is enabled).
         if iCloudSync.shared.isEnabled {
-            DispatchQueue.global(qos: .background).async {
-                iCloudSync.shared.syncPrivateModulesToLocal()
-            }
+            iCloudSync.shared.syncPrivateModulesToLocal()
         }
     }
 
