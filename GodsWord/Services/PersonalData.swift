@@ -83,6 +83,7 @@ public struct BackupPayload: Codable, Sendable {
     }
 }
 
+@MainActor
 public final class PersonalData: ObservableObject {
     private let defaults: UserDefaults
     private let positionsKey = "gw.readingPositions.v1"
