@@ -527,11 +527,16 @@ struct ReaderView: View {
         let sorted = selectedVerses.sorted()
         guard !sorted.isEmpty else { return }
         let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
-        let lines = sorted.compactMap { v -> String? in
+        let version = history.module.id
+        // Single verse: omit the number in the text.
+        // Multiple verses: include numbers ("1 text 2 text").
+        let single = sorted.count == 1
+        let parts = sorted.compactMap { v -> String? in
             guard let text = verses.first(where: { $0.verse == v })?.text else { return nil }
-            return "\(v) \(text)"
+            return single ? text : "\(v) \(text)"
         }
-        UIPasteboard.general.string = ([ref] + lines).joined(separator: "\n")
+        let quoted = "\"\(parts.joined(separator: " "))\""
+        UIPasteboard.general.string = "\(quoted) \(ref) \(version)"
     }
 
     /// [1,2,3,5] -> "1-3, 5"
