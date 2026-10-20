@@ -7,7 +7,7 @@
 //        <base>.dat holds the entry text.
 // zLD:   <base>.idx holds 8-byte records (datOffset u32 LE, datSize u32 LE);
 //        <base>.dat holds per-entry "NNNNN\r\n" + (block u32 LE, index u32 LE);
-//        <base>.zdx holds 12-byte block records (compOffset u32, compSize u32);
+//        <base>.zdx holds 8-byte block records (compOffset u32, compSize u32);
 //        <base>.zdt holds zlib blocks; each decompressed block starts with
 //        [entryCount u32][(dataOffset u32, dataSize u32) x count], then data.
 
@@ -168,8 +168,8 @@ public final class StrongsLexicon: @unchecked Sendable {
 
     private func decompressedZLDBlock(_ block: Int, zdx: [UInt8], zdt: [UInt8]) -> [UInt8]? {
         if let hit = cacheLock.withLock({ blockCache[block] }) { return hit }
-        guard block >= 0, (block + 1) * 12 <= zdx.count else { return nil }
-        let o = block * 12
+        guard block >= 0, (block + 1) * 8 <= zdx.count else { return nil }
+        let o = block * 8
         let compOffset = Int(readU32LE(zdx, o))
         let compSize = Int(readU32LE(zdx, o + 4))
         guard compSize > 0, compOffset >= 0, compOffset + compSize <= zdt.count else { return nil }
