@@ -404,13 +404,18 @@ struct ReaderView: View {
     private func attributedVerse(number: Int, text: String) -> AttributedString {
         var out = attributedVerseNumber(number)
         if hasNote(verse: number) {
-            out += noteIconAttr(number)
+            // Yellow background highlights the verse number; tapping it opens the note.
+            // (backgroundColor isn't overridden by link styling, unlike foregroundColor.)
+            let numRange = out.startIndex..<out.endIndex
+            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
+            out[numRange].link = URL(string: "note://\(number)")
+            out[numRange].underlineStyle = []
         }
         out += AttributedString(" ")
         out += AttributedString(text)
         // Invisible verse:// link makes the verse tappable for selection
         // without changing how it renders. Runs that already have a link
-        // (note icon) keep theirs.
+        // (verse number with a note) keep theirs.
         applyVerseLink(to: &out, verse: number)
         applySelectionHighlight(to: &out, verse: number)
         return out
@@ -445,7 +450,11 @@ struct ReaderView: View {
     private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
         var out = attributedVerseNumber(number)
         if hasNote(verse: number) {
-            out += noteIconAttr(number)
+            // Yellow background highlights the verse number; tapping it opens the note.
+            let numRange = out.startIndex..<out.endIndex
+            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
+            out[numRange].link = URL(string: "note://\(number)")
+            out[numRange].underlineStyle = []
         }
         out += AttributedString(" ")
         for token in tokens {
@@ -454,7 +463,7 @@ struct ReaderView: View {
                 out += attributedStrongsNumber(key)
             }
         }
-        // Verse link skips the Strong's numbers and note icon (already linked).
+        // Verse link skips the Strong's numbers and the verse number (already linked).
         applyVerseLink(to: &out, verse: number)
         applySelectionHighlight(to: &out, verse: number)
         return out
@@ -480,20 +489,6 @@ struct ReaderView: View {
     }
 
     // MARK: - Verse picker (invisible links; rendering unchanged)
-
-    /// Tiny note marker after the verse number; tapping opens the note.
-    /// Uses a monochrome glyph (✎) so the tint color actually applies —
-    /// full-color emoji ignore foregroundColor.
-    private func noteIconAttr(_ verse: Int) -> AttributedString {
-        var icon = AttributedString("✎ ")
-        icon.font = .system(size: personalData.fontSize * 0.6, design: .serif)
-        icon.link = URL(string: "note://\(verse)")
-        icon.underlineStyle = []
-        // Set color LAST so the link styling doesn't override it.
-        // Use UIColor explicitly for reliable bridging.
-        icon.foregroundColor = Color(UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 1.0))
-        return icon
-    }
 
     /// Sets an invisible verse://N link on every run without one, so the
     /// verse is tappable for selection. Link styling is neutralized
