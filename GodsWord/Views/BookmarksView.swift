@@ -173,7 +173,6 @@ struct BookmarksPanel: View {
         }
     }
     @State private var activeSheet: PanelSheet?
-    @State private var noteDraft = ""
 
     /// A verse note parsed from its storage key.
     private struct NoteEntry {
@@ -296,15 +295,8 @@ struct BookmarksPanel: View {
             case .bookmark(let bookmark):
                 BookmarkEditView(bookmark: bookmark, history: history)
             case .note(let key, let reference):
-                VerseNoteEditor(
-                    reference: reference,
-                    text: $noteDraft,
-                    onSave: { text in
-                        personalData.setVerseNote(text, forKey: key)
-                        activeSheet = nil
-                    }
-                )
-                .environmentObject(personalData)
+                VerseNoteEditor(reference: reference, noteKey: key)
+                    .environmentObject(personalData)
             }
         }
     }
@@ -328,14 +320,12 @@ struct BookmarksPanel: View {
             book: history.book,
             chapter: history.chapter,
             verse: verse)
-        noteDraft = personalData.verseNote(forKey: key) ?? ""
         activeSheet = .note(key: key,
                             reference: "\(history.bookTitle) \(history.chapter):\(verse)")
     }
 
     /// Opens the note editor for an existing note from the Notes list.
     private func editNote(_ entry: NoteEntry) {
-        noteDraft = entry.text
         activeSheet = .note(key: entry.key, reference: noteReference(entry))
     }
 

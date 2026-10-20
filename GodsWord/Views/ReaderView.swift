@@ -28,7 +28,6 @@ struct ReaderView: View {
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
     @State private var noteVerse: Int?
-    @State private var noteDraft: String = ""
     @State private var showingNoteEditor = false
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
@@ -332,9 +331,9 @@ struct ReaderView: View {
         }
         .sheet(isPresented: $showingNoteEditor) {
             if let verse = noteVerse {
-                VerseNoteEditor(reference: noteReference(verse), text: $noteDraft) { text in
-                    personalData.setVerseNote(text, forKey: noteKey(verse))
-                }
+                VerseNoteEditor(reference: noteReference(verse),
+                                noteKey: noteKey(verse))
+                    .environmentObject(personalData)
             }
         }
     }
@@ -569,7 +568,6 @@ struct ReaderView: View {
 
     private func openNoteEditor(for verse: Int) {
         noteVerse = verse
-        noteDraft = personalData.verseNotes[noteKey(verse)] ?? ""
         showingNoteEditor = true
     }
 
