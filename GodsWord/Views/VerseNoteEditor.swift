@@ -9,6 +9,8 @@ import SwiftUI
 struct VerseNoteEditor: View {
     let reference: String
     let noteKey: String
+    /// The note text when the editor opened; Save is disabled while unchanged.
+    private let originalText: String
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
@@ -18,6 +20,7 @@ struct VerseNoteEditor: View {
     init(reference: String, noteKey: String, initialText: String) {
         self.reference = reference
         self.noteKey = noteKey
+        self.originalText = initialText
         _text = State(initialValue: initialText)
     }
 
@@ -32,16 +35,17 @@ struct VerseNoteEditor: View {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
                     }
-                    ToolbarItem(placement: .destructiveAction) {
-                        Button("Delete", role: .destructive) {
-                            showingDeleteConfirm = true
+                    ToolbarItemGroup(placement: .confirmationAction) {
+                        if !originalText.isEmpty {
+                            Button("Delete", role: .destructive) {
+                                showingDeleteConfirm = true
+                            }
                         }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
                             personalData.setVerseNote(text, forKey: noteKey)
                             dismiss()
                         }
+                        .disabled(text == originalText)
                     }
                 }
                 .confirmationDialog("Delete this note?",
