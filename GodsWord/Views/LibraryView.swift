@@ -42,6 +42,7 @@ struct LibraryView: View {
     @State private var editingSource: BibleSource?
     @State private var addingSource = false
     @State private var importTarget: BibleSource?
+    @State private var showingImporter = false
     @State private var importError: String?
     @State private var didRestoreLastReading = false
 
@@ -69,6 +70,7 @@ struct LibraryView: View {
                                 if group.source.isLocal {
                                     Button {
                                         importTarget = group.source
+                                        showingImporter = true
                                     } label: {
                                         Label("Import a private Bible…", systemImage: "square.and.arrow.down")
                                     }
@@ -128,9 +130,7 @@ struct LibraryView: View {
                 SourceEditView(source: source)
             }
             .fileImporter(
-                isPresented: Binding(
-                    get: { importTarget != nil },
-                    set: { if !$0 { importTarget = nil } }),
+                isPresented: $showingImporter,
                 allowedContentTypes: [.json, .gzip]) { result in
                 if let target = importTarget {
                     importPrivateBible(result, into: target)
