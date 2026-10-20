@@ -43,7 +43,7 @@ struct SourceEditView: View {
         guard let source else { return true }
         // The built-in Private source lives in app storage; only its name
         // is editable.
-        return source.id != BibleSourceStore.`private`.id
+        return source.id != BibleSource.`private`.id
     }
 
     var body: some View {
