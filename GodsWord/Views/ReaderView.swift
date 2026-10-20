@@ -27,8 +27,15 @@ struct ReaderView: View {
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
-    @State private var noteVerse: Int?
-    @State private var showingNoteEditor = false
+    @State private var noteEditorItem: NoteEditorItem?
+
+    /// Identifiable wrapper so the note sheet always opens with fresh data.
+    private struct NoteEditorItem: Identifiable {
+        let id: String   // the note key
+        let verse: Int
+        let reference: String
+        let initialText: String
+    }
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
     /// the current version carries Strong's data.
@@ -329,12 +336,11 @@ struct ReaderView: View {
                 StrongsDefinitionView(key: key)
             }
         }
-        .sheet(isPresented: $showingNoteEditor) {
-            if let verse = noteVerse {
-                VerseNoteEditor(reference: noteReference(verse),
-                                noteKey: noteKey(verse))
-                    .environmentObject(personalData)
-            }
+        .sheet(item: $noteEditorItem) { item in
+            VerseNoteEditor(reference: item.reference,
+                            noteKey: item.id,
+                            initialText: item.initialText)
+                .environmentObject(personalData)
         }
     }
 
@@ -572,8 +578,12 @@ struct ReaderView: View {
     }
 
     private func openNoteEditor(for verse: Int) {
-        noteVerse = verse
-        showingNoteEditor = true
+        let key = noteKey(verse)
+        noteEditorItem = NoteEditorItem(
+            id: key,
+            verse: verse,
+            reference: noteReference(verse),
+            initialText: personalData.verseNote(forKey: key) ?? "")
     }
 
     /// Notes from the selection bar anchor to the first selected verse,

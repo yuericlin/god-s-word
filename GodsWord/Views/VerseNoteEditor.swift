@@ -1,7 +1,8 @@
 // VerseNoteEditor.swift
 // Sheet for viewing/editing the text note attached to one verse.
-// Self-contained: loads/saves via PersonalData using the note key,
-// so callers don't need to manage text state (avoids sheet timing issues).
+// The note text is passed in at creation time and stored in @State via
+// init, so the editor always opens with the correct content (no onAppear
+// timing issues). Saves/deletes via PersonalData using the note key.
 
 import SwiftUI
 
@@ -11,7 +12,14 @@ struct VerseNoteEditor: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
-    @State private var text: String = ""
+    @State private var text: String
+    @State private var showingDeleteConfirm = false
+
+    init(reference: String, noteKey: String, initialText: String) {
+        self.reference = reference
+        self.noteKey = noteKey
+        _text = State(initialValue: initialText)
+    }
 
     var body: some View {
         NavigationStack {
@@ -24,6 +32,11 @@ struct VerseNoteEditor: View {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
                     }
+                    ToolbarItem(placement: .destructiveAction) {
+                        Button("Delete", role: .destructive) {
+                            showingDeleteConfirm = true
+                        }
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Save") {
                             personalData.setVerseNote(text, forKey: noteKey)
@@ -31,9 +44,16 @@ struct VerseNoteEditor: View {
                         }
                     }
                 }
+                .confirmationDialog("Delete this note?",
+                                    isPresented: $showingDeleteConfirm,
+                                    titleVisibility: .visible) {
+                    Button("Delete Note", role: .destructive) {
+                        personalData.setVerseNote(nil, forKey: noteKey)
+                        dismiss()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                }
                 .onAppear {
-                    // Load the note text when the sheet appears.
-                    text = personalData.verseNote(forKey: noteKey) ?? ""
                     // Focus after the sheet animation so the keyboard shows.
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         isFocused = true

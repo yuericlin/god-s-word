@@ -264,6 +264,13 @@ struct BookmarksPanel: View {
                                 .padding(.vertical, 6)
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("Edit") { editNote(entry) }
+                                Button("Delete", role: .destructive) {
+                                    personalData.setVerseNote(nil,
+                                                              forKey: entry.key)
+                                }
+                            }
                             Divider()
                         }
                     }
@@ -295,7 +302,8 @@ struct BookmarksPanel: View {
             case .bookmark(let bookmark):
                 BookmarkEditView(bookmark: bookmark, history: history)
             case .note(let key, let reference):
-                VerseNoteEditor(reference: reference, noteKey: key)
+                VerseNoteEditor(reference: reference, noteKey: key,
+                                initialText: personalData.verseNote(forKey: key) ?? "")
                     .environmentObject(personalData)
             }
         }
