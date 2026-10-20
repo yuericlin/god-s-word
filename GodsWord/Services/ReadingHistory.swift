@@ -8,7 +8,7 @@ import SwordReader
 
 @Observable
 final class ReadingHistory {
-    var module: InstalledModule
+    var version: BibleVersion
     var testament: Int  // 1 = Old Testament, 2 = New Testament
     var book: Int       // 1-based within the testament
     var chapter: Int    // 1-based
@@ -20,11 +20,16 @@ final class ReadingHistory {
     /// a dwell completes.
     var dwellMode = false
 
-    init(module: InstalledModule, testament: Int = 1, book: Int = 1, chapter: Int = 1) {
-        self.module = module
+    init(version: BibleVersion, testament: Int = 1, book: Int = 1, chapter: Int = 1) {
+        self.version = version
         self.testament = testament
         self.book = book
         self.chapter = chapter
+    }
+
+    /// Convenience for callers that hold a downloaded SWORD module.
+    convenience init(module: InstalledModule, testament: Int = 1, book: Int = 1, chapter: Int = 1) {
+        self.init(version: .sword(module), testament: testament, book: book, chapter: chapter)
     }
 
     /// 0-based index across the whole Bible (0–65).
@@ -33,7 +38,7 @@ final class ReadingHistory {
     }
 
     func bookName(overall: Int) -> String {
-        module.info.isChinese ? BibleBookNamesZhHans[overall] : Versification.kjv.books[overall].name
+        version.bookName(overall: overall)
     }
 
     var bookTitle: String {
@@ -45,7 +50,7 @@ final class ReadingHistory {
     }
 
     func chapterCount(testament: Int, book: Int) -> Int {
-        module.info.versification?.book(testament: testament, book: book)?.chapters ?? 0
+        version.chapterCount(testament: testament, book: book)
     }
 
     /// Select a book by its 0-based overall index; jumps to its chapter 1.

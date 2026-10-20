@@ -21,7 +21,7 @@ struct BooksView: View {
                 }
             }
         }
-        .navigationTitle(history.module.info.description)
+        .navigationTitle(history.version.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .edgeNavigation(
             onForward: {

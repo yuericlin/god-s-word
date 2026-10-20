@@ -22,7 +22,7 @@ struct ReaderView: View {
     @State private var showingBookmarks = false
     @State private var strongsKey: String?
     @State private var dwellTask: Task<Void, Never>?
-    @State private var availableModules: [InstalledModule] = []
+    @State private var availableVersions: [BibleVersion] = []
     @State private var viewSize: CGSize = .zero
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
@@ -38,9 +38,9 @@ struct ReaderView: View {
     }
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
-    /// the current version carries Strong's data.
+    /// the current version carries Strong's data (SWORD versions only).
     private var useStrongs: Bool {
-        personalData.showStrongs && history.module.info.supportsStrongs
+        personalData.showStrongs && history.version.supportsStrongs
     }
 
     private var chapterPickerSelection: Binding<Int> {
@@ -51,11 +51,11 @@ struct ReaderView: View {
     /// reference, clamped to the new version's chapter count.
     private var versionSelection: Binding<String> {
         Binding(
-            get: { history.module.id },
+            get: { history.version.id },
             set: { newID in
-                guard newID != history.module.id,
-                      let mod = availableModules.first(where: { $0.id == newID }) else { return }
-                history.module = mod
+                guard newID != history.version.id,
+                      let v = availableVersions.first(where: { $0.id == newID }) else { return }
+                history.version = v
                 let count = history.chapterCount
                 if history.chapter > count {
                     history.chapter = max(count, 1)
@@ -212,13 +212,13 @@ struct ReaderView: View {
                 HStack(spacing: 8) {
                     Menu {
                         Picker("Version", selection: versionSelection) {
-                            ForEach(availableModules, id: \.id) { mod in
-                                Text(mod.id).tag(mod.id)
+                            ForEach(availableVersions, id: \.id) { v in
+                                Text(v.shortLabel).tag(v.id)
                             }
                         }
                     } label: {
                         HStack(spacing: 2) {
-                            Text(history.module.id)
+                            Text(history.version.shortLabel)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Image(systemName: "chevron.down")
@@ -293,12 +293,12 @@ struct ReaderView: View {
         .onChange(of: history.testament) { selectedVerses = [] }
         .onChange(of: history.book) { selectedVerses = [] }
         .onChange(of: history.chapter) { selectedVerses = [] }
-        .onAppear { availableModules = store.installedModules() }
+        .onAppear { availableVersions = allLibraryVersions() }
         .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
             SettingsView(onSelectHistoryEntry: { entry in
-                if let mod = availableModules.first(where: { $0.id == entry.moduleID }) {
-                    history.module = mod
+                if let v = availableVersions.first(where: { $0.id == entry.moduleID }) {
+                    history.version = v
                     history.testament = entry.testament
                     history.book = entry.book
                     history.chapter = entry.chapter
@@ -309,8 +309,8 @@ struct ReaderView: View {
         .sheet(isPresented: $showingHistory) {
             NavigationStack {
                 HistoryView(onSelect: { entry in
-                    if let mod = availableModules.first(where: { $0.id == entry.moduleID }) {
-                        history.module = mod
+                    if let v = availableVersions.first(where: { $0.id == entry.moduleID }) {
+                        history.version = v
                         history.testament = entry.testament
                         history.book = entry.book
                         history.chapter = entry.chapter
@@ -358,7 +358,7 @@ struct ReaderView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                ReadingSettingsView(showStrongsOption: history.module.info.supportsStrongs)
+                ReadingSettingsView(showStrongsOption: history.version.supportsStrongs)
                 Spacer()
                 Button("History") {
                     showingSettings = false
@@ -393,7 +393,13 @@ struct ReaderView: View {
     }
 
     private var chapterKey: String {
-        "\(history.module.id)-\(history.testament)-\(history.book)-\(history.chapter)"
+        "\(history.version.id)-\(history.testament)-\(history.book)-\(history.chapter)"
+    }
+
+    /// All versions known to the library (downloaded + private imports).
+    private func allLibraryVersions() -> [BibleVersion] {
+        store.installedModules().map(BibleVersion.sword)
+            + PrivateBibleStore.loadAll().map(BibleVersion.private)
     }
 
     private func canGo(toChapter c: Int) -> Bool {
@@ -533,7 +539,7 @@ struct ReaderView: View {
         let sorted = selectedVerses.sorted()
         guard !sorted.isEmpty else { return }
         let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
-        let version = history.module.id
+        let version = history.version.id
         // Single verse: omit the number in the text.
         // Multiple verses: include numbers ("1 text 2 text").
         let single = sorted.count == 1
@@ -566,7 +572,7 @@ struct ReaderView: View {
     // MARK: - Verse notes
 
     private func noteKey(_ verse: Int) -> String {
-        personalData.verseNoteKey(moduleID: history.module.id,
+        personalData.verseNoteKey(moduleID: history.version.id,
                                   testament: history.testament,
                                   book: history.book,
                                   chapter: history.chapter,
@@ -609,26 +615,22 @@ struct ReaderView: View {
         loadError = nil
         dwellTask?.cancel()
         do {
-            let mod = try await ModuleLoader.shared.module(for: history.module)
-            let rendered = mod.chapter(testament: history.testament, book: history.book,
-                                       chapter: history.chapter)
+            let rendered = try await history.version.loadChapter(
+                testament: history.testament, book: history.book,
+                chapter: history.chapter)
             guard !rendered.isEmpty else {
                 loadError = "This chapter has no text in this version."
                 return
             }
             verses = rendered
-            if history.module.info.supportsStrongs {
-                verseTokens = mod.chapterTokens(testament: history.testament,
-                                                book: history.book,
-                                                chapter: history.chapter)
-            } else {
-                verseTokens = []
-            }
+            verseTokens = await history.version.loadTokens(
+                testament: history.testament, book: history.book,
+                chapter: history.chapter)
             personalData.savePosition(ReadingPosition(testament: history.testament,
                                                       book: history.book,
                                                       chapter: history.chapter),
-                                      for: history.module.id)
-            personalData.saveLastReading(moduleID: history.module.id,
+                                      for: history.version.id)
+            personalData.saveLastReading(moduleID: history.version.id,
                                           testament: history.testament,
                                           book: history.book,
                                           chapter: history.chapter)
@@ -637,7 +639,7 @@ struct ReaderView: View {
                 // Turning chapters restarts the timer; quick flips are skipped.
                 startDwellTimer(for: chapterKey)
             } else {
-                personalData.recordHistory(moduleID: history.module.id,
+                personalData.recordHistory(moduleID: history.version.id,
                                             bookName: history.bookTitle,
                                             testament: history.testament,
                                             book: history.book,
@@ -656,7 +658,7 @@ struct ReaderView: View {
             try? await Task.sleep(for: .seconds(60))
             guard !Task.isCancelled else { return }
             if key == chapterKey {
-                personalData.recordHistory(moduleID: history.module.id,
+                personalData.recordHistory(moduleID: history.version.id,
                                             bookName: history.bookTitle,
                                             testament: history.testament,
                                             book: history.book,

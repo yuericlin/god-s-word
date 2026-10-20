@@ -28,6 +28,7 @@ sources = [
     "GodsWord/Services/StrongsService.swift",
     "GodsWord/Services/iCloudSync.swift",
     "GodsWord/Services/PrivateBible.swift",
+    "GodsWord/Services/BibleVersion.swift",
     "GodsWord/Views/LibraryView.swift",
     "GodsWord/Views/BooksView.swift",
     "GodsWord/Views/ChaptersView.swift",

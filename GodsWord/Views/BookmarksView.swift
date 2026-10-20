@@ -207,7 +207,7 @@ struct BookmarksPanel: View {
         let overall = entry.testament == 1 ? entry.book - 1 : 39 + entry.book - 1
         let bookName = history.bookName(overall: overall)
         let ref = "\(bookName) \(entry.chapter):\(entry.verse)"
-        return entry.moduleID == history.module.id ? ref : "\(entry.moduleID) \(ref)"
+        return entry.moduleID == history.version.id ? ref : "\(entry.moduleID) \(ref)"
     }
 
     var body: some View {
@@ -323,7 +323,7 @@ struct BookmarksPanel: View {
     private func addNote() {
         let verse = selectedVerses.min() ?? 1
         let key = personalData.verseNoteKey(
-            moduleID: history.module.id,
+            moduleID: history.version.id,
             testament: history.testament,
             book: history.book,
             chapter: history.chapter,
