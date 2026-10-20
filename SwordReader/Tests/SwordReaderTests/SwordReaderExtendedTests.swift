@@ -159,7 +159,7 @@ final class TokenizerEdgeCaseTests: XCTestCase {
 
 // MARK: - SwordConf (unit)
 
-final class SwordConfTests: XCTestCase {
+final class SwordConfExtendedTests: XCTestCase {
     func testSupportsStrongsDetection() {
         let conf = SwordConf(text: """
             [KJV]
@@ -267,7 +267,7 @@ final class PipelineIntegrationTests: XCTestCase {
 
 // MARK: - Versification (unit)
 
-final class VersificationTests: XCTestCase {
+final class VersificationExtendedTests: XCTestCase {
     func testKJVBookCount() {
         XCTAssertEqual(Versification.kjv.books.count, 66)
     }
