@@ -28,6 +28,7 @@ struct ReaderView: View {
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
     @State private var noteEditorItem: NoteEditorItem?
+    @State private var showingCompare = false
 
     /// Identifiable wrapper so the note sheet always opens with fresh data.
     private struct NoteEditorItem: Identifiable {
@@ -144,11 +145,12 @@ struct ReaderView: View {
                     })
                 }
             }
-            // Copy/Notes bar while verses are selected.
+            // Copy/Notes/Compare bar while verses are selected.
             if !selectedVerses.isEmpty {
                 HStack(spacing: 24) {
                     Button("Copy") { copySelectedVerses() }
                     Button("Notes") { openNoteEditorForSelection() }
+                    Button("Compare") { showingCompare = true }
                     Button {
                         selectedVerses = []
                     } label: {
@@ -341,6 +343,16 @@ struct ReaderView: View {
                 StrongsDefinitionView(key: key)
             }
         }
+        .sheet(isPresented: $showingCompare) {
+            CompareView(current: history.version,
+                        available: availableVersions,
+                        testament: history.testament,
+                        book: history.book,
+                        chapter: history.chapter,
+                        bookTitle: history.bookTitle,
+                        selectedVerses: selectedVerses.sorted())
+                .environmentObject(personalData)
+        }
         .sheet(item: $noteEditorItem) { item in
             VerseNoteEditor(reference: item.reference,
                             noteKey: item.id,
@@ -404,8 +416,7 @@ struct ReaderView: View {
 
     /// All versions known to the library (downloaded + private imports).
     private func allLibraryVersions() -> [BibleVersion] {
-        store.installedModules().map(BibleVersion.sword)
-            + PrivateBibleStore.loadAll().map(BibleVersion.private)
+        BibleVersion.allInstalled(in: store)
     }
 
     private func canGo(toChapter c: Int) -> Bool {

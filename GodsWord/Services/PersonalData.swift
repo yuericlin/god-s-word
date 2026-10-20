@@ -43,7 +43,7 @@ public struct HistoryEntry: Codable, Identifiable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 5
+    public var version: Int = 6
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -53,12 +53,15 @@ public struct BackupPayload: Codable, Sendable {
     public var verseNotes: [String: String]
     /// Note keys, most recently saved first (the panel's list order).
     public var verseNoteOrder: [String]
+    /// Versions the Compare panel shows besides the current one.
+    public var compareVersionIDs: [String]
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
                 positions: [String: ReadingPosition], installedModuleIDs: [String],
                 bookmarks: [Bookmark] = [], verseNotes: [String: String] = [:],
                 verseNoteOrder: [String] = [],
+                compareVersionIDs: [String] = [],
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -68,11 +71,12 @@ public struct BackupPayload: Codable, Sendable {
         self.bookmarks = bookmarks
         self.verseNotes = verseNotes
         self.verseNoteOrder = verseNoteOrder
+        self.compareVersionIDs = compareVersionIDs
         self.backedUpAt = backedUpAt
     }
 
     // Custom decoding so backups written before verseByVerse / showStrongs /
-    // bookmarks / verseNotes existed still load.
+    // bookmarks / verseNotes / compareVersionIDs existed still load.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
@@ -84,6 +88,7 @@ public struct BackupPayload: Codable, Sendable {
         bookmarks = try c.decodeIfPresent([Bookmark].self, forKey: .bookmarks) ?? []
         verseNotes = try c.decodeIfPresent([String: String].self, forKey: .verseNotes) ?? [:]
         verseNoteOrder = try c.decodeIfPresent([String].self, forKey: .verseNoteOrder) ?? []
+        compareVersionIDs = try c.decodeIfPresent([String].self, forKey: .compareVersionIDs) ?? []
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -100,6 +105,7 @@ public final class PersonalData: ObservableObject {
     private let bookmarksKey = "gw.bookmarks.v1"
     private let verseNotesKey = "gw.verseNotes.v1"
     private let verseNoteOrderKey = "gw.verseNoteOrder.v1"
+    private let compareVersionsKey = "gw.compareVersions.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -128,6 +134,7 @@ public final class PersonalData: ObservableObject {
         self.bookmarks = marks
         self.verseNotes = defaults.dictionary(forKey: verseNotesKey) as? [String: String] ?? [:]
         self.verseNoteOrder = defaults.stringArray(forKey: verseNoteOrderKey) ?? []
+        self.compareVersionIDs = defaults.stringArray(forKey: compareVersionsKey) ?? []
     }
 
     @Published public var fontSize: Double {
@@ -179,6 +186,22 @@ public final class PersonalData: ObservableObject {
     /// in canonical order). Maintained by `setVerseNote`.
     @Published public var verseNoteOrder: [String] {
         didSet { defaults.set(verseNoteOrder, forKey: verseNoteOrderKey) }
+    }
+
+    /// Ids of the versions the Compare panel shows besides the one being
+    /// read. Empty (the default) means Compare shows only the current
+    /// version. Persisted in UserDefaults.
+    @Published public var compareVersionIDs: [String] {
+        didSet { defaults.set(compareVersionIDs, forKey: compareVersionsKey) }
+    }
+
+    /// Adds or removes a version from the Compare setting.
+    public func toggleCompareVersion(_ id: String) {
+        if let i = compareVersionIDs.firstIndex(of: id) {
+            compareVersionIDs.remove(at: i)
+        } else {
+            compareVersionIDs.append(id)
+        }
     }
 
     /// Builds the storage key for a verse note.
@@ -305,6 +328,7 @@ public final class PersonalData: ObservableObject {
                       bookmarks: bookmarks,
                       verseNotes: verseNotes,
                       verseNoteOrder: verseNoteOrder,
+                      compareVersionIDs: compareVersionIDs,
                       backedUpAt: Date())
     }
 
@@ -325,6 +349,10 @@ public final class PersonalData: ObservableObject {
         if !payload.verseNoteOrder.isEmpty {
             verseNoteOrder = payload.verseNoteOrder
         }
+        // Same guard: backups made before Compare existed decode to [].
+        if !payload.compareVersionIDs.isEmpty {
+            compareVersionIDs = payload.compareVersionIDs
+        }
     }
 
     // MARK: - iCloud sync
@@ -337,6 +365,9 @@ public final class PersonalData: ObservableObject {
         public var showStrongs: Bool
         public var repositoryURL: String
         public var installedModuleIDs: [String]
+        /// Optional so settings.json files written before Compare existed
+        /// still decode (nil = leave the current setting alone).
+        public var compareVersionIDs: [String]?
     }
 
     private func syncBookmarksToiCloud() {
@@ -375,7 +406,8 @@ public final class PersonalData: ObservableObject {
         let settings = iCloudSettings(
             fontSize: fontSize, verseByVerse: verseByVerse,
             showStrongs: showStrongs, repositoryURL: repositoryURL,
-            installedModuleIDs: installedModuleIDs)
+            installedModuleIDs: installedModuleIDs,
+            compareVersionIDs: compareVersionIDs)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -423,7 +455,8 @@ public final class PersonalData: ObservableObject {
             fontSize: fontSize, verseByVerse: verseByVerse,
             showStrongs: showStrongs,
             repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
-            installedModuleIDs: [])
+            installedModuleIDs: [],
+            compareVersionIDs: compareVersionIDs)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -469,6 +502,7 @@ public final class PersonalData: ObservableObject {
                 fontSize = s.fontSize
                 verseByVerse = s.verseByVerse
                 showStrongs = s.showStrongs
+                if let ids = s.compareVersionIDs { compareVersionIDs = ids }
             default:
                 continue
             }
