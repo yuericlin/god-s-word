@@ -273,3 +273,23 @@ Multiple (KJV Gen 1:1-2):
   enable in Xcode Signing & Capabilities with the user's Apple Developer
   account).
 
+### Private Bible versions
+- **REQ-IC-9:** Private/custom Bible versions are stored as JSON (or gzipped
+  JSON) in `god-s-word/private-repo/`.
+- **REQ-IC-10:** When iCloud is enabled, private Bibles are automatically
+  downloaded to local `Application Support/PrivateModules/`.
+- **REQ-IC-11:** Private Bible JSON schema:
+  ```json
+  {
+    "id": "MyVersion",
+    "name": "My Custom Bible",
+    "language": "en",
+    "books": [
+      { "name": "Genesis",
+        "chapters": [ ["v1 text", "v2 text"], ["ch2 v1"] ] }
+    ]
+  }
+  ```
+  Chapters are arrays of verses (0-based in JSON, 1-based in the API).
+- **REQ-IC-12:** Both `.json` and `.json.gz` are supported for private modules.
+

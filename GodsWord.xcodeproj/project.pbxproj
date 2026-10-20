@@ -16,6 +16,7 @@
 		0027A6339D685FE6852157B4 /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C66BFB778405C05A35B83D7 /* Bookmark.swift */; };
 		37F38021A4C0525599329DD4 /* StrongsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D6BA134F085C248807B712 /* StrongsService.swift */; };
 		DA194D2A04DE5E28968665C3 /* iCloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5E7E39E0D851BE9152E55D /* iCloudSync.swift */; };
+		4E277C5D3CE15FD48BA42019 /* PrivateBible.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C87FF5499FE535E9C0ECAED /* PrivateBible.swift */; };
 		F0541EB7FDB45E1CA4B57ECC /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1265A3BEC5EE5E008AA46C2D /* LibraryView.swift */; };
 		4480D067D1C55ECE90727D77 /* BooksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4640D866555568EA55879C4 /* BooksView.swift */; };
 		05873CC235225784B7C0F264 /* ChaptersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BBA36552A5953DFB2A60413 /* ChaptersView.swift */; };
@@ -46,6 +47,7 @@
 		0C66BFB778405C05A35B83D7 /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bookmark.swift"; sourceTree = "<group>"; };
 		F6D6BA134F085C248807B712 /* StrongsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StrongsService.swift"; sourceTree = "<group>"; };
 		7E5E7E39E0D851BE9152E55D /* iCloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iCloudSync.swift"; sourceTree = "<group>"; };
+		7C87FF5499FE535E9C0ECAED /* PrivateBible.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PrivateBible.swift"; sourceTree = "<group>"; };
 		1265A3BEC5EE5E008AA46C2D /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LibraryView.swift"; sourceTree = "<group>"; };
 		E4640D866555568EA55879C4 /* BooksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BooksView.swift"; sourceTree = "<group>"; };
 		3BBA36552A5953DFB2A60413 /* ChaptersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ChaptersView.swift"; sourceTree = "<group>"; };
@@ -108,6 +110,7 @@
 				0C66BFB778405C05A35B83D7 /* Bookmark.swift */,
 				F6D6BA134F085C248807B712 /* StrongsService.swift */,
 				7E5E7E39E0D851BE9152E55D /* iCloudSync.swift */,
+				7C87FF5499FE535E9C0ECAED /* PrivateBible.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -216,6 +219,7 @@
 				0027A6339D685FE6852157B4 /* Bookmark.swift in Sources */,
 				37F38021A4C0525599329DD4 /* StrongsService.swift in Sources */,
 				DA194D2A04DE5E28968665C3 /* iCloudSync.swift in Sources */,
+				4E277C5D3CE15FD48BA42019 /* PrivateBible.swift in Sources */,
 				F0541EB7FDB45E1CA4B57ECC /* LibraryView.swift in Sources */,
 				4480D067D1C55ECE90727D77 /* BooksView.swift in Sources */,
 				05873CC235225784B7C0F264 /* ChaptersView.swift in Sources */,

@@ -17,7 +17,16 @@ public final class iCloudSync: ObservableObject {
     @Published public var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: "gw.iCloudSync.enabled")
-            if isEnabled { ensureFolders() }
+            if isEnabled {
+                ensureFolders()
+                // Download any private Bibles from iCloud to local.
+                DispatchQueue.global(qos: .background).async {
+                    let count = self.syncPrivateModulesToLocal()
+                    if count > 0 {
+                        print("[iCloudSync] Downloaded \(count) private Bible(s) to local")
+                    }
+                }
+            }
         }
     }
 
@@ -149,6 +158,47 @@ public final class iCloudSync: ObservableObject {
         return files.filter {
             $0.pathExtension == "json" || $0.pathExtension == "gz"
         }
+    }
+
+    /// Downloads private Bible modules from iCloud private-repo/ to local
+    /// Application Support/PrivateModules/. Call on launch and when iCloud
+    /// is enabled. Returns the number of modules downloaded.
+    @discardableResult
+    public func syncPrivateModulesToLocal() -> Int {
+        guard isEnabled, isAvailable else { return 0 }
+        let remote = listPrivateModules()
+        guard !remote.isEmpty else { return 0 }
+        var count = 0
+        let fm = FileManager.default
+        try? fm.createDirectory(at: PrivateBibleStore.baseDir,
+                                withIntermediateDirectories: true)
+        let coordinator = NSFileCoordinator()
+        for url in remote {
+            let dest = PrivateBibleStore.baseDir
+                .appendingPathComponent(url.lastPathComponent)
+            // Skip if already downloaded and same size (avoid redundant copies).
+            if fm.fileExists(atPath: dest.path),
+               let rAttr = try? fm.attributesOfItem(atPath: url.path),
+               let dAttr = try? fm.attributesOfItem(atPath: dest.path),
+               (rAttr[.size] as? Int) == (dAttr[.size] as? Int) {
+                continue
+            }
+            var copyError: Error?
+            coordinator.coordinate(readingItemAt: url, options: [],
+                                   error: nil) { readURL in
+                do {
+                    // Start downloading if not yet local (iCloud Drive).
+                    try fm.startDownloadingUbiquitousItem(at: readURL)
+                    let data = try Data(contentsOf: readURL)
+                    try data.write(to: dest, options: .atomic)
+                    count += 1
+                } catch {
+                    copyError = error
+                }
+            }
+            if copyError != nil { continue }
+        }
+        return count
     }
 
     // MARK: - Gzip helpers
