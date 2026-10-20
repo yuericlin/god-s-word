@@ -159,6 +159,8 @@ struct BookmarksPanel: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var editingBookmark: Bookmark?
+    @State private var addingNote = false
+    @State private var noteDraft = ""
 
     /// A verse note parsed from its storage key.
     private struct NoteEntry {
@@ -260,9 +262,12 @@ struct BookmarksPanel: View {
 
             Spacer()
 
-            Button("Add Bookmark") { addBookmark() }
-                .frame(maxWidth: .infinity)
-                .padding()
+            HStack {
+                Button("Add Bookmark") { addBookmark() }
+                Spacer()
+                Button("Add Note") { addNote() }
+            }
+            .padding()
         }
         .frame(width: 300)
         .frame(maxHeight: .infinity)
@@ -276,6 +281,22 @@ struct BookmarksPanel: View {
         .sheet(item: $editingBookmark) { bookmark in
             BookmarkEditView(bookmark: bookmark, history: history)
         }
+        .sheet(isPresented: $addingNote) {
+            VerseNoteEditor(
+                reference: "\(history.bookTitle) \(history.chapter):1",
+                text: $noteDraft,
+                onSave: { text in
+                    let key = personalData.verseNoteKey(
+                        moduleID: history.module.id,
+                        testament: history.testament,
+                        book: history.book,
+                        chapter: history.chapter,
+                        verse: 1)
+                    personalData.setVerseNote(text, forKey: key)
+                }
+            )
+            .environmentObject(personalData)
+        }
     }
 
     private func addBookmark() {
@@ -285,6 +306,18 @@ struct BookmarksPanel: View {
             book: history.book,
             chapter: history.chapter)
         editingBookmark = created
+    }
+
+    /// Opens the note editor for the current chapter (anchored at verse 1).
+    private func addNote() {
+        let key = personalData.verseNoteKey(
+            moduleID: history.module.id,
+            testament: history.testament,
+            book: history.book,
+            chapter: history.chapter,
+            verse: 1)
+        noteDraft = personalData.verseNote(forKey: key) ?? ""
+        addingNote = true
     }
 
     private func jump(to bookmark: Bookmark) {
