@@ -39,6 +39,16 @@ public final class iCloudSync: ObservableObject {
         self.isEnabled = UserDefaults.standard.bool(forKey: "gw.iCloudSync.enabled")
     }
 
+    /// Call on app launch: ensures folders exist if iCloud was already enabled.
+    public func ensureFoldersOnLaunchIfEnabled() {
+        guard isEnabled else { return }
+        // Delay slightly to let iCloud initialize.
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            self.ensureFolders()
+        }
+    }
+
     // MARK: - Folder structure
 
     /// The iCloud Drive container URL, e.g. ~/Library/Mobile Documents/iCloud~.../

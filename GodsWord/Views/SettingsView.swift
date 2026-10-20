@@ -47,10 +47,16 @@ struct SettingsView: View {
                     ))
                     .disabled(!iCloudSync.shared.isAvailable)
                     if !iCloudSync.shared.isAvailable {
-                        Text("Sign in to iCloud in Settings to enable sync.")
+                        Text("Sign in to iCloud in the iOS Settings app to enable sync. " +
+                             "The developer must also enable the iCloud capability in Xcode " +
+                             "(Signing & Capabilities).")
                             .font(.callout).foregroundStyle(.secondary)
                     } else if iCloudSync.shared.isEnabled {
-                        Text("Bookmarks, notes, settings, and history sync as JSON to the god-s-word folder in iCloud Drive. Private Bible versions go in god-s-word/private-repo/.")
+                        Text("Bookmarks, notes, settings, and history sync as JSON to the god-s-word folder in iCloud Drive. Private Bible versions go in god-s-word/private-repo/. " +
+                             "The folder appears in the Files app under iCloud Drive once sync is active.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else {
+                        Text("Enable to sync your data to the god-s-word folder in iCloud Drive.")
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 } header: {
