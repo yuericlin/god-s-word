@@ -480,10 +480,20 @@ struct ReaderView: View {
 
     // MARK: - Verse picker (invisible links; rendering unchanged)
 
-    /// Tiny note marker after the verse number; tapping opens the note.
+    /// Tiny sticky-note icon after the verse number; tapping opens the note.
     private func noteIconAttr(_ verse: Int) -> AttributedString {
-        var icon = AttributedString("📝 ")
-        icon.font = .system(size: personalData.fontSize * 0.6, design: .serif)
+        let size = personalData.fontSize * 0.62
+        let config = UIImage.SymbolConfiguration(pointSize: size, weight: .regular)
+        guard let image = UIImage(systemName: "note", withConfiguration: config) else {
+            return AttributedString("")
+        }
+        let attachment = NSTextAttachment()
+        attachment.image = image.withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+        // Nudge up so it sits centered on the text line.
+        attachment.bounds = CGRect(x: 0, y: -2, width: size, height: size)
+        let ns = NSMutableAttributedString(attachment: attachment)
+        ns.append(NSAttributedString(string: " "))
+        var icon = AttributedString(ns)
         icon.link = URL(string: "note://\(verse)")
         icon.underlineStyle = []
         return icon
