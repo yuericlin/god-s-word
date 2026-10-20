@@ -185,7 +185,7 @@ struct ReaderView: View {
                                selectedVerses: selectedVerses,
                                noteSeedText: selectedVerses.isEmpty
                                    ? "\(history.bookTitle) \(history.chapter)\n"
-                                   : selectionVerseText() + "\n")
+                                   : selectionClipboardString() + "\n")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .transition(.move(edge: .trailing))
             }
@@ -542,8 +542,7 @@ struct ReaderView: View {
 
     /// Copies the selected verses as "Book Chapter:1, 3" + "1 text" lines.
     /// The selected verses' text: a single verse plain, multiple verses
-    /// numbered ("1 text 2 text"). Copy wraps it in quotes and appends
-    /// the reference and version; a new note is seeded with it as-is.
+    /// numbered ("1 text 2 text").
     private func selectionVerseText() -> String {
         let sorted = selectedVerses.sorted()
         let single = sorted.count == 1
@@ -554,12 +553,18 @@ struct ReaderView: View {
         return parts.joined(separator: " ")
     }
 
-    private func copySelectedVerses() {
+    /// The clipboard format for the current selection:
+    /// "\"verse text\" Book Chapter:Verses Version". Copy uses it
+    /// verbatim; a new note is seeded with it (plus a newline).
+    private func selectionClipboardString() -> String {
         let sorted = selectedVerses.sorted()
-        guard !sorted.isEmpty else { return }
         let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
-        let version = history.version.id
-        UIPasteboard.general.string = "\"\(selectionVerseText())\" \(ref) \(version)"
+        return "\"\(selectionVerseText())\" \(ref) \(history.version.id)"
+    }
+
+    private func copySelectedVerses() {
+        guard !selectedVerses.isEmpty else { return }
+        UIPasteboard.general.string = selectionClipboardString()
     }
 
     /// [1,2,3,5] -> "1-3, 5"
@@ -606,7 +611,7 @@ struct ReaderView: View {
 
     /// Notes from the selection bar anchor to the first selected verse,
     /// so a multi-verse note shows its icon only there. A new note is
-    /// seeded with the selected verses' text.
+    /// seeded with the selection in the clipboard format.
     private func openNoteEditorForSelection() {
         guard let first = selectedVerses.min() else { return }
         let key = noteKey(first)
@@ -615,7 +620,7 @@ struct ReaderView: View {
             verse: first,
             reference: noteReference(first),
             initialText: personalData.verseNote(forKey: key) ?? "",
-            seedText: selectionVerseText() + "\n")
+            seedText: selectionClipboardString() + "\n")
     }
 
     private func noteReference(_ verse: Int) -> String {

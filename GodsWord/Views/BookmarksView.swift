@@ -158,8 +158,8 @@ struct BookmarksPanel: View {
     @Binding var showing: Bool
     /// Verses currently selected in the reader; "Add Note" anchors to these if non-empty.
     let selectedVerses: Set<Int>
-    /// Pre-fill for a brand-new note from this panel: the selected
-    /// verses' text, or book + chapter when nothing is selected.
+    /// Pre-fill for a brand-new note from this panel: the selection in
+    /// the clipboard format, or book + chapter when nothing is selected.
     let noteSeedText: String
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
@@ -189,8 +189,9 @@ struct BookmarksPanel: View {
     }
 
     /// Notes list order: most recently saved first (PersonalData's
-    /// verseNoteOrder); notes not in that list (e.g. restored from an
-    /// old backup) follow in canonical order.
+    /// verseNoteOrder); notes not in that list (e.g. created before
+    /// order tracking) follow in REVERSE canonical order — the
+    /// opposite of the original list order, latest passage on top.
     private var noteEntries: [NoteEntry] {
         let order = personalData.verseNoteOrder
         return personalData.verseNotes.compactMap { key, text -> NoteEntry? in
@@ -208,7 +209,7 @@ struct BookmarksPanel: View {
             let ia = order.firstIndex(of: $0.key) ?? .max
             let ib = order.firstIndex(of: $1.key) ?? .max
             if ia != ib { return ia < ib }
-            return ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) <
+            return ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) >
                    ($1.moduleID, $1.testament, $1.book, $1.chapter, $1.verse)
         }
     }
