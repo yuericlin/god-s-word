@@ -63,10 +63,15 @@ public enum PrivateBibleStore: Sendable {
 
     /// All locally available private Bibles (from .json or .json.gz).
     public static func loadAll() -> [PrivateBible] {
+        loadAll(in: baseDir)
+    }
+
+    /// All private Bibles in an arbitrary folder.
+    public static func loadAll(in dir: URL) -> [PrivateBible] {
         let fm = FileManager.default
-        try? fm.createDirectory(at: baseDir, withIntermediateDirectories: true)
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         guard let files = try? fm.contentsOfDirectory(
-            at: baseDir, includingPropertiesForKeys: nil,
+            at: dir, includingPropertiesForKeys: nil,
             options: .skipsHiddenFiles) else { return [] }
         var out: [PrivateBible] = []
         for url in files {
@@ -105,6 +110,15 @@ public enum PrivateBibleStore: Sendable {
             out = data
         }
         try out.write(to: url, options: .atomic)
+    }
+
+    /// Saves a private Bible into a specific folder (a source's location).
+    public static func save(_ bible: PrivateBible, into dir: URL) throws {
+        try FileManager.default.createDirectory(at: dir,
+                                                withIntermediateDirectories: true)
+        let data = try JSONEncoder().encode(bible)
+        let url = dir.appendingPathComponent("\(bible.id).json")
+        try data.write(to: url, options: .atomic)
     }
 }
 

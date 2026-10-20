@@ -1,7 +1,8 @@
 // LibraryView.swift — root screen: the user's Bible versions.
-// Versions are segregated by source (CrossWire, then Private), then by
-// language, then alphabetically. Private versions are imported from JSON
-// files; public ones show their source base URL.
+// Versions are segregated by source (CrossWire, Private, then custom
+// sources), then by language, then alphabetically. Sources are managed
+// here: add (repository URL or local folder), edit any source, delete
+// custom ones (their version files are kept).
 
 import SwiftUI
 import SwordReader
@@ -18,8 +19,8 @@ enum Route: Hashable {
 
 /// One source section in the library: its versions grouped by language.
 private struct SourceGroup: Identifiable {
-    let id: String          // "CrossWire" / "Private"
-    let sourceURL: URL?     // public base URL; nil for private
+    let source: BibleSource
+    var id: String { source.id }
     let languages: [LanguageGroup]
 }
 
@@ -38,7 +39,9 @@ struct LibraryView: View {
     @State private var history: ReadingHistory?
     @State private var showingRepository = false
     @State private var showingSettings = false
-    @State private var showingImporter = false
+    @State private var editingSource: BibleSource?
+    @State private var addingSource = false
+    @State private var importTarget: BibleSource?
     @State private var importError: String?
     @State private var didRestoreLastReading = false
 
@@ -49,7 +52,7 @@ struct LibraryView: View {
                     ContentUnavailableView(
                         "No Bibles yet",
                         systemImage: "book.closed",
-                        description: Text("Add a Bible version from the CrossWire repository to start reading.")
+                        description: Text("Add a Bible version from a repository, or import a private Bible, to start reading.")
                     )
                 } else {
                     List {
@@ -60,26 +63,18 @@ struct LibraryView: View {
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
                                     ForEach(lang.versions) { version in
-                                        versionRow(version, in: group)
+                                        versionRow(version)
                                     }
                                 }
-                                if group.id == "Private" {
+                                if group.source.isLocal {
                                     Button {
-                                        showingImporter = true
+                                        importTarget = group.source
                                     } label: {
                                         Label("Import a private Bible…", systemImage: "square.and.arrow.down")
                                     }
                                 }
                             } header: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(group.id)
-                                    if let url = group.sourceURL {
-                                        Text(url.absoluteString)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .textCase(nil)
-                                    }
-                                }
+                                sourceHeader(group.source)
                             }
                         }
                     }
@@ -93,8 +88,19 @@ struct LibraryView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingRepository = true } label: {
-                        Label("Add Bible", systemImage: "plus")
+                    Menu {
+                        Button {
+                            showingRepository = true
+                        } label: {
+                            Label("Download Bible…", systemImage: "arrow.down.circle")
+                        }
+                        Button {
+                            addingSource = true
+                        } label: {
+                            Label("Add Source…", systemImage: "plus.circle")
+                        }
+                    } label: {
+                        Label("Add", systemImage: "plus")
                     }
                 }
             }
@@ -115,9 +121,21 @@ struct LibraryView: View {
                     }
                 })
             }
-            .fileImporter(isPresented: $showingImporter,
-                          allowedContentTypes: [.json, .gzip]) { result in
-                importPrivateBible(result)
+            .sheet(isPresented: $addingSource, onDismiss: refresh) {
+                SourceEditView()
+            }
+            .sheet(item: $editingSource, onDismiss: refresh) { source in
+                SourceEditView(source: source)
+            }
+            .fileImporter(
+                isPresented: Binding(
+                    get: { importTarget != nil },
+                    set: { if !$0 { importTarget = nil } }),
+                allowedContentTypes: [.json, .gzip]) { result in
+                if let target = importTarget {
+                    importPrivateBible(result, into: target)
+                }
+                importTarget = nil
             }
             .alert("Import failed", isPresented: Binding(
                 get: { importError != nil },
@@ -149,7 +167,32 @@ struct LibraryView: View {
         .onAppear(perform: refresh)
     }
 
-    private func versionRow(_ version: BibleVersion, in group: SourceGroup) -> some View {
+    /// Source section header: name, public base URL when there is one, and
+    /// an edit button (all sources are editable).
+    private func sourceHeader(_ source: BibleSource) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(source.name)
+                if let url = source.repositoryURL {
+                    Text(url.absoluteString)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(nil)
+                }
+            }
+            Spacer()
+            Button {
+                editingSource = source
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func versionRow(_ version: BibleVersion) -> some View {
         Button {
             history = ReadingHistory(version: version)
             path.append(Route.books)
@@ -181,10 +224,22 @@ struct LibraryView: View {
     }
 
     private func refresh() {
-        let sword = store.installedModules().map(BibleVersion.sword)
-        let privates = PrivateBibleStore.loadAll().map(BibleVersion.private)
-        groups = [makeGroup(id: "CrossWire", versions: sword),
-                  makeGroup(id: "Private", versions: privates)]
+        let store = BibleSourceStore.shared
+        let installed = self.store.installedModules()
+        var newGroups: [SourceGroup] = []
+        for source in store.allSources {
+            let versions: [BibleVersion]
+            switch source.kind {
+            case .repository:
+                versions = installed
+                    .filter { store.sourceID(forModule: $0.id) == source.id }
+                    .map(BibleVersion.sword)
+            case .appFolder, .folder:
+                versions = loadPrivateBibles(from: source).map(BibleVersion.private)
+            }
+            newGroups.append(makeGroup(source: source, versions: versions))
+        }
+        groups = newGroups
         restoreLastReading()
         // Ensure iCloud folders exist (if enabled) and sync private Bibles.
         iCloudSync.shared.ensureFoldersOnLaunchIfEnabled()
@@ -193,7 +248,16 @@ struct LibraryView: View {
         }
     }
 
-    private func makeGroup(id: String, versions: [BibleVersion]) -> SourceGroup {
+    /// Private Bibles in a local source's folder (security-scoped when
+    /// it's a user-picked folder).
+    private func loadPrivateBibles(from source: BibleSource) -> [PrivateBible] {
+        guard let dir = source.resolvedFolder else { return [] }
+        let scoped = source.needsSecurityScope && dir.startAccessingSecurityScopedResource()
+        defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
+        return PrivateBibleStore.loadAll(in: dir)
+    }
+
+    private func makeGroup(source: BibleSource, versions: [BibleVersion]) -> SourceGroup {
         let byLang = Dictionary(grouping: versions, by: \.language)
         let langs = byLang.keys.sorted().map { code -> LanguageGroup in
             let vs = (byLang[code] ?? []).sorted { $0.displayName < $1.displayName }
@@ -201,17 +265,20 @@ struct LibraryView: View {
                                  title: vs.first?.languageTitle ?? code,
                                  versions: vs)
         }
-        let url = versions.first?.sourceURL
-        return SourceGroup(id: id, sourceURL: url, languages: langs)
+        return SourceGroup(source: source, languages: langs)
     }
 
-    /// Import a private Bible JSON (.json or .json.gz) picked by the user.
-    private func importPrivateBible(_ result: Result<URL, Error>) {
+    /// Import a private Bible JSON (.json or .json.gz) into a local source's folder.
+    private func importPrivateBible(_ result: Result<URL, Error>, into source: BibleSource) {
         let url: URL
         switch result {
         case .success(let u): url = u
         case .failure(let e):
             importError = e.localizedDescription
+            return
+        }
+        guard let dir = source.resolvedFolder else {
+            importError = "That source has no folder."
             return
         }
         guard url.startAccessingSecurityScopedResource() else {
@@ -223,8 +290,10 @@ struct LibraryView: View {
             importError = "That file isn't a valid private Bible JSON."
             return
         }
+        let scoped = source.needsSecurityScope && dir.startAccessingSecurityScopedResource()
+        defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
         do {
-            try PrivateBibleStore.save(bible)
+            try PrivateBibleStore.save(bible, into: dir)
         } catch {
             importError = error.localizedDescription
             return
@@ -259,11 +328,15 @@ struct LibraryView: View {
             try? store.delete(mod.id)
             Task { await ModuleLoader.shared.evict(mod.id) }
         case .private(let bible):
-            let fm = FileManager.default
-            for ext in ["json", "json.gz"] {
-                let url = PrivateBibleStore.baseDir
-                    .appendingPathComponent("\(bible.id).\(ext)")
-                try? fm.removeItem(at: url)
+            // Remove from whichever local source folder holds it.
+            for source in BibleSourceStore.shared.allSources where source.isLocal {
+                guard let dir = source.resolvedFolder else { continue }
+                let scoped = source.needsSecurityScope && dir.startAccessingSecurityScopedResource()
+                for ext in ["json", "json.gz"] {
+                    try? FileManager.default.removeItem(
+                        at: dir.appendingPathComponent("\(bible.id).\(ext)"))
+                }
+                if scoped { dir.stopAccessingSecurityScopedResource() }
             }
         }
         if history?.version.id == version.id { history = nil }
