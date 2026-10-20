@@ -157,7 +157,44 @@ struct BookmarksPanel: View {
     let history: ReadingHistory
     @Binding var showing: Bool
     @EnvironmentObject private var personalData: PersonalData
+    @Environment(\.moduleStore) private var store
     @State private var editingBookmark: Bookmark?
+
+    /// A verse note parsed from its storage key.
+    private struct NoteEntry {
+        let key: String
+        let moduleID: String
+        let testament: Int
+        let book: Int
+        let chapter: Int
+        let verse: Int
+        let text: String
+    }
+
+    private var noteEntries: [NoteEntry] {
+        personalData.verseNotes.compactMap { key, text -> NoteEntry? in
+            let parts = key.split(separator: ":")
+            guard parts.count == 5,
+                  let testament = Int(parts[1]),
+                  let book = Int(parts[2]),
+                  let chapter = Int(parts[3]),
+                  let verse = Int(parts[4]) else { return nil }
+            return NoteEntry(key: key, moduleID: String(parts[0]),
+                             testament: testament, book: book,
+                             chapter: chapter, verse: verse, text: text)
+        }
+        .sorted {
+            ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) <
+            ($1.moduleID, $1.testament, $1.book, $1.chapter, $1.verse)
+        }
+    }
+
+    private func noteReference(_ entry: NoteEntry) -> String {
+        let overall = entry.testament == 1 ? entry.book - 1 : 39 + entry.book - 1
+        let bookName = history.bookName(overall: overall)
+        let ref = "\(bookName) \(entry.chapter):\(entry.verse)"
+        return entry.moduleID == history.module.id ? ref : "\(entry.moduleID) \(ref)"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -183,7 +220,42 @@ struct BookmarksPanel: View {
             if personalData.bookmarks.isEmpty {
                 Text("No bookmarks yet.")
                     .foregroundStyle(.secondary)
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+            }
+
+            // Notes section: every verse with a note, tap to jump there.
+            Text("Notes").font(.headline)
+                .padding(.horizontal)
+                .padding(.top, 12)
+            if noteEntries.isEmpty {
+                Text("No notes yet.")
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(noteEntries, id: \.key) { entry in
+                            Button { jumpToNote(entry) } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(noteReference(entry))
+                                        .font(.subheadline)
+                                    Text(entry.text)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(2)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 6)
+                            }
+                            .buttonStyle(.plain)
+                            Divider()
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .frame(maxHeight: 300)
             }
 
             Spacer()
@@ -222,6 +294,21 @@ struct BookmarksPanel: View {
         let count = max(history.chapterCount(testament: bookmark.testament,
                                              book: bookmark.book), 1)
         history.chapter = min(max(bookmark.chapter, 1), count)
+        showing = false
+    }
+
+    private func jumpToNote(_ entry: NoteEntry) {
+        // Switch version if the note belongs to another one.
+        if entry.moduleID != history.module.id,
+           let mod = store.installedModules().first(where: { $0.id == entry.moduleID }) {
+            history.module = mod
+        }
+        history.dwellMode = true
+        history.testament = entry.testament
+        history.book = entry.book
+        let count = max(history.chapterCount(testament: entry.testament,
+                                             book: entry.book), 1)
+        history.chapter = min(max(entry.chapter, 1), count)
         showing = false
     }
 }
