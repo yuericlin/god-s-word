@@ -3,6 +3,7 @@
 // version menu always reflect the current selection.
 
 import SwiftUI
+import UIKit
 import SwordReader
 
 struct ReaderView: View {
@@ -23,6 +24,12 @@ struct ReaderView: View {
     @State private var dwellTask: Task<Void, Never>?
     @State private var availableModules: [InstalledModule] = []
     @State private var viewSize: CGSize = .zero
+    /// Verse picker: tap a verse to select it (light sky blue highlight).
+    /// Selection is by verse number, so it survives version changes.
+    @State private var selectedVerses: Set<Int> = []
+    @State private var noteVerse: Int?
+    @State private var noteDraft: String = ""
+    @State private var showingNoteEditor = false
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
     /// the current version carries Strong's data.
@@ -69,6 +76,9 @@ struct ReaderView: View {
                                                 .font(.system(size: personalData.fontSize, design: .serif))
                                                 .lineSpacing(6)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                                // Swallow long-press so the empty-area
+                                                // menu doesn't fire on text.
+                                                .onLongPressGesture { }
                                         }
                                     } else {
                                         ForEach(verses, id: \.verse) { v in
@@ -76,6 +86,7 @@ struct ReaderView: View {
                                                 .font(.system(size: personalData.fontSize, design: .serif))
                                                 .lineSpacing(6)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                                .onLongPressGesture { }
                                         }
                                     }
                                 } else {
@@ -85,21 +96,62 @@ struct ReaderView: View {
                                         .font(.system(size: personalData.fontSize, design: .serif))
                                         .lineSpacing(6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                        .onLongPressGesture { }
                                 }
                             }
                             .padding()
+                            // Long-press on empty reading area (margins, gaps)
+                            // offers to take a note (anchored at verse 1).
+                            .contextMenu {
+                                Button("Take Notes") { openChapterNoteEditor() }
+                            }
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
                     .environment(\.openURL, OpenURLAction { url in
-                        guard url.scheme == "strongs",
-                              let key = url.host, !key.isEmpty
-                        else { return .systemAction }
-                        strongsKey = key
-                        return .handled
+                        switch url.scheme {
+                        case "strongs":
+                            // Tapping a Strong's number opens its dictionary entry.
+                            if let key = url.host, !key.isEmpty {
+                                strongsKey = key
+                                return .handled
+                            }
+                        case "verse":
+                            // Tapping a verse's words toggles its selection.
+                            if let host = url.host, let n = Int(host) {
+                                toggleSelection(n)
+                                return .handled
+                            }
+                        case "note":
+                            // Tapping the note icon opens the verse's note.
+                            if let host = url.host, let n = Int(host) {
+                                openNoteEditor(for: n)
+                                return .handled
+                            }
+                        default:
+                            break
+                        }
+                        return .systemAction
                     })
                 }
+            }
+            // Copy/Notes bar while verses are selected.
+            if !selectedVerses.isEmpty {
+                HStack(spacing: 24) {
+                    Button("Copy") { copySelectedVerses() }
+                    Button("Notes") { openNoteEditorForSelection() }
+                    Button {
+                        selectedVerses = []
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 90)
             }
             // Ribbons for bookmarks pointing at the chapter being read.
             // Nothing shows when the current chapter isn't bookmarked.
@@ -229,6 +281,11 @@ struct ReaderView: View {
                 }
         )
         .task(id: chapterKey) { await load() }
+        // Selection lives within a chapter: clear it when the location
+        // changes, but keep it when only the version (module) changes.
+        .onChange(of: history.testament) { selectedVerses = [] }
+        .onChange(of: history.book) { selectedVerses = [] }
+        .onChange(of: history.chapter) { selectedVerses = [] }
         .onAppear { availableModules = store.installedModules() }
         .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
@@ -270,6 +327,13 @@ struct ReaderView: View {
         )) {
             if let key = strongsKey {
                 StrongsDefinitionView(key: key)
+            }
+        }
+        .sheet(isPresented: $showingNoteEditor) {
+            if let verse = noteVerse {
+                VerseNoteEditor(reference: noteReference(verse), text: $noteDraft) { text in
+                    personalData.setVerseNote(text, forKey: noteKey(verse))
+                }
             }
         }
     }
@@ -337,7 +401,18 @@ struct ReaderView: View {
     }
 
     private func attributedVerse(number: Int, text: String) -> AttributedString {
-        attributedVerseNumber(number) + AttributedString(" ") + AttributedString(text)
+        var out = attributedVerseNumber(number)
+        if hasNote(verse: number) {
+            out += noteIconAttr(number)
+        }
+        out += AttributedString(" ")
+        out += AttributedString(text)
+        // Invisible verse:// link makes the verse tappable for selection
+        // without changing how it renders. Runs that already have a link
+        // (note icon) keep theirs.
+        applyVerseLink(to: &out, verse: number)
+        applySelectionHighlight(to: &out, verse: number)
+        return out
     }
 
     /// Whole chapter as one flowing paragraph (paragraph mode). Verse numbers
@@ -368,6 +443,9 @@ struct ReaderView: View {
     /// their spacing); numbers render small and raised.
     private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
         var out = attributedVerseNumber(number)
+        if hasNote(verse: number) {
+            out += noteIconAttr(number)
+        }
         out += AttributedString(" ")
         for token in tokens {
             out += AttributedString(token.text)
@@ -375,6 +453,9 @@ struct ReaderView: View {
                 out += attributedStrongsNumber(key)
             }
         }
+        // Verse link skips the Strong's numbers and note icon (already linked).
+        applyVerseLink(to: &out, verse: number)
+        applySelectionHighlight(to: &out, verse: number)
         return out
     }
 
@@ -395,6 +476,119 @@ struct ReaderView: View {
         num.foregroundColor = .secondary
         num.baselineOffset = personalData.fontSize * 0.25
         return num
+    }
+
+    // MARK: - Verse picker (invisible links; rendering unchanged)
+
+    /// Tiny note marker after the verse number; tapping opens the note.
+    private func noteIconAttr(_ verse: Int) -> AttributedString {
+        var icon = AttributedString("📝 ")
+        icon.font = .system(size: personalData.fontSize * 0.6, design: .serif)
+        icon.link = URL(string: "note://\(verse)")
+        icon.underlineStyle = []
+        return icon
+    }
+
+    /// Sets an invisible verse://N link on every run without one, so the
+    /// verse is tappable for selection. Link styling is neutralized
+    /// (no underline, normal colors) so rendering is pixel-identical.
+    private func applyVerseLink(to attr: inout AttributedString, verse: Int) {
+        let url = URL(string: "verse://\(verse)")
+        struct Item { let range: Range<AttributedString.Index>; let hasColor: Bool }
+        let items = attr.runs.compactMap { run -> Item? in
+            guard run.link == nil else { return nil }
+            return Item(range: run.range, hasColor: run.foregroundColor != nil)
+        }
+        for item in items {
+            attr[item.range].link = url
+            attr[item.range].underlineStyle = []
+            if !item.hasColor {
+                attr[item.range].foregroundColor = .primary
+            }
+        }
+    }
+
+    /// Light sky blue background on a selected verse.
+    private func applySelectionHighlight(to attr: inout AttributedString, verse: Int) {
+        guard selectedVerses.contains(verse) else { return }
+        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+    }
+
+    private func toggleSelection(_ verse: Int) {
+        if selectedVerses.contains(verse) {
+            selectedVerses.remove(verse)
+        } else {
+            selectedVerses.insert(verse)
+        }
+    }
+
+    /// Copies the selected verses as "Book Chapter:1, 3" + "1 text" lines.
+    private func copySelectedVerses() {
+        let sorted = selectedVerses.sorted()
+        guard !sorted.isEmpty else { return }
+        let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
+        let lines = sorted.compactMap { v -> String? in
+            guard let text = verses.first(where: { $0.verse == v })?.text else { return nil }
+            return "\(v) \(text)"
+        }
+        UIPasteboard.general.string = ([ref] + lines).joined(separator: "\n")
+    }
+
+    /// [1,2,3,5] -> "1-3, 5"
+    private func verseListString(_ verses: [Int]) -> String {
+        var parts: [String] = []
+        var start = verses[0]
+        var prev = verses[0]
+        for v in verses.dropFirst() {
+            if v == prev + 1 {
+                prev = v
+            } else {
+                parts.append(start == prev ? "\(start)" : "\(start)-\(prev)")
+                start = v
+                prev = v
+            }
+        }
+        parts.append(start == prev ? "\(start)" : "\(start)-\(prev)")
+        return parts.joined(separator: ", ")
+    }
+
+    // MARK: - Verse notes
+
+    private func noteKey(_ verse: Int) -> String {
+        personalData.verseNoteKey(moduleID: history.module.id,
+                                  testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter,
+                                  verse: verse)
+    }
+
+    private func hasNote(verse: Int) -> Bool {
+        personalData.verseNote(forKey: noteKey(verse)) != nil
+    }
+
+    private func openNoteEditor(for verse: Int) {
+        noteVerse = verse
+        noteDraft = personalData.verseNotes[noteKey(verse)] ?? ""
+        showingNoteEditor = true
+    }
+
+    /// Notes from the selection bar anchor to the first selected verse,
+    /// so a multi-verse note shows its icon only there.
+    private func openNoteEditorForSelection() {
+        guard let first = selectedVerses.min() else { return }
+        openNoteEditor(for: first)
+    }
+
+    private func noteReference(_ verse: Int) -> String {
+        "\(history.bookTitle) \(history.chapter):\(verse)"
+    }
+
+    /// A chapter note is a note from the first verse to the last;
+    /// anchor it at the first verse like any multi-verse note.
+    private func openChapterNoteEditor() {
+        if let first = verses.first?.verse {
+            openNoteEditor(for: first)
+        }
     }
 
     private func load() async {

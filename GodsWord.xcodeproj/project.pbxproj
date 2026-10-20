@@ -21,6 +21,7 @@
 		DB0DB1C9B53F5D6689584DB6 /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F6FBA764F3551EAD6F022C /* ReaderView.swift */; };
 		F4C5D6699E6854429891C522 /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0C3897609655C6B4EFA9D6 /* BookmarksView.swift */; };
 		955617D3BE4E56A29D3C1A84 /* StrongsDefinitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2692C6CDDE558D3AE511188 /* StrongsDefinitionView.swift */; };
+		8A15BA1AC3CF596EA4103348 /* VerseNoteEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA9D3EE36AEB5219B9D20EAA /* VerseNoteEditor.swift */; };
 		67FAF9C86F125E808C6566CE /* ReadingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9598E044090F5CFABC15E5C3 /* ReadingSettingsView.swift */; };
 		663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */; };
 		6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42447FBBBA5658DCA177927D /* SettingsView.swift */; };
@@ -49,6 +50,7 @@
 		28F6FBA764F3551EAD6F022C /* ReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReaderView.swift"; sourceTree = "<group>"; };
 		EB0C3897609655C6B4EFA9D6 /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BookmarksView.swift"; sourceTree = "<group>"; };
 		F2692C6CDDE558D3AE511188 /* StrongsDefinitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StrongsDefinitionView.swift"; sourceTree = "<group>"; };
+		AA9D3EE36AEB5219B9D20EAA /* VerseNoteEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "VerseNoteEditor.swift"; sourceTree = "<group>"; };
 		9598E044090F5CFABC15E5C3 /* ReadingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReadingSettingsView.swift"; sourceTree = "<group>"; };
 		EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RepositoryView.swift"; sourceTree = "<group>"; };
 		42447FBBBA5658DCA177927D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
@@ -116,6 +118,7 @@
 				28F6FBA764F3551EAD6F022C /* ReaderView.swift */,
 				EB0C3897609655C6B4EFA9D6 /* BookmarksView.swift */,
 				F2692C6CDDE558D3AE511188 /* StrongsDefinitionView.swift */,
+				AA9D3EE36AEB5219B9D20EAA /* VerseNoteEditor.swift */,
 				9598E044090F5CFABC15E5C3 /* ReadingSettingsView.swift */,
 				EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */,
 				42447FBBBA5658DCA177927D /* SettingsView.swift */,
@@ -215,6 +218,7 @@
 				DB0DB1C9B53F5D6689584DB6 /* ReaderView.swift in Sources */,
 				F4C5D6699E6854429891C522 /* BookmarksView.swift in Sources */,
 				955617D3BE4E56A29D3C1A84 /* StrongsDefinitionView.swift in Sources */,
+				8A15BA1AC3CF596EA4103348 /* VerseNoteEditor.swift in Sources */,
 				67FAF9C86F125E808C6566CE /* ReadingSettingsView.swift in Sources */,
 				663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */,
 				6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */,
