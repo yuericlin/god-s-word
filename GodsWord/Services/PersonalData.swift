@@ -345,6 +345,10 @@ public final class PersonalData: ObservableObject {
         syncSettingsToiCloud(repositoryURL: repositoryURL,
                               installedModuleIDs: installedModuleIDs)
     }
+
+    /// Call when settings change (font size, toggles, installed modules).
+    public func syncSettingsToiCloud(repositoryURL: String,
+                                     installedModuleIDs: [String]) {
         guard iCloudSync.shared.isEnabled else { return }
         let settings = iCloudSettings(
             fontSize: fontSize, verseByVerse: verseByVerse,

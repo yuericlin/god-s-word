@@ -88,8 +88,9 @@ struct SettingsView: View {
                     Button("Import Data") {
                         showingImporter = true
                     }
-                    if let message, message.hasPrefix("Export") || message.hasPrefix("Import") {
-                        Text(message).font(.callout).foregroundStyle(.secondary)
+                    if let msg = message,
+                       msg.hasPrefix("Export") || msg.hasPrefix("Import") {
+                        Text(msg).font(.callout).foregroundStyle(.secondary)
                     }
                 } header: {
                     Text("Manual backup")
@@ -98,6 +99,7 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    if !GoogleDriveBackup.isConfigured {
                         Text("Google sign-in isn't configured in this build yet. " +
                              "Add your GoogleOAuth.plist (see README) to enable Drive backup.")
                             .font(.callout).foregroundStyle(.secondary)
