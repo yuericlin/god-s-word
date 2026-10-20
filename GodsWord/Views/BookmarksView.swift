@@ -161,7 +161,14 @@ struct BookmarksPanel: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var editingBookmark: Bookmark?
-    @State private var addingNote = false
+
+    /// Config for the note editor sheet (nil = not shown).
+    private struct NoteEditorConfig: Identifiable {
+        let id: String  // the verse-note storage key
+        let reference: String
+        let initialText: String
+    }
+    @State private var noteEditorConfig: NoteEditorConfig?
     @State private var noteDraft = ""
 
     /// A verse note parsed from its storage key.
@@ -241,7 +248,7 @@ struct BookmarksPanel: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(noteEntries, id: \.key) { entry in
-                            Button { jumpToNote(entry) } label: {
+                            Button { editNote(entry) } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(noteReference(entry))
                                         .font(.subheadline)
@@ -283,19 +290,13 @@ struct BookmarksPanel: View {
         .sheet(item: $editingBookmark) { bookmark in
             BookmarkEditView(bookmark: bookmark, history: history)
         }
-        .sheet(isPresented: $addingNote) {
-            let verse = selectedVerses.min() ?? 1
+        .sheet(item: $noteEditorConfig) { config in
             VerseNoteEditor(
-                reference: "\(history.bookTitle) \(history.chapter):\(verse)",
+                reference: config.reference,
                 text: $noteDraft,
                 onSave: { text in
-                    let key = personalData.verseNoteKey(
-                        moduleID: history.module.id,
-                        testament: history.testament,
-                        book: history.book,
-                        chapter: history.chapter,
-                        verse: verse)
-                    personalData.setVerseNote(text, forKey: key)
+                    personalData.setVerseNote(text, forKey: config.id)
+                    noteEditorConfig = nil
                 }
             )
             .environmentObject(personalData)
@@ -322,7 +323,19 @@ struct BookmarksPanel: View {
             chapter: history.chapter,
             verse: verse)
         noteDraft = personalData.verseNote(forKey: key) ?? ""
-        addingNote = true
+        noteEditorConfig = NoteEditorConfig(
+            id: key,
+            reference: "\(history.bookTitle) \(history.chapter):\(verse)",
+            initialText: noteDraft)
+    }
+
+    /// Opens the note editor for an existing note from the Notes list.
+    private func editNote(_ entry: NoteEntry) {
+        noteDraft = entry.text
+        noteEditorConfig = NoteEditorConfig(
+            id: entry.key,
+            reference: noteReference(entry),
+            initialText: entry.text)
     }
 
     private func jump(to bookmark: Bookmark) {
@@ -335,20 +348,6 @@ struct BookmarksPanel: View {
         showing = false
     }
 
-    private func jumpToNote(_ entry: NoteEntry) {
-        // Switch version if the note belongs to another one.
-        if entry.moduleID != history.module.id,
-           let mod = store.installedModules().first(where: { $0.id == entry.moduleID }) {
-            history.module = mod
-        }
-        history.dwellMode = true
-        history.testament = entry.testament
-        history.book = entry.book
-        let count = max(history.chapterCount(testament: entry.testament,
-                                             book: entry.book), 1)
-        history.chapter = min(max(entry.chapter, 1), count)
-        showing = false
-    }
 }
 
 /// Edits a bookmark's name, ribbon color, and book/chapter.
