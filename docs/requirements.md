@@ -248,3 +248,28 @@ Multiple (KJV Gen 1:1-2):
   bookmarks, ribbons).
 - **REQ-BK-3:** Backup is opt-in, manual, to the private `appDataFolder`.
 
+---
+
+## 13. iCloud sync
+
+- **REQ-IC-1:** iCloud sync is offered BEFORE Google Drive (preferred method).
+  Toggle in Settings > iCloud. Requires iCloud account sign-in.
+- **REQ-IC-2:** When enabled, all data syncs to the `god-s-word/` folder in
+  iCloud Drive.
+- **REQ-IC-3:** Data is stored in **JSON format** (not binary):
+  - `bookmarks.json` — ribbon bookmarks
+  - `notes.json` — verse notes (`{key: text}`)
+  - `settings.json` — font size, toggles, repository URL, installed module IDs
+  - `history.json` — reading history log
+- **REQ-IC-4:** Both plain JSON (`.json`) and compressed JSON (`.json.gz`) are
+  supported. Save defaults to plain; load tries `.gz` first, then `.json`.
+- **REQ-IC-5:** A `god-s-word/private-repo/` subfolder stores private or
+  customized Bible versions (JSON or gzipped JSON modules).
+- **REQ-IC-6:** On launch with iCloud enabled, data loads from iCloud Drive
+  (non-empty values only; never wipes local data with empty cloud data).
+- **REQ-IC-7:** Changes sync to iCloud automatically (write-through on every
+  `didSet`).
+- **REQ-IC-8:** Requires the iCloud Drive capability (`GodsWord.entitlements`;
+  enable in Xcode Signing & Capabilities with the user's Apple Developer
+  account).
+

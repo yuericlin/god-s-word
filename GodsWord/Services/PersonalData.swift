@@ -144,6 +144,7 @@ public final class PersonalData: ObservableObject {
     @Published public var historyLog: [HistoryEntry] {
         didSet {
             defaults.set(try? JSONEncoder().encode(historyLog), forKey: historyLogKey)
+            syncHistoryToiCloud()
         }
     }
 
@@ -151,6 +152,7 @@ public final class PersonalData: ObservableObject {
     @Published public var bookmarks: [Bookmark] {
         didSet {
             defaults.set(try? JSONEncoder().encode(bookmarks), forKey: bookmarksKey)
+            syncBookmarksToiCloud()
         }
     }
 
@@ -160,6 +162,7 @@ public final class PersonalData: ObservableObject {
     @Published public var verseNotes: [String: String] {
         didSet {
             defaults.set(verseNotes, forKey: verseNotesKey)
+            syncNotesToiCloud()
         }
     }
 
@@ -298,6 +301,62 @@ public final class PersonalData: ObservableObject {
         // Same guard for notes.
         if !payload.verseNotes.isEmpty {
             verseNotes = payload.verseNotes
+        }
+    }
+
+    // MARK: - iCloud sync
+
+    /// Settings snapshot for iCloud (JSON). Includes repository URL and
+    /// installed module IDs so a new device can restore its library.
+    public struct iCloudSettings: Codable {
+        public var fontSize: Double
+        public var verseByVerse: Bool
+        public var showStrongs: Bool
+        public var repositoryURL: String
+        public var installedModuleIDs: [String]
+    }
+
+    private func syncBookmarksToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(bookmarks, as: .bookmarks)
+    }
+
+    private func syncNotesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(verseNotes, as: .notes)
+    }
+
+    private func syncHistoryToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(historyLog, as: .history)
+    }
+
+    /// Call when settings change (font size, toggles, installed modules).
+    public func syncSettingsToiCloud(repositoryURL: String,
+                                     installedModuleIDs: [String]) {
+        guard iCloudSync.shared.isEnabled else { return }
+        let settings = iCloudSettings(
+            fontSize: fontSize, verseByVerse: verseByVerse,
+            showStrongs: showStrongs, repositoryURL: repositoryURL,
+            installedModuleIDs: installedModuleIDs)
+        try? iCloudSync.shared.save(settings, as: .settings)
+    }
+
+    /// Loads all data from iCloud Drive (when enabled). Called on launch.
+    public func loadFromiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        if let b: [Bookmark] = try? iCloudSync.shared.load([Bookmark].self,
+                                                            as: .bookmarks),
+           !b.isEmpty {
+            bookmarks = b
+        }
+        if let n: [String: String] = try? iCloudSync.shared.load(
+            [String: String].self, as: .notes), !n.isEmpty {
+            verseNotes = n
+        }
+        if let h: [HistoryEntry] = try? iCloudSync.shared.load(
+            [HistoryEntry].self, as: .history), !h.isEmpty {
+            historyLog = h
         }
     }
 }

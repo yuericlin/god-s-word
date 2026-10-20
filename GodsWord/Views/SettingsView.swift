@@ -41,6 +41,23 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("iCloud Sync", isOn: Binding(
+                        get: { iCloudSync.shared.isEnabled },
+                        set: { iCloudSync.shared.isEnabled = $0 }
+                    ))
+                    .disabled(!iCloudSync.shared.isAvailable)
+                    if !iCloudSync.shared.isAvailable {
+                        Text("Sign in to iCloud in Settings to enable sync.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else if iCloudSync.shared.isEnabled {
+                        Text("Bookmarks, notes, settings, and history sync as JSON to the god-s-word folder in iCloud Drive. Private Bible versions go in god-s-word/private-repo/.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("iCloud")
+                }
+
+                Section {
                     if !GoogleDriveBackup.isConfigured {
                         Text("Google sign-in isn't configured in this build yet. " +
                              "Add your GoogleOAuth.plist (see README) to enable Drive backup.")

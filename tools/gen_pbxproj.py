@@ -26,6 +26,7 @@ sources = [
     "GodsWord/Services/ReadingHistory.swift",
     "GodsWord/Services/Bookmark.swift",
     "GodsWord/Services/StrongsService.swift",
+    "GodsWord/Services/iCloudSync.swift",
     "GodsWord/Views/LibraryView.swift",
     "GodsWord/Views/BooksView.swift",
     "GodsWord/Views/ChaptersView.swift",
