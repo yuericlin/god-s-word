@@ -487,10 +487,11 @@ struct ReaderView: View {
     private func noteIconAttr(_ verse: Int) -> AttributedString {
         var icon = AttributedString("✎ ")
         icon.font = .system(size: personalData.fontSize * 0.6, design: .serif)
-        // Light yellow tint.
-        icon.foregroundColor = Color(red: 1.0, green: 0.9, blue: 0.45)
         icon.link = URL(string: "note://\(verse)")
         icon.underlineStyle = []
+        // Set color LAST so the link styling doesn't override it.
+        // Use UIColor explicitly for reliable bridging.
+        icon.foregroundColor = Color(UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 1.0))
         return icon
     }
 
