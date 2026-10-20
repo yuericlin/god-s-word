@@ -482,8 +482,10 @@ struct ReaderView: View {
     // MARK: - Verse picker (invisible links; rendering unchanged)
 
     /// Tiny note marker after the verse number; tapping opens the note.
+    /// Uses a monochrome glyph (✎) so the tint color actually applies —
+    /// full-color emoji ignore foregroundColor.
     private func noteIconAttr(_ verse: Int) -> AttributedString {
-        var icon = AttributedString("📄 ")
+        var icon = AttributedString("✎ ")
         icon.font = .system(size: personalData.fontSize * 0.6, design: .serif)
         // Light yellow tint.
         icon.foregroundColor = Color(red: 1.0, green: 0.9, blue: 0.45)
