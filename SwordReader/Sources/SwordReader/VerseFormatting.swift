@@ -85,3 +85,35 @@ public enum NoteAnchoring {
         selectedVerses.min() ?? 1
     }
 }
+
+/// Bookmark ribbon palette per REQ-BM-2.
+/// Colors cycle in order: sky blue, gold, purple, silver, green.
+public enum BookmarkPalette {
+    public static let colors: [(red: Double, green: Double, blue: Double)] = [
+        (0.53, 0.81, 0.98), // light sky blue
+        (1.00, 0.84, 0.40), // light gold
+        (0.79, 0.66, 0.91), // light purple
+        (0.83, 0.83, 0.83), // light silver
+        (0.56, 0.93, 0.56), // light green
+    ]
+
+    /// Color for the bookmark created at `count` existing bookmarks (0-based).
+    public static func color(forCount count: Int) -> (red: Double, green: Double, blue: Double) {
+        colors[count % colors.count]
+    }
+}
+
+/// Reading history log behavior per REQ-HI-2/3: dedupe-to-front, cap at `limit`.
+public enum HistoryLogLogic {
+    public static let limit = 100
+
+    /// Insert `entry` at the front, removing any existing duplicate,
+    /// then truncate to the cap. Entries must be Equatable to dedupe.
+    public static func insert<T: Equatable>(_ entry: T, into log: [T], limit: Int = limit) -> [T] {
+        var out = log.filter { $0 != entry }
+        out.insert(entry, at: 0)
+        if out.count > limit { out = Array(out.prefix(limit)) }
+        return out
+    }
+}
+

@@ -171,3 +171,68 @@ final class VersePickerRequirementsTests: XCTestCase {
         XCTAssertEqual(m.selected, [1, 2])
     }
 }
+
+// MARK: - REQ-BM: Bookmark palette
+
+final class BookmarkRequirementsTests: XCTestCase {
+    // REQ-BM-1: fresh installs start with zero bookmarks (palette empty state).
+    // (Enforced by PersonalData default; palette logic tested below.)
+
+    // REQ-BM-2: colors assigned in order, cycling after five.
+    func testPaletteOrder() {
+        XCTAssertEqual(BookmarkPalette.color(forCount: 0).red, 0.53, accuracy: 0.001)
+        XCTAssertEqual(BookmarkPalette.color(forCount: 1).red, 1.00, accuracy: 0.001)
+        XCTAssertEqual(BookmarkPalette.color(forCount: 2).red, 0.79, accuracy: 0.001)
+        XCTAssertEqual(BookmarkPalette.color(forCount: 3).red, 0.83, accuracy: 0.001)
+        XCTAssertEqual(BookmarkPalette.color(forCount: 4).red, 0.56, accuracy: 0.001)
+    }
+
+    func testPaletteCyclesAfterFive() {
+        let c5 = BookmarkPalette.color(forCount: 5)
+        let c0 = BookmarkPalette.color(forCount: 0)
+        XCTAssertEqual(c5.red, c0.red)
+        XCTAssertEqual(c5.green, c0.green)
+        XCTAssertEqual(c5.blue, c0.blue)
+    }
+
+    func testPaletteExactValues() {
+        // Light sky blue, gold, purple, silver, green (REQ-BM-2).
+        let expected: [(Double, Double, Double)] = [
+            (0.53, 0.81, 0.98), (1.00, 0.84, 0.40), (0.79, 0.66, 0.91),
+            (0.83, 0.83, 0.83), (0.56, 0.93, 0.56),
+        ]
+        XCTAssertEqual(BookmarkPalette.colors.count, 5)
+        for (i, e) in expected.enumerated() {
+            let c = BookmarkPalette.colors[i]
+            XCTAssertEqual(c.red, e.0, accuracy: 0.001, "bookmark \(i) red")
+            XCTAssertEqual(c.green, e.1, accuracy: 0.001, "bookmark \(i) green")
+            XCTAssertEqual(c.blue, e.2, accuracy: 0.001, "bookmark \(i) blue")
+        }
+    }
+}
+
+// MARK: - REQ-HI: Reading history log
+
+final class HistoryRequirementsTests: XCTestCase {
+    // REQ-HI-3: revisiting dedupes to the front.
+    func testDedupeToFront() {
+        let log = HistoryLogLogic.insert("Gen1", into: ["Ex1", "Gen1", "Lev1"])
+        XCTAssertEqual(log, ["Gen1", "Ex1", "Lev1"])
+    }
+
+    // REQ-HI-2: cap at 100 entries.
+    func testCapAt100() {
+        var log: [Int] = []
+        for i in 1...105 { log = HistoryLogLogic.insert(i, into: log) }
+        XCTAssertEqual(log.count, 100)
+        XCTAssertEqual(log.first, 105)
+        XCTAssertEqual(log.last, 6) // 105 - 99
+    }
+
+    func testNewEntryAtFront() {
+        let log = HistoryLogLogic.insert("New", into: ["A", "B"])
+        XCTAssertEqual(log.first, "New")
+        XCTAssertEqual(log.count, 3)
+    }
+}
+
