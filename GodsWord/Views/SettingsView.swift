@@ -25,6 +25,25 @@ struct SettingsView: View {
                     ReadingSettingsView()
                 }
 
+                Section {
+                    NavigationLink {
+                        CompareVersionsPicker()
+                    } label: {
+                        HStack {
+                            Text("Compare versions")
+                            Spacer()
+                            Text(personalData.compareVersionIDs.isEmpty
+                                 ? "Current only"
+                                 : "\(personalData.compareVersionIDs.count) chosen")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Compare")
+                } footer: {
+                    Text("The Compare action on selected verses shows them in the version you are reading plus the versions chosen here.")
+                }
+
                 Section("History") {
                     NavigationLink {
                         HistoryView(onSelect: { entry in

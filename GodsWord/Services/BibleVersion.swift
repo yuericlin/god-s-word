@@ -13,6 +13,12 @@ enum BibleVersion: Identifiable, Equatable {
         lhs.id == rhs.id && lhs.isPrivate == rhs.isPrivate
     }
 
+    /// All versions known to the library (downloaded + private imports).
+    static func allInstalled(in store: ModuleStore) -> [BibleVersion] {
+        store.installedModules().map(BibleVersion.sword)
+            + PrivateBibleStore.loadAll().map(BibleVersion.private)
+    }
+
     /// Stable key shared with PersonalData (notes, bookmarks, history,
     /// positions) so data stays attached to its version.
     var id: String {

@@ -236,3 +236,69 @@ final class HistoryRequirementsTests: XCTestCase {
     }
 }
 
+
+// MARK: - REQ-CM: Compare versions
+
+final class CompareRequirementsTests: XCTestCase {
+    let available = ["KJV", "ChiUns", "ASV", "NKJV+"]
+
+    // REQ-CM-3: nil or empty setting -> only the current version.
+    func testNilOrEmptySettingShowsOnlyCurrent() {
+        XCTAssertEqual(CompareVersions.ids(current: "KJV", configured: nil,
+                                           available: available), ["KJV"])
+        XCTAssertEqual(CompareVersions.ids(current: "KJV", configured: [],
+                                           available: available), ["KJV"])
+    }
+
+    // REQ-CM-4: configured versions union the current one, current first.
+    func testConfiguredUnionCurrent() {
+        XCTAssertEqual(CompareVersions.ids(current: "KJV",
+                                           configured: ["ChiUns", "ASV"],
+                                           available: available),
+                       ["KJV", "ChiUns", "ASV"])
+    }
+
+    // REQ-CM-4: after the current version, the order follows the library
+    // (available) order, not the order the versions were chosen in.
+    func testOrderFollowsAvailableNotSetting() {
+        XCTAssertEqual(CompareVersions.ids(current: "KJV",
+                                           configured: ["ASV", "ChiUns"],
+                                           available: available),
+                       ["KJV", "ChiUns", "ASV"])
+    }
+
+    // REQ-CM-4: the current version is never duplicated, wherever it sits
+    // in the setting, and a current version outside the setting is added.
+    func testCurrentNotDuplicated() {
+        XCTAssertEqual(CompareVersions.ids(current: "ASV",
+                                           configured: ["KJV", "ASV", "ChiUns"],
+                                           available: available),
+                       ["ASV", "KJV", "ChiUns"])
+        XCTAssertEqual(CompareVersions.ids(current: "KJV",
+                                           configured: ["KJV"],
+                                           available: available), ["KJV"])
+    }
+
+    // REQ-CM-5: versions that are no longer installed are skipped, and
+    // duplicate ids in the setting collapse.
+    func testUnavailableAndDuplicateIdsSkipped() {
+        XCTAssertEqual(CompareVersions.ids(current: "KJV",
+                                           configured: ["Gone", "ASV", "ASV"],
+                                           available: available),
+                       ["KJV", "ASV"])
+    }
+
+    // REQ-CM-3: a setting that only names uninstalled versions behaves as
+    // empty.
+    func testOnlyUnavailableSettingShowsOnlyCurrent() {
+        XCTAssertEqual(CompareVersions.ids(current: "KJV", configured: ["Gone"],
+                                           available: available), ["KJV"])
+    }
+
+    // The current version is always shown, even if (oddly) it isn't in the
+    // available list.
+    func testCurrentAlwaysIncluded() {
+        XCTAssertEqual(CompareVersions.ids(current: "Odd", configured: ["ASV"],
+                                           available: available), ["Odd", "ASV"])
+    }
+}

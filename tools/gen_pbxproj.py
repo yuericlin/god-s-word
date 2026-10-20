@@ -43,6 +43,7 @@ sources = [
     "GodsWord/Views/SettingsView.swift",
     "GodsWord/Views/HistoryView.swift",
     "GodsWord/Views/EdgeNavigation.swift",
+    "GodsWord/Views/CompareView.swift",
 ]
 resources = [
     "GodsWord/Assets.xcassets",

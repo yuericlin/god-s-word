@@ -49,6 +49,26 @@ public enum VerseFormatting {
     }
 }
 
+/// Which versions the Compare panel shows (REQ-CM-3..5).
+public enum CompareVersions {
+    /// The version ids to show, current version first. `configured` is the
+    /// user's Compare setting: nil or empty -> only the current version;
+    /// otherwise the configured versions union the current one. The rest
+    /// follow `available`'s order (the library's), so the panel's order
+    /// doesn't depend on the order versions were ticked. Configured ids
+    /// that aren't in `available` (e.g. since deleted) are skipped and
+    /// duplicates dropped.
+    public static func ids(current: String, configured: [String]?,
+                           available: [String]) -> [String] {
+        let wanted = Set(configured ?? [])
+        var out = [current]
+        for id in available where wanted.contains(id) && !out.contains(id) {
+            out.append(id)
+        }
+        return out
+    }
+}
+
 /// Note storage key handling per REQ-NT-11.
 /// Format: "{moduleID}:{testament}:{book}:{chapter}:{verse}"
 public enum NoteKey {

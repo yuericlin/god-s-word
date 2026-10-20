@@ -255,8 +255,8 @@ Multiple (KJV Gen 1:1-2):
 
 ## 12. Backup (Drive)
 
-- **REQ-BK-1:** Payload v5 includes: reading settings, history log, bookmarks,
-  verse notes, Strong's visibility.
+- **REQ-BK-1:** Payload v6 includes: reading settings, history log, bookmarks,
+  verse notes, Strong's visibility, Compare versions (REQ-CM-7).
 - **REQ-BK-2:** Applying an old backup never wipes newer data types (notes,
   bookmarks, ribbons).
 - **REQ-BK-3:** Backup is opt-in, manual, to the private `appDataFolder`.
@@ -307,3 +307,35 @@ Multiple (KJV Gen 1:1-2):
   Chapters are arrays of verses (0-based in JSON, 1-based in the API).
 - **REQ-IC-12:** Both `.json` and `.json.gz` are supported for private modules.
 
+---
+
+## 14. Compare
+
+### Action
+- **REQ-CM-1:** The selection bar (shown while verses are selected) has a
+  **Compare** action next to Copy and Notes.
+- **REQ-CM-2:** Compare opens a panel titled with the reference
+  (`Book Chapter:Verses`, ranges compressed as in REQ-CP-5) showing the
+  selected verses in each version, one section per version (short label plus
+  full name). Verse numbers show only when several verses are selected
+  (as in REQ-CP-3/4); a verse a version lacks shows a dash. The selection
+  is kept when the panel closes.
+
+### Which versions
+- **REQ-CM-3:** If the Compare versions setting is empty (or never set), the
+  panel shows only the current version.
+- **REQ-CM-4:** Otherwise it shows the chosen versions union the current
+  version: the current version first, then the chosen ones in library order
+  (the order of the version picker, not the order they were ticked). The
+  current version is never shown twice.
+- **REQ-CM-5:** A chosen version that is no longer installed is skipped.
+
+### Setting
+- **REQ-CM-6:** The setting is a multi-select list of every installed version
+  (downloaded and private). It is reachable from Settings > Compare and from
+  the Compare panel's Versions button, and changing it updates the open
+  panel.
+- **REQ-CM-7:** The setting persists in `UserDefaults`
+  (`gw.compareVersions.v1`), in Drive backups (payload v6) and in
+  `settings.json` for iCloud sync and manual export. Older backups and
+  settings files (no Compare field) load without wiping the setting.
