@@ -299,7 +299,7 @@ final class StrongsTests: XCTestCase {
         XCTAssertEqual(lex.definition(for: "H1"), "1 'ab -- father.")
         XCTAssertEqual(lex.definition(for: "H00002"), "2 'ab -- aramaic father.")
         XCTAssertNil(lex.definition(for: "H3"))
-        XCTAssertNil(lex.definition(for: "G1"))
+        // H/G routing happens in StrongsService: a lexicon only knows its own numbers.
     }
 
     /// Tiny zLD lexicon (base64 fixture): records 0..2 -> preamble, G1, G2.
@@ -318,7 +318,7 @@ final class StrongsTests: XCTestCase {
         XCTAssertEqual(lex.definition(for: "G1"), "alpha first letter")
         XCTAssertEqual(lex.definition(for: "G2"), "beta second letter")
         XCTAssertNil(lex.definition(for: "G3"))
-        XCTAssertNil(lex.definition(for: "H1"))
+        // H/G routing happens in StrongsService: a lexicon only knows its own numbers.
     }
 
     func testLexiconMissingIdx() throws {

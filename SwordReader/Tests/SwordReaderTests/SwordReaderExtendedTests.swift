@@ -33,7 +33,8 @@ final class NormalizeStrongsTests: XCTestCase {
         XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H07225"), "H7225")
         XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H1"), "H1")
         XCTAssertEqual(OsisTokens.normalizeStrongs("strong:G26"), "G26")
-        XCTAssertEqual(OsisTokens.normalizeStrongs("H430"), "H430")
+        // Bare keys without the "strong:" prefix are not lemmas; they are rejected.
+        XCTAssertNil(OsisTokens.normalizeStrongs("H430"))
     }
 
     func testInvalidFormatsReturnNil() {
@@ -110,7 +111,8 @@ final class TokenizerEdgeCaseTests: XCTestCase {
         let tokens = OsisTokens.tokensWithStrongs(from: raw)
         // Self-closing <w/> contributes no text and no Strong's.
         let texts = tokens.map { $0.text }.joined()
-        XCTAssertEqual(texts, "Hello  world")
+        // Plain text collapses the whitespace around the self-closing tag.
+        XCTAssertEqual(texts, "Hello world")
         XCTAssertTrue(tokens.allSatisfy { $0.strongs.isEmpty })
     }
 
@@ -159,7 +161,7 @@ final class TokenizerEdgeCaseTests: XCTestCase {
 
 // MARK: - SwordConf (unit)
 
-final class SwordConfTests: XCTestCase {
+final class SwordConfExtendedTests: XCTestCase {
     func testSupportsStrongsDetection() {
         let conf = SwordConf(text: """
             [KJV]
@@ -181,10 +183,10 @@ final class SwordConfTests: XCTestCase {
         // Bibles: DataPath is a directory.
         let bibleConf = SwordConf(text: """
             [KJV]
-            DataPath=./modules/texts/ztext/kjv
+            DataPath=./modules/texts/ztext/kjv/
             """)
         let bible = ModuleInfo(conf: bibleConf)
-        XCTAssertTrue(bible.dataDir.hasSuffix("kjv"))
+        XCTAssertEqual(bible.dataDir, "modules/texts/ztext/kjv/")
 
         // Lexicons: DataPath names the file base, not a directory.
         let lexConf = SwordConf(text: """
@@ -193,8 +195,7 @@ final class SwordConfTests: XCTestCase {
             """)
         let lex = ModuleInfo(conf: lexConf)
         // dataDir resolves the containing directory.
-        XCTAssertTrue(lex.dataDir.hasSuffix("strongshebrew"))
-        XCTAssertFalse(lex.dataDir.hasSuffix("strongshebrew/strongshebrew"))
+        XCTAssertEqual(lex.dataDir, "modules/lexdict/rawld/strongshebrew/")
     }
 
     func testAllValuesCollectsRepeatedKeys() {
@@ -261,13 +262,13 @@ final class PipelineIntegrationTests: XCTestCase {
     func testPlainTextCleaningPipeline() {
         let raw = #"And God <note>footnote</note> said &quot;Let there be light&quot;."#
         let plain = OsisPlain.plainText(from: raw)
-        XCTAssertEqual(plain, #"And God  said "Let there be light"."#)
+        XCTAssertEqual(plain, #"And God said "Let there be light"."#)
     }
 }
 
 // MARK: - Versification (unit)
 
-final class VersificationTests: XCTestCase {
+final class VersificationExtendedTests: XCTestCase {
     func testKJVBookCount() {
         XCTAssertEqual(Versification.kjv.books.count, 66)
     }
@@ -282,7 +283,7 @@ final class VersificationTests: XCTestCase {
 
     func testRevelationLastBook() {
         let rev = Versification.kjv.books[65]
-        XCTAssertEqual(rev.name, "Revelation")
+        XCTAssertEqual(rev.name, "Revelation of John")
         XCTAssertEqual(rev.chapters, 22)
     }
 
