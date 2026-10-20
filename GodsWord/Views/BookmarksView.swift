@@ -158,6 +158,9 @@ struct BookmarksPanel: View {
     @Binding var showing: Bool
     /// Verses currently selected in the reader; "Add Note" anchors to these if non-empty.
     let selectedVerses: Set<Int>
+    /// Pre-fill for a brand-new note from this panel: the selected
+    /// verses' text, or book + chapter when nothing is selected.
+    let noteSeedText: String
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
 
@@ -185,8 +188,12 @@ struct BookmarksPanel: View {
         let text: String
     }
 
+    /// Notes list order: most recently saved first (PersonalData's
+    /// verseNoteOrder); notes not in that list (e.g. restored from an
+    /// old backup) follow in canonical order.
     private var noteEntries: [NoteEntry] {
-        personalData.verseNotes.compactMap { key, text -> NoteEntry? in
+        let order = personalData.verseNoteOrder
+        return personalData.verseNotes.compactMap { key, text -> NoteEntry? in
             let parts = key.split(separator: ":")
             guard parts.count == 5,
                   let testament = Int(parts[1]),
@@ -198,8 +205,11 @@ struct BookmarksPanel: View {
                              chapter: chapter, verse: verse, text: text)
         }
         .sorted {
-            ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) <
-            ($1.moduleID, $1.testament, $1.book, $1.chapter, $1.verse)
+            let ia = order.firstIndex(of: $0.key) ?? .max
+            let ib = order.firstIndex(of: $1.key) ?? .max
+            if ia != ib { return ia < ib }
+            return ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) <
+                   ($1.moduleID, $1.testament, $1.book, $1.chapter, $1.verse)
         }
     }
 
@@ -303,7 +313,8 @@ struct BookmarksPanel: View {
                 BookmarkEditView(bookmark: bookmark, history: history)
             case .note(let key, let reference):
                 VerseNoteEditor(reference: reference, noteKey: key,
-                                initialText: personalData.verseNote(forKey: key) ?? "")
+                                initialText: personalData.verseNote(forKey: key) ?? "",
+                                seedText: noteSeedText)
                     .environmentObject(personalData)
             }
         }

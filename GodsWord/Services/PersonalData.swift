@@ -51,11 +51,14 @@ public struct BackupPayload: Codable, Sendable {
     public var installedModuleIDs: [String]
     public var bookmarks: [Bookmark]
     public var verseNotes: [String: String]
+    /// Note keys, most recently saved first (the panel's list order).
+    public var verseNoteOrder: [String]
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
                 positions: [String: ReadingPosition], installedModuleIDs: [String],
                 bookmarks: [Bookmark] = [], verseNotes: [String: String] = [:],
+                verseNoteOrder: [String] = [],
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -64,6 +67,7 @@ public struct BackupPayload: Codable, Sendable {
         self.installedModuleIDs = installedModuleIDs
         self.bookmarks = bookmarks
         self.verseNotes = verseNotes
+        self.verseNoteOrder = verseNoteOrder
         self.backedUpAt = backedUpAt
     }
 
@@ -79,6 +83,7 @@ public struct BackupPayload: Codable, Sendable {
         installedModuleIDs = try c.decode([String].self, forKey: .installedModuleIDs)
         bookmarks = try c.decodeIfPresent([Bookmark].self, forKey: .bookmarks) ?? []
         verseNotes = try c.decodeIfPresent([String: String].self, forKey: .verseNotes) ?? [:]
+        verseNoteOrder = try c.decodeIfPresent([String].self, forKey: .verseNoteOrder) ?? []
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -94,6 +99,7 @@ public final class PersonalData: ObservableObject {
     private let lastReadingKey = "gw.lastReading.v1"
     private let bookmarksKey = "gw.bookmarks.v1"
     private let verseNotesKey = "gw.verseNotes.v1"
+    private let verseNoteOrderKey = "gw.verseNoteOrder.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -121,6 +127,7 @@ public final class PersonalData: ObservableObject {
         }
         self.bookmarks = marks
         self.verseNotes = defaults.dictionary(forKey: verseNotesKey) as? [String: String] ?? [:]
+        self.verseNoteOrder = defaults.stringArray(forKey: verseNoteOrderKey) ?? []
     }
 
     @Published public var fontSize: Double {
@@ -167,6 +174,13 @@ public final class PersonalData: ObservableObject {
         }
     }
 
+    /// Note keys ordered most-recently-saved first; the bookmarks panel
+    /// lists notes in this order (notes missing from the list sort last,
+    /// in canonical order). Maintained by `setVerseNote`.
+    @Published public var verseNoteOrder: [String] {
+        didSet { defaults.set(verseNoteOrder, forKey: verseNoteOrderKey) }
+    }
+
     /// Builds the storage key for a verse note.
     public func verseNoteKey(moduleID: String, testament: Int, book: Int,
                              chapter: Int, verse: Int) -> String {
@@ -179,12 +193,16 @@ public final class PersonalData: ObservableObject {
         return (note?.isEmpty ?? true) ? nil : note
     }
 
-    /// Stores a verse note; an empty/nil text removes it.
+    /// Stores a verse note; an empty/nil text removes it. Saving moves
+    /// the note to the front of `verseNoteOrder` (latest on top).
     public func setVerseNote(_ text: String?, forKey key: String) {
         if let text, !text.isEmpty {
             verseNotes[key] = text
+            verseNoteOrder.removeAll { $0 == key }
+            verseNoteOrder.insert(key, at: 0)
         } else {
             verseNotes.removeValue(forKey: key)
+            verseNoteOrder.removeAll { $0 == key }
         }
     }
 
@@ -286,6 +304,7 @@ public final class PersonalData: ObservableObject {
                       installedModuleIDs: installedModuleIDs,
                       bookmarks: bookmarks,
                       verseNotes: verseNotes,
+                      verseNoteOrder: verseNoteOrder,
                       backedUpAt: Date())
     }
 
@@ -302,6 +321,9 @@ public final class PersonalData: ObservableObject {
         // Same guard for notes.
         if !payload.verseNotes.isEmpty {
             verseNotes = payload.verseNotes
+        }
+        if !payload.verseNoteOrder.isEmpty {
+            verseNoteOrder = payload.verseNoteOrder
         }
     }
 
@@ -393,6 +415,8 @@ public final class PersonalData: ObservableObject {
             .write(to: folder.appendingPathComponent("bookmarks.json"))
         try encoder.encode(verseNotes)
             .write(to: folder.appendingPathComponent("notes.json"))
+        try encoder.encode(verseNoteOrder)
+            .write(to: folder.appendingPathComponent("noteOrder.json"))
         try encoder.encode(historyLog)
             .write(to: folder.appendingPathComponent("history.json"))
         let settings = iCloudSettings(
@@ -432,6 +456,9 @@ public final class PersonalData: ObservableObject {
                 let n = try JSONDecoder().decode([String: String].self,
                                                  from: json)
                 if !n.isEmpty { verseNotes = n }
+            case "noteOrder":
+                let o = try JSONDecoder().decode([String].self, from: json)
+                if !o.isEmpty { verseNoteOrder = o }
             case "history":
                 let h = try JSONDecoder().decode([HistoryEntry].self,
                                                  from: json)

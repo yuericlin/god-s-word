@@ -20,7 +20,7 @@ struct ReadingSettingsView: View {
             if showStrongsOption {
                 Toggle("Strong's numbers", isOn: $personalData.showStrongs)
             }
-            Text("The quick brown fox jumps over the lazy dog.")
+            Text("In the beginning God created the heavens and the earth.")
                 .font(.system(size: personalData.fontSize, design: .serif))
                 .foregroundStyle(.secondary)
         }

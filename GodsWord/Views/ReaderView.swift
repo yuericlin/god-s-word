@@ -35,6 +35,8 @@ struct ReaderView: View {
         let verse: Int
         let reference: String
         let initialText: String
+        /// Pre-fill for a note that doesn't exist yet (ignored otherwise).
+        let seedText: String
     }
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
@@ -180,7 +182,10 @@ struct ReaderView: View {
                     .ignoresSafeArea()
                     .onTapGesture { showingBookmarks = false }
                 BookmarksPanel(history: history, showing: $showingBookmarks,
-                               selectedVerses: selectedVerses)
+                               selectedVerses: selectedVerses,
+                               noteSeedText: selectedVerses.isEmpty
+                                   ? "\(history.bookTitle) \(history.chapter)\n"
+                                   : selectionVerseText() + "\n")
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .transition(.move(edge: .trailing))
             }
@@ -339,7 +344,8 @@ struct ReaderView: View {
         .sheet(item: $noteEditorItem) { item in
             VerseNoteEditor(reference: item.reference,
                             noteKey: item.id,
-                            initialText: item.initialText)
+                            initialText: item.initialText,
+                            seedText: item.seedText)
                 .environmentObject(personalData)
         }
     }
@@ -535,20 +541,25 @@ struct ReaderView: View {
     }
 
     /// Copies the selected verses as "Book Chapter:1, 3" + "1 text" lines.
-    private func copySelectedVerses() {
+    /// The selected verses' text: a single verse plain, multiple verses
+    /// numbered ("1 text 2 text"). Copy wraps it in quotes and appends
+    /// the reference and version; a new note is seeded with it as-is.
+    private func selectionVerseText() -> String {
         let sorted = selectedVerses.sorted()
-        guard !sorted.isEmpty else { return }
-        let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
-        let version = history.version.id
-        // Single verse: omit the number in the text.
-        // Multiple verses: include numbers ("1 text 2 text").
         let single = sorted.count == 1
         let parts = sorted.compactMap { v -> String? in
             guard let text = verses.first(where: { $0.verse == v })?.text else { return nil }
             return single ? text : "\(v) \(text)"
         }
-        let quoted = "\"\(parts.joined(separator: " "))\""
-        UIPasteboard.general.string = "\(quoted) \(ref) \(version)"
+        return parts.joined(separator: " ")
+    }
+
+    private func copySelectedVerses() {
+        let sorted = selectedVerses.sorted()
+        guard !sorted.isEmpty else { return }
+        let ref = "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
+        let version = history.version.id
+        UIPasteboard.general.string = "\"\(selectionVerseText())\" \(ref) \(version)"
     }
 
     /// [1,2,3,5] -> "1-3, 5"
@@ -589,14 +600,22 @@ struct ReaderView: View {
             id: key,
             verse: verse,
             reference: noteReference(verse),
-            initialText: personalData.verseNote(forKey: key) ?? "")
+            initialText: personalData.verseNote(forKey: key) ?? "",
+            seedText: "\(history.bookTitle) \(history.chapter)\n")
     }
 
     /// Notes from the selection bar anchor to the first selected verse,
-    /// so a multi-verse note shows its icon only there.
+    /// so a multi-verse note shows its icon only there. A new note is
+    /// seeded with the selected verses' text.
     private func openNoteEditorForSelection() {
         guard let first = selectedVerses.min() else { return }
-        openNoteEditor(for: first)
+        let key = noteKey(first)
+        noteEditorItem = NoteEditorItem(
+            id: key,
+            verse: first,
+            reference: noteReference(first),
+            initialText: personalData.verseNote(forKey: key) ?? "",
+            seedText: selectionVerseText() + "\n")
     }
 
     private func noteReference(_ verse: Int) -> String {

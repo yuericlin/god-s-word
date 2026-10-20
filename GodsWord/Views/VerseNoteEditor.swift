@@ -17,11 +17,15 @@ struct VerseNoteEditor: View {
     @State private var text: String
     @State private var showingDeleteConfirm = false
 
-    init(reference: String, noteKey: String, initialText: String) {
+    init(reference: String, noteKey: String, initialText: String,
+         seedText: String = "") {
         self.reference = reference
         self.noteKey = noteKey
         self.originalText = initialText
-        _text = State(initialValue: initialText)
+        // A brand-new note (no saved text) opens pre-filled with the seed
+        // (the selected verses' text, or book + chapter); `originalText`
+        // stays empty so Save is enabled and Delete stays hidden.
+        _text = State(initialValue: initialText.isEmpty ? seedText : initialText)
     }
 
     var body: some View {

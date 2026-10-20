@@ -120,6 +120,16 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-NT-10:** Notes are included in Drive backup payloads (v5). Applying an
   old backup never wipes existing notes.
 - **REQ-NT-11:** Note storage key format: `"{moduleID}:{testament}:{book}:{chapter}:{verse}"`.
+- **REQ-NT-12:** A new note opens pre-filled (seeded): with verses selected,
+  the selected verses' text only (single verse plain; multiple verses numbered
+  "1 text 2 text" — no quotes, reference, or version), followed by a newline;
+  with no selection, "Book Title Chapter" plus a newline. The seed never
+  replaces an existing note's text; Save compares against the saved text, so
+  a seeded new note can be saved as-is and shows no Delete button.
+- **REQ-NT-13:** Note save order is tracked (`gw.verseNoteOrder.v1`, most
+  recent first; saving a note moves its key to the front, deleting removes
+  it). The order is included in Drive backups and manual exports
+  (`noteOrder.json`) and restored by both.
 
 ---
 
@@ -130,8 +140,9 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-BP-2:** The Bookmarks section shows ribbon bookmarks (horizontal row).
   Tapping a bookmark jumps to its chapter. (Hold-1-second for Mark/Edit/Delete
   — see bookmarks spec.)
-- **REQ-BP-3:** The Notes section lists every verse with a note, sorted by
-  (module, testament, book, chapter, verse).
+- **REQ-BP-3:** The Notes section lists every verse with a note, most
+  recently saved first (REQ-NT-13); notes without a recorded save order
+  follow, sorted by (module, testament, book, chapter, verse).
 - **REQ-BP-4:** Each note row shows the reference (`"Book Chapter:Verse"`) and a
   2-line preview of the note text.
 - **REQ-BP-5:** Tapping a note in the list opens the note editor for that note
