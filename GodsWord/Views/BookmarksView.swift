@@ -160,12 +160,19 @@ struct BookmarksPanel: View {
     let selectedVerses: Set<Int>
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
-    @State private var editingBookmark: Bookmark?
 
-    /// Note editor state (mirrors ReaderView's reliable Bool-based pattern).
-    @State private var showingNoteEditor = false
-    @State private var noteEditorKey = ""
-    @State private var noteEditorReference = ""
+    /// Single sheet for the panel (SwiftUI doesn't reliably handle two .sheet modifiers).
+    private enum PanelSheet: Identifiable {
+        case bookmark(Bookmark)
+        case note(key: String, reference: String)
+        var id: String {
+            switch self {
+            case .bookmark(let b): return "bookmark-\(b.id.uuidString)"
+            case .note(let key, _): return "note-\(key)"
+            }
+        }
+    }
+    @State private var activeSheet: PanelSheet?
     @State private var noteDraft = ""
 
     /// A verse note parsed from its storage key.
@@ -284,18 +291,21 @@ struct BookmarksPanel: View {
                     if value.translation.width > 40 { showing = false }
                 }
         )
-        .sheet(item: $editingBookmark) { bookmark in
-            BookmarkEditView(bookmark: bookmark, history: history)
-        }
-        .sheet(isPresented: $showingNoteEditor) {
-            VerseNoteEditor(
-                reference: noteEditorReference,
-                text: $noteDraft,
-                onSave: { text in
-                    personalData.setVerseNote(text, forKey: noteEditorKey)
-                }
-            )
-            .environmentObject(personalData)
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .bookmark(let bookmark):
+                BookmarkEditView(bookmark: bookmark, history: history)
+            case .note(let key, let reference):
+                VerseNoteEditor(
+                    reference: reference,
+                    text: $noteDraft,
+                    onSave: { text in
+                        personalData.setVerseNote(text, forKey: key)
+                        activeSheet = nil
+                    }
+                )
+                .environmentObject(personalData)
+            }
         }
     }
 
@@ -305,7 +315,7 @@ struct BookmarksPanel: View {
             testament: history.testament,
             book: history.book,
             chapter: history.chapter)
-        editingBookmark = created
+        activeSheet = .bookmark(created)
     }
 
     /// Opens the note editor: scoped to the selected verses if any,
@@ -318,18 +328,15 @@ struct BookmarksPanel: View {
             book: history.book,
             chapter: history.chapter,
             verse: verse)
-        noteEditorKey = key
-        noteEditorReference = "\(history.bookTitle) \(history.chapter):\(verse)"
         noteDraft = personalData.verseNote(forKey: key) ?? ""
-        showingNoteEditor = true
+        activeSheet = .note(key: key,
+                            reference: "\(history.bookTitle) \(history.chapter):\(verse)")
     }
 
     /// Opens the note editor for an existing note from the Notes list.
     private func editNote(_ entry: NoteEntry) {
-        noteEditorKey = entry.key
-        noteEditorReference = noteReference(entry)
         noteDraft = entry.text
-        showingNoteEditor = true
+        activeSheet = .note(key: entry.key, reference: noteReference(entry))
     }
 
     private func jump(to bookmark: Bookmark) {
