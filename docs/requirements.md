@@ -151,6 +151,12 @@ Multiple (KJV Gen 1:1-2):
   With verses selected, "Add Note" still edits the verse note anchored at
   the first selected verse (REQ-NT-2). Verse notes written at verse 1
   before this change remain verse notes.
+- **REQ-NT-16:** Because a pre-REQ-NT-15 chapter note is indistinguishable
+  from a genuine verse-1 note, nothing migrates automatically. When a
+  chapter has no chapter-level note but does have a verse-1 note, the
+  panel's Chapter scope shows that note labeled as stored on verse 1 and
+  offers "Move to Chapter Note", which copies it into the chapter store
+  and removes the verse-1 note (an explicit user action only).
 
 ---
 
@@ -425,3 +431,10 @@ Multiple (KJV Gen 1:1-2):
   installed Strong's version. Resolution is `StrongsVerseSource.resolve`.
   Private versions never supply Strong's. With no Strong's version
   installed, the tab explains so.
+- **REQ-AP-8:** Commentaries are often copyrighted, so the panel's
+  Commentary tab header has an info button opening a sheet with the
+  commentary's name, its declared distribution license
+  (`ModuleInfo.distributionLicense`, the conf's DistributionLicense
+  field), and its About text (which carries the copyright notice).
+  The Settings commentary picker also shows the license under each
+  commentary's name when one is declared.

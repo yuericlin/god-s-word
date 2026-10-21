@@ -20,6 +20,11 @@ public struct CommentaryModule: Identifiable, Equatable, Sendable {
     public var displayName: String { installed.info.description }
     /// Compact label: the module id (e.g. "MHCC").
     public var shortLabel: String { installed.id }
+    /// The module's declared distribution license ("" when the conf
+    /// declares none) — shown in the panel's info sheet (REQ-AP-8).
+    public var license: String { installed.info.distributionLicense }
+    /// The module's About text from its conf (copyright/publisher info).
+    public var about: String { installed.info.about }
 
     public static func == (lhs: CommentaryModule, rhs: CommentaryModule) -> Bool {
         lhs.id == rhs.id

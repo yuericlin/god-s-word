@@ -28,6 +28,7 @@ struct AuxiliaryPanelView: View {
     @State private var editorItem: EditorItem?
     @State private var commentaries: [CommentaryModule] = []
     @State private var showingRepository = false
+    @State private var showingCommentaryInfo = false
     @State private var commentaryChapter: [CommentaryGrouping.Entry] = []
     @State private var commentaryBook: [BookSection] = []
 
@@ -159,12 +160,7 @@ struct AuxiliaryPanelView: View {
                     editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
                 }
             case .chapter:
-                scopedNote(reference: "\(history.bookTitle) \(history.chapter)",
-                           text: personalData.chapterNote(forKey: chapterNoteKey),
-                           emptyText: "No note for this chapter yet.") {
-                    editorItem = .chapter(key: chapterNoteKey,
-                                           reference: "\(history.bookTitle) \(history.chapter)")
-                }
+                chapterNoteView
             case .verse:
                 scopedNote(reference: verseReference,
                            text: personalData.verseNote(forKey: verseNoteKey),
@@ -227,6 +223,64 @@ struct AuxiliaryPanelView: View {
                                   verse: anchorVerse)
     }
 
+    /// The verse-1 note key for this chapter — where chapter notes
+    /// were stored before scoped chapter notes (REQ-NT-16).
+    private var verse1NoteKey: String {
+        personalData.verseNoteKey(moduleID: history.version.id,
+                                  testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter,
+                                  verse: 1)
+    }
+
+    /// The Chapter scope of the Notes tab. When no chapter note exists
+    /// yet but the chapter has a note on verse 1, that note is shown
+    /// as a legacy note (REQ-NT-16): before scoped notes, the reader's
+    /// "Take Notes" stored chapter notes as verse-1 notes, and the two
+    /// are indistinguishable, so nothing migrates automatically — the
+    /// user moves it with one tap instead.
+    @ViewBuilder
+    private var chapterNoteView: some View {
+        let reference = "\(history.bookTitle) \(history.chapter)"
+        if let text = personalData.chapterNote(forKey: chapterNoteKey) {
+            scopedNote(reference: reference, text: text, emptyText: "") {
+                editorItem = .chapter(key: chapterNoteKey, reference: reference)
+            }
+        } else if let legacy = personalData.verseNote(forKey: verse1NoteKey) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(reference).font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Edit") {
+                        editorItem = .chapter(key: chapterNoteKey, reference: reference)
+                    }
+                    .font(.subheadline)
+                }
+                Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                ScrollView {
+                    Text(legacy)
+                        .font(.system(size: personalData.fontSize, design: .serif))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                Button("Move to Chapter Note") {
+                    personalData.setChapterNote(legacy, forKey: chapterNoteKey)
+                    personalData.setVerseNote(nil, forKey: verse1NoteKey)
+                }
+                .font(.subheadline)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        } else {
+            scopedNote(reference: reference, text: nil,
+                       emptyText: "No note for this chapter yet.") {
+                editorItem = .chapter(key: chapterNoteKey, reference: reference)
+            }
+        }
+    }
+
     // MARK: - Commentary tab
 
     private var resolvedCommentary: CommentaryModule? {
@@ -261,6 +315,16 @@ struct AuxiliaryPanelView: View {
                     }
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                }
+                if let mod = resolvedCommentary {
+                    Button { showingCommentaryInfo = true } label: {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showingCommentaryInfo) {
+                        CommentaryInfoView(module: mod)
+                    }
                 }
             }
             if let mod = resolvedCommentary {
@@ -652,6 +716,11 @@ struct CommentaryModulePicker: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
+                                if !mod.license.isEmpty {
+                                    Text(mod.license)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             if personalData.commentaryModuleID == mod.id {
@@ -685,6 +754,58 @@ struct CommentaryModulePicker: View {
             personalData.commentaryModuleID = ""
         }
         commentaries = CommentaryModule.allInstalled(in: store)
+    }
+}
+
+/// Info about the commentary shown in the panel (REQ-AP-8): its
+/// title, its declared distribution license, and the About text from
+/// its .conf, which carries the copyright notice. Commentaries are
+/// often copyrighted — the license is the field the copyright holder
+/// declares, and this is where the reader can see it.
+struct CommentaryInfoView: View {
+    let module: CommentaryModule
+    @Environment(\.dismiss) private var dismiss
+
+    /// The About text with SWORD's \par / \t markup turned into
+    /// line breaks and spaces.
+    private var formattedAbout: String {
+        module.about
+            .replacingOccurrences(of: "\t", with: " ")
+            .replacingOccurrences(of: "\\t", with: " ")
+            .replacingOccurrences(of: "\\par", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Module") {
+                    LabeledContent("Name", value: module.displayName)
+                    LabeledContent("Module ID", value: module.id)
+                }
+                if !module.license.isEmpty {
+                    Section("License") {
+                        Text(module.license)
+                    }
+                }
+                if !formattedAbout.isEmpty {
+                    Section("About") {
+                        Text(formattedAbout)
+                    }
+                }
+                if module.license.isEmpty && formattedAbout.isEmpty {
+                    Text("This module's configuration declares no license or About text.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Commentary info")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }
 
