@@ -486,6 +486,28 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
         XCTAssertNil(ChapterNoteKey.parse("KJV:2:x:3"))
     }
 
+    // REQ-AP-8: the module's DistributionLicense is exposed for the
+    // panel's commentary info (commentaries are often copyrighted).
+    func testModuleDistributionLicense() {
+        let licensed = conf("""
+            [Licensed]
+            DataPath=./modules/comments/zcom/licensed/
+            ModDrv=zCom
+            DistributionLicense=Copyrighted; Free for non-commercial use
+            Lang=en
+            """)
+        XCTAssertEqual(licensed.distributionLicense,
+                       "Copyrighted; Free for non-commercial use")
+
+        let silent = conf("""
+            [Silent]
+            DataPath=./modules/comments/zcom/silent/
+            ModDrv=zCom
+            Lang=en
+            """)
+        XCTAssertEqual(silent.distributionLicense, "")
+    }
+
     // REQ-AP-7: the Strong's verse source resolution order.
     func testStrongsVerseSourceResolution() {
         // Current version carries Strong's: it wins over any fallback.

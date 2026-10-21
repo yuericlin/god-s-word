@@ -72,6 +72,15 @@ public struct ModuleInfo: Sendable {
         return v == "KJV" || v == "NRSV"
     }
 
+    /// The module's distribution license as declared in its .conf
+    /// (DistributionLicense — e.g. "Public Domain", "Copyrighted"), or
+    /// "" when the conf doesn't declare one. Shown in the panel's
+    /// commentary info (REQ-AP-8): commentaries are often copyrighted,
+    /// and this is the field the copyright holder fills in.
+    public var distributionLicense: String {
+        (conf["DistributionLicense"] ?? "").trimmingCharacters(in: .whitespaces)
+    }
+
     /// Whether the module carries Strong's numbers
     /// (GlobalOptionFilter=OSISStrongs in its .conf).
     public var supportsStrongs: Bool {
