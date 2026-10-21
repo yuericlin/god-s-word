@@ -172,9 +172,8 @@ struct ReaderView: View {
             // Ribbons for bookmarks pointing at the chapter being read.
             // Nothing shows when the current chapter isn't bookmarked.
             let currentMarks = personalData.bookmarks.filter {
-                $0.testament == history.testament &&
-                $0.book == history.book &&
-                $0.chapter == history.chapter
+                $0.isAt(testament: history.testament, book: history.book,
+                        chapter: history.chapter)
             }
             if !currentMarks.isEmpty {
                 BookmarkRibbonsRow(history: history,

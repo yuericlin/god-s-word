@@ -59,6 +59,7 @@ struct AssignBookmarkView: View {
             Circle()
                 .fill(bookmark.color)
                 .frame(width: 14, height: 14)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(bookmark.name)
                     .foregroundStyle(.primary)
@@ -76,24 +77,23 @@ struct AssignBookmarkView: View {
     }
 
     private func isHere(_ bookmark: Bookmark) -> Bool {
-        bookmark.testament == history.testament
-            && bookmark.book == history.book
-            && bookmark.chapter == history.chapter
+        bookmark.isAt(testament: history.testament, book: history.book,
+                      chapter: history.chapter)
     }
 
     private func assign(_ bookmark: Bookmark) {
-        var moved = bookmark
-        moved.testament = history.testament
-        moved.book = history.book
-        moved.chapter = history.chapter
-        personalData.updateBookmark(moved)
+        personalData.assignBookmark(bookmark, testament: history.testament,
+                                    book: history.book, chapter: history.chapter)
         dismiss()
     }
 
     private func reference(for bookmark: Bookmark) -> String {
-        let overall = bookmark.testament == 1
-            ? bookmark.book - 1 : 39 + bookmark.book - 1
-        guard overall >= 0 && overall < 66 else { return "" }
-        return "\(history.bookName(overall: overall)) \(bookmark.chapter)"
+        guard let overall = bookmark.overallBookIndex,
+              let name = history.version.bookNameIfPresent(overall: overall)
+        else {
+            // This version lacks the book (partial private Bible).
+            return "Book \(bookmark.book), chapter \(bookmark.chapter)"
+        }
+        return "\(name) \(bookmark.chapter)"
     }
 }

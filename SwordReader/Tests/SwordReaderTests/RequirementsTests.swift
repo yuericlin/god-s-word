@@ -302,3 +302,52 @@ final class CompareRequirementsTests: XCTestCase {
                                            available: available), ["Odd", "ASV"])
     }
 }
+
+// MARK: - REQ-BM-8: book location math (assign bookmark)
+
+final class BookLocationRequirementsTests: XCTestCase {
+    func testOverallIndexBoundaries() {
+        XCTAssertEqual(BookLocation.overallIndex(testament: 1, book: 1), 0)
+        XCTAssertEqual(BookLocation.overallIndex(testament: 1, book: 39), 38)
+        XCTAssertEqual(BookLocation.overallIndex(testament: 2, book: 1), 39)
+        XCTAssertEqual(BookLocation.overallIndex(testament: 2, book: 27), 65)
+    }
+
+    func testOverallIndexRejectsOutsideTheBible() {
+        XCTAssertNil(BookLocation.overallIndex(testament: 1, book: 0))
+        XCTAssertNil(BookLocation.overallIndex(testament: 1, book: 40))
+        XCTAssertNil(BookLocation.overallIndex(testament: 2, book: 0))
+        XCTAssertNil(BookLocation.overallIndex(testament: 2, book: 28))
+        XCTAssertNil(BookLocation.overallIndex(testament: 0, book: 1))
+        XCTAssertNil(BookLocation.overallIndex(testament: 3, book: 1))
+    }
+
+    func testTestamentAndBookBoundaries() {
+        let first = BookLocation.testamentAndBook(overall: 0)
+        XCTAssertEqual(first?.testament, 1)
+        XCTAssertEqual(first?.book, 1)
+        let lastOT = BookLocation.testamentAndBook(overall: 38)
+        XCTAssertEqual(lastOT?.testament, 1)
+        XCTAssertEqual(lastOT?.book, 39)
+        let firstNT = BookLocation.testamentAndBook(overall: 39)
+        XCTAssertEqual(firstNT?.testament, 2)
+        XCTAssertEqual(firstNT?.book, 1)
+        let last = BookLocation.testamentAndBook(overall: 65)
+        XCTAssertEqual(last?.testament, 2)
+        XCTAssertEqual(last?.book, 27)
+        XCTAssertNil(BookLocation.testamentAndBook(overall: -1))
+        XCTAssertNil(BookLocation.testamentAndBook(overall: 66))
+    }
+
+    func testRoundTripAllSixtySixBooks() {
+        for overall in 0..<BookLocation.bookCount {
+            let loc = BookLocation.testamentAndBook(overall: overall)
+            XCTAssertNotNil(loc, "overall \(overall)")
+            if let loc {
+                XCTAssertEqual(
+                    BookLocation.overallIndex(testament: loc.testament, book: loc.book),
+                    overall)
+            }
+        }
+    }
+}
