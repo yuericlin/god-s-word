@@ -249,15 +249,25 @@ public final class PersonalData: ObservableObject {
         bookmarks.removeAll { $0.id == bookmark.id }
     }
 
-    /// Creates a bookmark at the given location. The ribbon color comes
-    /// from the default palette in creation order.
-    @discardableResult
-    public func addBookmark(name: String, testament: Int, book: Int, chapter: Int) -> Bookmark {
+    /// A new bookmark at the given location that is NOT stored yet. The
+    /// ribbon color comes from the default palette in creation order. The
+    /// editor stores it with `saveBookmark` when the user taps Save; cancelling
+    /// the editor just drops the draft.
+    public func makeBookmarkDraft(name: String, testament: Int, book: Int,
+                                  chapter: Int) -> Bookmark {
         let c = Bookmark.paletteColor(at: bookmarks.count)
-        let bookmark = Bookmark(name: name, red: c.red, green: c.green, blue: c.blue,
-                                testament: testament, book: book, chapter: chapter)
-        bookmarks.append(bookmark)
-        return bookmark
+        return Bookmark(name: name, red: c.red, green: c.green, blue: c.blue,
+                        testament: testament, book: book, chapter: chapter)
+    }
+
+    /// Stores a bookmark: replaces the one with the same id, or appends a
+    /// new one (a draft from `makeBookmarkDraft`).
+    public func saveBookmark(_ bookmark: Bookmark) {
+        if let i = bookmarks.firstIndex(where: { $0.id == bookmark.id }) {
+            bookmarks[i] = bookmark
+        } else {
+            bookmarks.append(bookmark)
+        }
     }
 
     /// Records a visited chapter. Moves an existing entry for the same

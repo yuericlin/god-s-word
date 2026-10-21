@@ -30,8 +30,8 @@ struct ReaderView: View {
     @State private var noteEditorItem: NoteEditorItem?
     @State private var showingCompare = false
     @State private var showingAssignBookmark = false
-    /// A bookmark just created from the Assign sheet; its editor opens once
-    /// that sheet has closed (presenting two sheets at once is unreliable).
+    /// A new, unsaved bookmark started in the Assign sheet; its editor opens
+    /// once that sheet has closed (presenting two sheets at once is unreliable).
     @State private var pendingNewBookmark: Bookmark?
     @State private var bookmarkToEdit: Bookmark?
 

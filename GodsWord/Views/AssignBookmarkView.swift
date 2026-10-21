@@ -1,13 +1,14 @@
 // AssignBookmarkView.swift — sheet opened from the reader's long-press menu
 // ("Assign Bookmark"). Lists the existing bookmarks; tapping one moves it to
-// the chapter being read (REQ-BM-8). "New Bookmark" creates one at this
-// chapter and hands it back so the presenter can open its editor.
+// the chapter being read (REQ-BM-8). "New Bookmark" starts an unsaved draft
+// at this chapter and hands it back so the presenter can open its editor;
+// the draft is stored only if the user saves it there (REQ-BM-9).
 
 import SwiftUI
 
 struct AssignBookmarkView: View {
     let history: ReadingHistory
-    /// Called with a newly created bookmark; the presenter opens its editor.
+    /// Called with a new, unsaved bookmark; the presenter opens its editor.
     var onCreate: (Bookmark) -> Void
 
     @EnvironmentObject private var personalData: PersonalData
@@ -18,18 +19,18 @@ struct AssignBookmarkView: View {
             List {
                 Section {
                     Button {
-                        let created = personalData.addBookmark(
+                        let draft = personalData.makeBookmarkDraft(
                             name: "\(history.bookTitle) \(history.chapter)",
                             testament: history.testament,
                             book: history.book,
                             chapter: history.chapter)
-                        onCreate(created)
+                        onCreate(draft)
                         dismiss()
                     } label: {
                         Label("New Bookmark", systemImage: "plus.circle")
                     }
                 } footer: {
-                    Text("Creates a bookmark at \(history.bookTitle) \(history.chapter).")
+                    Text("Starts a bookmark at \(history.bookTitle) \(history.chapter). It is saved when you tap Save.")
                 }
 
                 if !personalData.bookmarks.isEmpty {

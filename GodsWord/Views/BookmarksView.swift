@@ -322,13 +322,15 @@ struct BookmarksPanel: View {
         }
     }
 
+    /// Opens the editor on a new, unsaved bookmark at the current chapter.
+    /// It is stored only when the user taps Save.
     private func addBookmark() {
-        let created = personalData.addBookmark(
+        let draft = personalData.makeBookmarkDraft(
             name: "Bookmark \(personalData.bookmarks.count + 1)",
             testament: history.testament,
             book: history.book,
             chapter: history.chapter)
-        activeSheet = .bookmark(created)
+        activeSheet = .bookmark(draft)
     }
 
     /// Opens the note editor: scoped to the selected verses if any,
@@ -408,7 +410,7 @@ struct BookmarkEditView: View {
                     }
                 }
             }
-            .navigationTitle("Edit Bookmark")
+            .navigationTitle(isNew ? "New Bookmark" : "Edit Bookmark")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -422,6 +424,11 @@ struct BookmarkEditView: View {
                 }
             }
         }
+    }
+
+    /// True while the bookmark is an unsaved draft (Cancel discards it).
+    private var isNew: Bool {
+        !personalData.bookmarks.contains { $0.id == bookmark.id }
     }
 
     private var chapterCount: Int {
@@ -445,6 +452,6 @@ struct BookmarkEditView: View {
         updated.testament = t
         updated.book = b
         updated.chapter = min(max(chapter, 1), chapterCount)
-        personalData.updateBookmark(updated)
+        personalData.saveBookmark(updated)
     }
 }
