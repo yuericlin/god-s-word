@@ -39,6 +39,39 @@ public struct ModuleInfo: Sendable {
         language.lowercased().hasPrefix("zh")
     }
 
+    /// The module's catalog category, e.g. "Biblical Texts" or
+    /// "Commentaries" (the conf's Category key; "" when absent).
+    public var category: String {
+        (conf["Category"] ?? "").trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Whether this module is a commentary: its catalog category says so,
+    /// or it uses the zCom driver. Commentaries are not Bible versions and
+    /// never appear in the version lists.
+    public var isCommentary: Bool {
+        category.lowercased() == "commentaries"
+            || conf.driver?.trimmingCharacters(in: .whitespaces) == "zCom"
+    }
+
+    /// True when the auxiliary panel can read this commentary: zCom
+    /// driver, ZIP compression, whole-book blocks, OSIS source, UTF-8
+    /// encoding, KJV/NRSV versification, not enciphered. A zCom module
+    /// has the same .bzv/.bzs/.bzz file layout as zText, so the existing
+    /// SwordModule reader reads it unmodified (verified against MHCC).
+    /// ThML commentaries (e.g. TSK) are not renderable yet.
+    public var isCommentaryRenderable: Bool {
+        guard isCommentary,
+              conf.driver?.trimmingCharacters(in: .whitespaces) == "zCom",
+              conf.compressType?.trimmingCharacters(in: .whitespaces) == "ZIP",
+              conf.blockType?.trimmingCharacters(in: .whitespaces) == "BOOK",
+              conf.sourceType?.trimmingCharacters(in: .whitespaces) == "OSIS",
+              conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() == "UTF-8",
+              conf.cipherKey == nil
+        else { return false }
+        let v = conf.versification?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+        return v == "KJV" || v == "NRSV"
+    }
+
     /// Whether the module carries Strong's numbers
     /// (GlobalOptionFilter=OSISStrongs in its .conf).
     public var supportsStrongs: Bool {

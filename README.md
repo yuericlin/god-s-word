@@ -19,6 +19,10 @@ one chapter at a time — nothing else.
   no account needed.
 - **One chapter at a time** — a calm reader: Library → Books → Chapters → text.
   Swipe or tap to move between chapters. Verse numbers, adjustable text size.
+- **Auxiliary panel** — below the chapter: your notes at book, chapter, and
+  verse level; a downloaded CrossWire commentary (e.g. MHCC) at the same
+  three levels; and the selected verse rendered with Strong's numbers
+  (from a fallback version you choose when the one you're reading has none).
 - **Fast and offline** — a pure-Swift SWORD module reader with no third-party
   dependencies. Downloaded Bibles live on your iPhone and read fully offline.
 - **Private by default** — your data (installed Bibles, reading positions, text
