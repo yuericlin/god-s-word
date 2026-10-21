@@ -4,6 +4,7 @@
 
 import Foundation
 import SwiftUI
+import SwordReader
 
 public struct Bookmark: Codable, Identifiable, Sendable {
     public var id: UUID
@@ -31,6 +32,25 @@ public struct Bookmark: Codable, Identifiable, Sendable {
 
     public var color: Color {
         Color(red: red, green: green, blue: blue)
+    }
+
+    /// 0-based index across the whole Bible; nil for an invalid location.
+    var overallBookIndex: Int? {
+        BookLocation.overallIndex(testament: testament, book: book)
+    }
+
+    /// Whether the bookmark points at exactly this chapter.
+    func isAt(testament: Int, book: Int, chapter: Int) -> Bool {
+        self.testament == testament && self.book == book && self.chapter == chapter
+    }
+
+    /// A copy pointing at another chapter (name, color, and id unchanged).
+    func moved(testament: Int, book: Int, chapter: Int) -> Bookmark {
+        var copy = self
+        copy.testament = testament
+        copy.book = book
+        copy.chapter = chapter
+        return copy
     }
 
     /// Default ribbon colors, in order, for newly created bookmarks:

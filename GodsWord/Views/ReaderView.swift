@@ -29,6 +29,11 @@ struct ReaderView: View {
     @State private var selectedVerses: Set<Int> = []
     @State private var noteEditorItem: NoteEditorItem?
     @State private var showingCompare = false
+    @State private var showingAssignBookmark = false
+    /// A bookmark just created from the Assign sheet; its editor opens once
+    /// that sheet has closed (presenting two sheets at once is unreliable).
+    @State private var pendingNewBookmark: Bookmark?
+    @State private var bookmarkToEdit: Bookmark?
 
     /// Identifiable wrapper so the note sheet always opens with fresh data.
     private struct NoteEditorItem: Identifiable {
@@ -113,6 +118,7 @@ struct ReaderView: View {
                             // offers to take a note (anchored at verse 1).
                             .contextMenu {
                                 Button("Take Notes") { openChapterNoteEditor() }
+                                Button("Assign Bookmark") { showingAssignBookmark = true }
                             }
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
@@ -166,9 +172,8 @@ struct ReaderView: View {
             // Ribbons for bookmarks pointing at the chapter being read.
             // Nothing shows when the current chapter isn't bookmarked.
             let currentMarks = personalData.bookmarks.filter {
-                $0.testament == history.testament &&
-                $0.book == history.book &&
-                $0.chapter == history.chapter
+                $0.isAt(testament: history.testament, book: history.book,
+                        chapter: history.chapter)
             }
             if !currentMarks.isEmpty {
                 BookmarkRibbonsRow(history: history,
@@ -342,6 +347,20 @@ struct ReaderView: View {
             if let key = strongsKey {
                 StrongsDefinitionView(key: key)
             }
+        }
+        .sheet(isPresented: $showingAssignBookmark, onDismiss: {
+            if let created = pendingNewBookmark {
+                bookmarkToEdit = created
+                pendingNewBookmark = nil
+            }
+        }) {
+            AssignBookmarkView(history: history,
+                               onCreate: { pendingNewBookmark = $0 })
+                .environmentObject(personalData)
+        }
+        .sheet(item: $bookmarkToEdit) { bookmark in
+            BookmarkEditView(bookmark: bookmark, history: history)
+                .environmentObject(personalData)
         }
         .sheet(isPresented: $showingCompare) {
             CompareView(current: history.version,

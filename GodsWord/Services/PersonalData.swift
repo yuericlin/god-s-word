@@ -236,6 +236,14 @@ public final class PersonalData: ObservableObject {
         }
     }
 
+    /// Points an existing bookmark at another chapter. Used by the bookmarks
+    /// panel's Mark and the reader's Assign Bookmark so both behave alike.
+    public func assignBookmark(_ bookmark: Bookmark,
+                               testament: Int, book: Int, chapter: Int) {
+        updateBookmark(bookmark.moved(testament: testament, book: book,
+                                      chapter: chapter))
+    }
+
     /// Removes the bookmark with the same id.
     public func deleteBookmark(_ bookmark: Bookmark) {
         bookmarks.removeAll { $0.id == bookmark.id }

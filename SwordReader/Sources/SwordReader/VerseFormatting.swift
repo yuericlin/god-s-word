@@ -49,6 +49,35 @@ public enum VerseFormatting {
     }
 }
 
+/// Book location math shared by bookmarks and the reader (REQ-BM-8).
+/// A book is addressed either as (testament 1|2, 1-based book within the
+/// testament) or as a 0-based index across the whole 66-book Bible.
+public enum BookLocation {
+    public static let otBookCount = 39
+    public static let ntBookCount = 27
+    public static let bookCount = otBookCount + ntBookCount
+
+    /// (1, 1) -> 0 ... (1, 39) -> 38, (2, 1) -> 39 ... (2, 27) -> 65.
+    /// Nil when the location is outside the Bible.
+    public static func overallIndex(testament: Int, book: Int) -> Int? {
+        switch testament {
+        case 1 where (1...otBookCount).contains(book): return book - 1
+        case 2 where (1...ntBookCount).contains(book): return otBookCount + book - 1
+        default: return nil
+        }
+    }
+
+    /// The inverse of `overallIndex`; nil when `overall` isn't in 0...65.
+    public static func testamentAndBook(overall: Int)
+        -> (testament: Int, book: Int)?
+    {
+        guard (0..<bookCount).contains(overall) else { return nil }
+        return overall < otBookCount
+            ? (1, overall + 1)
+            : (2, overall - otBookCount + 1)
+    }
+}
+
 /// Which versions the Compare panel shows (REQ-CM-3..5).
 public enum CompareVersions {
     /// The version ids to show, current version first. `configured` is the

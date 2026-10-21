@@ -222,6 +222,12 @@ Multiple (KJV Gen 1:1-2):
 
 ---
 
+- **REQ-BM-8:** The reader's long-press menu (on the margins and gaps around
+  the text) has **Assign Bookmark** next to Take Notes. It opens a sheet with
+  a **New Bookmark** row and the existing bookmarks. New Bookmark creates one
+  at the chapter being read and opens its editor. Choosing an existing
+  bookmark moves it to the chapter being read (the same as Mark, REQ-BM-6).
+
 ## 9. Two-level book/chapter picker
 
 - **REQ-PK-1:** The reader's top book menu opens a two-level picker sheet (not

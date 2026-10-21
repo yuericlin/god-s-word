@@ -111,6 +111,15 @@ enum BibleVersion: Identifiable, Equatable {
         }
     }
 
+    /// Like `bookName(overall:)`, but nil instead of an out-of-range crash
+    /// when this version lacks the book (a private Bible can have fewer than
+    /// 66 books while a bookmark points anywhere in the Bible).
+    func bookNameIfPresent(overall: Int) -> String? {
+        guard overall >= 0, overall < 66 else { return nil }
+        if case .private(let b) = self, overall >= b.books.count { return nil }
+        return bookName(overall: overall)
+    }
+
     func chapterCount(testament: Int, book: Int) -> Int {
         switch self {
         case .sword(let m):

@@ -80,11 +80,10 @@ struct BookmarkRibbonsRow: View {
         ) {
             Button("Mark") {
                 // Assign the current chapter to the held bookmark.
-                if var b = pendingBookmark {
-                    b.testament = history.testament
-                    b.book = history.book
-                    b.chapter = history.chapter
-                    personalData.updateBookmark(b)
+                if let b = pendingBookmark {
+                    personalData.assignBookmark(b, testament: history.testament,
+                                                book: history.book,
+                                                chapter: history.chapter)
                 }
             }
             Button("Edit") {
@@ -145,10 +144,12 @@ struct BookmarkRibbonsRow: View {
     }
 
     private func reference(for bookmark: Bookmark) -> String {
-        let overall = bookmark.testament == 1
-            ? bookmark.book - 1 : 39 + bookmark.book - 1
-        guard overall >= 0 && overall < 66 else { return "" }
-        return "\(history.bookName(overall: overall)) \(bookmark.chapter)"
+        guard let overall = bookmark.overallBookIndex,
+              let name = history.version.bookNameIfPresent(overall: overall)
+        else {
+            return ""
+        }
+        return "\(name) \(bookmark.chapter)"
     }
 }
 
