@@ -44,6 +44,44 @@ struct SettingsView: View {
                     Text("The Compare action on selected verses shows them in the version you are reading plus the versions chosen here.")
                 }
 
+                Section {
+                    NavigationLink {
+                        CommentaryModulePicker()
+                    } label: {
+                        HStack {
+                            Text("Commentary")
+                            Spacer()
+                            Text(personalData.commentaryModuleID.isEmpty
+                                 ? "Automatic"
+                                 : personalData.commentaryModuleID)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Auxiliary panel")
+                } footer: {
+                    Text("The panel below the reader has Notes, Commentary, and Strong's tabs. Commentary entries show for the book, chapter, or verse being read.")
+                }
+
+                Section {
+                    NavigationLink {
+                        StrongsFallbackPicker()
+                    } label: {
+                        HStack {
+                            Text("Strong's fallback version")
+                            Spacer()
+                            Text(personalData.strongsFallbackVersionID.isEmpty
+                                 ? "Automatic"
+                                 : personalData.strongsFallbackVersionID)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Strong's")
+                } footer: {
+                    Text("When the version you are reading has no Strong's numbers, the panel's Strong's tab renders the selected verse from this version instead.")
+                }
+
                 Section("History") {
                     NavigationLink {
                         HistoryView(onSelect: { entry in

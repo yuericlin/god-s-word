@@ -29,7 +29,9 @@ struct RepositoryView: View {
     }
 
     private var filtered: [ModuleInfo] {
-        let base = modules.filter { $0.isRenderable }
+        // Bibles the reader can open, plus commentaries the auxiliary
+        // panel can read (REQ-AP-4).
+        let base = modules.filter { $0.isRenderable || $0.isCommentaryRenderable }
         guard !query.isEmpty else { return base }
         let q = query.lowercased()
         return base.filter {
@@ -60,7 +62,10 @@ struct RepositoryView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(mod.description).font(.headline)
-                                    Text("\(mod.id) · \(mod.language)").font(.caption).foregroundStyle(.secondary)
+                                    Text(mod.isCommentary
+                                         ? "\(mod.id) · \(mod.language) · Commentary"
+                                         : "\(mod.id) · \(mod.language)")
+                                        .font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 statusView(for: mod)

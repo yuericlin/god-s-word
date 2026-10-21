@@ -30,6 +30,7 @@ sources = [
     "GodsWord/Services/PrivateBible.swift",
     "GodsWord/Services/BibleVersion.swift",
     "GodsWord/Services/BibleSource.swift",
+    "GodsWord/Services/CommentaryService.swift",
     "GodsWord/Views/LibraryView.swift",
     "GodsWord/Views/BooksView.swift",
     "GodsWord/Views/ChaptersView.swift",
@@ -46,6 +47,7 @@ sources = [
     "GodsWord/Views/CompareView.swift",
     "GodsWord/Views/LicenseNoticeView.swift",
     "GodsWord/Views/AssignBookmarkView.swift",
+    "GodsWord/Views/AuxiliaryPanelView.swift",
 ]
 resources = [
     "GodsWord/Assets.xcassets",

@@ -169,10 +169,12 @@ struct BookmarksPanel: View {
     private enum PanelSheet: Identifiable {
         case bookmark(Bookmark)
         case note(key: String, reference: String)
+        case chapterNote(key: String, reference: String)
         var id: String {
             switch self {
             case .bookmark(let b): return "bookmark-\(b.id.uuidString)"
             case .note(let key, _): return "note-\(key)"
+            case .chapterNote(let key, _): return "chapterNote-\(key)"
             }
         }
     }
@@ -318,6 +320,11 @@ struct BookmarksPanel: View {
                                 initialText: personalData.verseNote(forKey: key) ?? "",
                                 seedText: noteSeedText)
                     .environmentObject(personalData)
+            case .chapterNote(let key, let reference):
+                ScopedNoteEditor(reference: reference,
+                                 initialText: personalData.chapterNote(forKey: key) ?? "") { text in
+                    personalData.setChapterNote(text, forKey: key)
+                }
             }
         }
     }
@@ -333,18 +340,28 @@ struct BookmarksPanel: View {
         activeSheet = .bookmark(draft)
     }
 
-    /// Opens the note editor: scoped to the selected verses if any,
-    /// otherwise to the entire chapter (anchored at verse 1).
+    /// Opens the note editor: a verse note scoped to the selected verses
+    /// if any are selected, otherwise the chapter-level note for the
+    /// chapter being read (REQ-NT-14).
     private func addNote() {
-        let verse = selectedVerses.min() ?? 1
-        let key = personalData.verseNoteKey(
-            moduleID: history.version.id,
-            testament: history.testament,
-            book: history.book,
-            chapter: history.chapter,
-            verse: verse)
-        activeSheet = .note(key: key,
-                            reference: "\(history.bookTitle) \(history.chapter):\(verse)")
+        if let verse = selectedVerses.min() {
+            let key = personalData.verseNoteKey(
+                moduleID: history.version.id,
+                testament: history.testament,
+                book: history.book,
+                chapter: history.chapter,
+                verse: verse)
+            activeSheet = .note(key: key,
+                                reference: "\(history.bookTitle) \(history.chapter):\(verse)")
+        } else {
+            let key = personalData.chapterNoteKey(
+                moduleID: history.version.id,
+                testament: history.testament,
+                book: history.book,
+                chapter: history.chapter)
+            activeSheet = .chapterNote(key: key,
+                                       reference: "\(history.bookTitle) \(history.chapter)")
+        }
     }
 
     /// Opens the note editor for an existing note from the Notes list.

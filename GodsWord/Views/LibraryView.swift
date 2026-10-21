@@ -248,6 +248,7 @@ struct LibraryView: View {
             case .repository:
                 versions = installed
                     .filter { store.sourceID(forModule: $0.id) == source.id }
+                    .filter { !$0.info.isCommentary }
                     .map(BibleVersion.sword)
             case .appFolder, .folder:
                 versions = loadPrivateBibles(from: source).map(BibleVersion.private)
