@@ -242,8 +242,10 @@ struct ReaderView: View {
                         showingBookChapterPicker = true
                     } label: {
                         HStack(spacing: 4) {
-                            Text(history.bookTitle)
+                            Text("\(history.bookTitle) \(history.chapter)")
                                 .font(.headline)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                             Image(systemName: "chevron.down")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

@@ -139,7 +139,7 @@ Multiple (KJV Gen 1:1-2):
 ### Sections
 - **REQ-BP-1:** The panel has two sections: **Bookmarks** and **Notes**.
 - **REQ-BP-2:** The Bookmarks section shows ribbon bookmarks (horizontal row).
-  Tapping a bookmark jumps to its chapter. (Hold-1-second for Mark/Edit/Delete
+  Tapping a bookmark jumps to its chapter. (Hold-1-second for Assign/Edit/Delete
   — see bookmarks spec.)
 - **REQ-BP-3:** The Notes section lists every verse with a note, most
   recently saved first (REQ-NT-13); notes without a recorded save order
@@ -215,8 +215,8 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-BM-4:** The bookmarks panel shows small translucent ribbons at its
   top-right corner, one per bookmark.
 - **REQ-BM-5:** Single tap on a bookmark jumps to its chapter.
-- **REQ-BM-6:** Holding a bookmark for 1 second offers: Mark (assign the current
-  chapter to it), Edit (name, ribbon color, book & chapter), Delete.
+- **REQ-BM-6:** Holding a bookmark for 1 second offers: Assign (point it at the
+  chapter being read), Edit (name, ribbon color, book & chapter), Delete.
 - **REQ-BM-7:** Bookmarks persist in UserDefaults (`gw.bookmarks.v1`) and Drive
   backups (payload v4+). Old backups load without wiping bookmarks.
 
@@ -226,7 +226,7 @@ Multiple (KJV Gen 1:1-2):
   the text) has **Assign Bookmark** next to Take Notes. It opens a sheet with
   a **New Bookmark** row and the existing bookmarks. New Bookmark creates one
   at the chapter being read and opens its editor. Choosing an existing
-  bookmark moves it to the chapter being read (the same as Mark, REQ-BM-6).
+  bookmark moves it to the chapter being read (the same as Assign, REQ-BM-6).
 
 ## 9. Two-level book/chapter picker
 
@@ -236,6 +236,11 @@ Multiple (KJV Gen 1:1-2):
   user picks the exact chapter.
 - **REQ-PK-3:** The current book shows a checkmark; the current chapter is
   highlighted.
+- **REQ-PK-4:** The reader's top title shows the book name with the chapter
+  number ("Genesis 1").
+- **REQ-PK-5:** Picking a Bible version in the library keeps the book and
+  chapter being read; the chapter is clamped to the new version's range. The
+  first pick, or a version that lacks the current book, starts at Genesis 1.
 
 ---
 
