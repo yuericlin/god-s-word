@@ -151,8 +151,9 @@ Multiple (KJV Gen 1:1-2):
   (does NOT jump to the verse).
 
 ### Actions
-- **REQ-BP-6:** "Add Bookmark" button at the bottom creates a bookmark at the
-  current chapter and opens the edit sheet.
+- **REQ-BP-6:** "Add Bookmark" button at the bottom opens the edit sheet on a
+  new bookmark at the current chapter. The bookmark is stored only when the
+  user taps Save (REQ-BM-9).
 - **REQ-BP-7:** "Add Note" button next to "Add Bookmark" opens the note editor.
   The note is scoped to the selected verses if any are selected, otherwise to
   the entire chapter (anchored at verse 1).
@@ -224,9 +225,14 @@ Multiple (KJV Gen 1:1-2):
 
 - **REQ-BM-8:** The reader's long-press menu (on the margins and gaps around
   the text) has **Assign Bookmark** next to Take Notes. It opens a sheet with
-  a **New Bookmark** row and the existing bookmarks. New Bookmark creates one
-  at the chapter being read and opens its editor. Choosing an existing
-  bookmark moves it to the chapter being read (the same as Assign, REQ-BM-6).
+  a **New Bookmark** row and the existing bookmarks. New Bookmark opens the
+  editor on a new bookmark at the chapter being read (REQ-BM-9). Choosing an
+  existing bookmark moves it to the chapter being read (the same as Assign,
+  REQ-BM-6).
+- **REQ-BM-9:** A new bookmark (Add Bookmark in the panel, New Bookmark in
+  Assign) is a draft until the user taps Save in its editor, which titles it
+  "New Bookmark". Cancel, or swiping the sheet down, discards it: nothing is
+  stored. Editing an existing bookmark is unchanged; Cancel keeps it as it was.
 
 ## 9. Two-level book/chapter picker
 
