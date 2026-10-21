@@ -9,7 +9,10 @@
 import Foundation
 import SwordReader
 
-public struct CommentaryModule: Identifiable, Equatable {
+/// Sendable (its only payload, InstalledModule, is Sendable) so the
+/// panel can hand a module to the nonisolated async loaders below from
+/// main-actor contexts without data-race errors.
+public struct CommentaryModule: Identifiable, Equatable, Sendable {
     public let installed: InstalledModule
 
     public var id: String { installed.id }
