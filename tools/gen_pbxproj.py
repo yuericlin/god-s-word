@@ -45,6 +45,7 @@ sources = [
     "GodsWord/Views/EdgeNavigation.swift",
     "GodsWord/Views/CompareView.swift",
     "GodsWord/Views/LicenseNoticeView.swift",
+    "GodsWord/Views/AssignBookmarkView.swift",
 ]
 resources = [
     "GodsWord/Assets.xcassets",

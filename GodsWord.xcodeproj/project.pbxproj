@@ -34,6 +34,7 @@
 		1E5E24DF8E0C52C58C51E8B0 /* EdgeNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921F397B4AB15F01B8F5CEF9 /* EdgeNavigation.swift */; };
 		425B6CD904DA5DADBF60F155 /* CompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C86768E8B6D0513890C45A41 /* CompareView.swift */; };
 		E4EE3E4FE4735B1F87C2126B /* LicenseNoticeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DFFA7F6631F527C99A905EE /* LicenseNoticeView.swift */; };
+		1CA1F741243459BFB12B4242 /* AssignBookmarkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F3FFCC06FBA53B2B3F2B2C5 /* AssignBookmarkView.swift */; };
 		0D214555E72E554CBF6AEBAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7F476AB55FEF5384B2579B4E /* Assets.xcassets */; };
 		36FF226A84B45E19987DEBD8 /* SwordReader in Frameworks */ = {isa = PBXBuildFile; productRef = E599A9EE70405DC5A2FA9A2C /* SwordReader */; };
 /* End PBXBuildFile section */
@@ -70,6 +71,7 @@
 		921F397B4AB15F01B8F5CEF9 /* EdgeNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EdgeNavigation.swift"; sourceTree = "<group>"; };
 		C86768E8B6D0513890C45A41 /* CompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CompareView.swift"; sourceTree = "<group>"; };
 		1DFFA7F6631F527C99A905EE /* LicenseNoticeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "LicenseNoticeView.swift"; sourceTree = "<group>"; };
+		9F3FFCC06FBA53B2B3F2B2C5 /* AssignBookmarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AssignBookmarkView.swift"; sourceTree = "<group>"; };
 		7F476AB55FEF5384B2579B4E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Assets.xcassets"; sourceTree = "<group>"; };
 		E6377AC33558587A9F8AAC89 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info.plist"; sourceTree = "<group>"; };
 		93F598839F2B52DB9174BE90 /* GoogleOAuth.plist.template */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleOAuth.plist.template"; sourceTree = "<group>"; };
@@ -145,6 +147,7 @@
 				921F397B4AB15F01B8F5CEF9 /* EdgeNavigation.swift */,
 				C86768E8B6D0513890C45A41 /* CompareView.swift */,
 				1DFFA7F6631F527C99A905EE /* LicenseNoticeView.swift */,
+				9F3FFCC06FBA53B2B3F2B2C5 /* AssignBookmarkView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -252,6 +255,7 @@
 				1E5E24DF8E0C52C58C51E8B0 /* EdgeNavigation.swift in Sources */,
 				425B6CD904DA5DADBF60F155 /* CompareView.swift in Sources */,
 				E4EE3E4FE4735B1F87C2126B /* LicenseNoticeView.swift in Sources */,
+				1CA1F741243459BFB12B4242 /* AssignBookmarkView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
