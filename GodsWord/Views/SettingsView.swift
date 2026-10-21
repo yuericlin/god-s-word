@@ -153,7 +153,7 @@ struct SettingsView: View {
                     HStack { Text("Version"); Spacer(); Text(appVersion).foregroundStyle(.secondary) }
                     Text("God's Word is an independent reader, not affiliated with or endorsed by CrossWire Bible Society, the SWORD Project, Apple, Google, or any Bible publisher.")
                         .font(.callout).foregroundStyle(.secondary)
-                    Text("This app includes no Bible text. Bibles and lexicons are downloaded by you from the CrossWire Bible Society module repository (crosswire.org) or imported by you. Each belongs to its copyright holder; check a module's About text for its license before sharing or publishing it. Use is at your own responsibility.")
+                    Text("This app includes no Bible text. Bibles and lexicons are downloaded by you from the CrossWire Bible Society module repository (crosswire.org) or imported by you. Each belongs to its copyright holder; check each module's license on crosswire.org before sharing or publishing it. Use is at your own responsibility.")
                         .font(.callout).foregroundStyle(.secondary)
                     NavigationLink("Licenses and notices") {
                         LicenseNoticeView()
