@@ -134,6 +134,114 @@ public enum NoteKey {
     }
 }
 
+/// Book-level note storage keys (REQ-NT-14). Book notes live in their own
+/// store, so the format only needs to be unique within it:
+/// "{moduleID}:{testament}:{book}".
+public enum BookNoteKey {
+    public static func make(moduleID: String, testament: Int, book: Int) -> String {
+        "\(moduleID):\(testament):\(book)"
+    }
+
+    public struct Parsed: Equatable {
+        public let moduleID: String
+        public let testament: Int
+        public let book: Int
+    }
+
+    public static func parse(_ key: String) -> Parsed? {
+        let parts = key.split(separator: ":")
+        guard parts.count == 3,
+              let testament = Int(parts[1]),
+              let book = Int(parts[2]) else { return nil }
+        return Parsed(moduleID: String(parts[0]), testament: testament, book: book)
+    }
+}
+
+/// Chapter-level note storage keys (REQ-NT-14). Chapter notes live in
+/// their own store: "{moduleID}:{testament}:{book}:{chapter}".
+public enum ChapterNoteKey {
+    public static func make(moduleID: String, testament: Int, book: Int,
+                            chapter: Int) -> String {
+        "\(moduleID):\(testament):\(book):\(chapter)"
+    }
+
+    public struct Parsed: Equatable {
+        public let moduleID: String
+        public let testament: Int
+        public let book: Int
+        public let chapter: Int
+    }
+
+    public static func parse(_ key: String) -> Parsed? {
+        let parts = key.split(separator: ":")
+        guard parts.count == 4,
+              let testament = Int(parts[1]),
+              let book = Int(parts[2]),
+              let chapter = Int(parts[3]) else { return nil }
+        return Parsed(moduleID: String(parts[0]), testament: testament,
+                      book: book, chapter: chapter)
+    }
+}
+
+/// Grouping of one chapter's commentary entries (REQ-AP-5). A commentary
+/// stores a single entry covering a run of verses by repeating the same
+/// text at every verse it covers (verified against MHCC: the entry for
+/// Genesis 1:1-2 is stored identically at verses 1 and 2). Collapsing
+/// consecutive verses with identical text recovers those ranges.
+public enum CommentaryGrouping {
+    public struct Entry: Equatable {
+        public let startVerse: Int
+        public let endVerse: Int
+        public let text: String
+        public init(startVerse: Int, endVerse: Int, text: String) {
+            self.startVerse = startVerse
+            self.endVerse = endVerse
+            self.text = text
+        }
+    }
+
+    /// Collapses (verse, text) pairs — in verse order — into ranges.
+    /// Empty texts are skipped and break a run; the same text appearing
+    /// again later (not consecutively) starts a new entry.
+    public static func group(_ verses: [(verse: Int, text: String)]) -> [Entry] {
+        var out = [Entry]()
+        for v in verses where !v.text.isEmpty {
+            if var last = out.last, last.text == v.text,
+               last.endVerse == v.verse - 1 {
+                last = Entry(startVerse: last.startVerse, endVerse: v.verse,
+                             text: last.text)
+                out[out.count - 1] = last
+            } else {
+                out.append(Entry(startVerse: v.verse, endVerse: v.verse,
+                                 text: v.text))
+            }
+        }
+        return out
+    }
+
+    /// The grouped entry covering `verse`, or nil when the commentary
+    /// has no entry for it.
+    public static func entry(in entries: [Entry], covering verse: Int) -> Entry? {
+        entries.first { $0.startVerse <= verse && verse <= $0.endVerse }
+    }
+}
+
+/// Which version supplies the Strong's rendering of the selected verse
+/// in the auxiliary panel (REQ-AP-7). The version being read wins when it
+/// carries Strong's numbers; otherwise the user's fallback setting;
+/// otherwise the first installed Strong's version (in library order).
+public enum StrongsVerseSource {
+    public static func resolve(currentID: String, currentSupportsStrongs: Bool,
+                               fallbackID: String?,
+                               strongsVersionIDs: [String]) -> String? {
+        if currentSupportsStrongs { return currentID }
+        if let fallbackID, strongsVersionIDs.contains(fallbackID) {
+            return fallbackID
+        }
+        return strongsVersionIDs.first
+    }
+}
+
 /// Note anchoring per REQ-NT-1..3.
 /// - Selected verses -> anchor at the lowest selected verse.
 /// - No selection -> chapter note anchored at verse 1.

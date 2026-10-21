@@ -28,6 +28,7 @@ struct ReaderView: View {
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
     @State private var noteEditorItem: NoteEditorItem?
+    @State private var showingChapterNoteEditor = false
     @State private var showingCompare = false
     @State private var showingAssignBookmark = false
     /// A new, unsaved bookmark started in the Assign sheet; its editor opens
@@ -73,6 +74,18 @@ struct ReaderView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            readerContent
+            // Auxiliary panel below the reading panel: Notes / Commentary /
+            // Strong's tabs (REQ-AP-1). It reads the same history and the
+            // verse selection; the reading text above is untouched.
+            AuxiliaryPanelView(history: history,
+                               selectedVerses: selectedVerses,
+                               availableVersions: availableVersions)
+        }
+    }
+
+    private var readerContent: some View {
         ZStack(alignment: .leading) {
             Group {
                 if let loadError {
@@ -115,7 +128,7 @@ struct ReaderView: View {
                             }
                             .padding()
                             // Long-press on empty reading area (margins, gaps)
-                            // offers to take a note (anchored at verse 1).
+                            // offers to take a chapter-level note.
                             .contextMenu {
                                 Button("Take Notes") { openChapterNoteEditor() }
                                 Button("Assign Bookmark") { showingAssignBookmark = true }
@@ -380,6 +393,14 @@ struct ReaderView: View {
                             initialText: item.initialText,
                             seedText: item.seedText)
                 .environmentObject(personalData)
+        }
+        .sheet(isPresented: $showingChapterNoteEditor) {
+            ScopedNoteEditor(
+                reference: "\(history.bookTitle) \(history.chapter)",
+                initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? ""
+            ) { text in
+                personalData.setChapterNote(text, forKey: currentChapterNoteKey)
+            }
         }
     }
 
@@ -659,12 +680,19 @@ struct ReaderView: View {
         "\(history.bookTitle) \(history.chapter):\(verse)"
     }
 
-    /// A chapter note is a note from the first verse to the last;
-    /// anchor it at the first verse like any multi-verse note.
+    /// The storage key of the current chapter's chapter-level note
+    /// (REQ-NT-14).
+    private var currentChapterNoteKey: String {
+        personalData.chapterNoteKey(moduleID: history.version.id,
+                                    testament: history.testament,
+                                    book: history.book,
+                                    chapter: history.chapter)
+    }
+
+    /// A chapter note is scoped to the whole chapter (REQ-NT-14): it
+    /// lives in the chapter-notes store, not on any verse.
     private func openChapterNoteEditor() {
-        if let first = verses.first?.verse {
-            openNoteEditor(for: first)
-        }
+        showingChapterNoteEditor = true
     }
 
     private func load() async {

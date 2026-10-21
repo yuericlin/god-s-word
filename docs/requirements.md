@@ -96,9 +96,10 @@ Multiple (KJV Gen 1:1-2):
   verses.
 - **REQ-NT-2:** When created from selected verses, the note anchors to the
   FIRST selected verse (lowest number). The note indicator appears only there.
-- **REQ-NT-3:** A chapter note is anchored at verse 1.
+- **REQ-NT-3:** ~~A chapter note is anchored at verse 1.~~ Superseded by
+  REQ-NT-15: chapter notes are their own scope, stored separately.
 - **REQ-NT-4:** Long-press on empty reading area offers "Take Notes", which
-  creates a chapter note (anchored at verse 1).
+  creates a chapter-level note (REQ-NT-15).
 
 ### Indicator
 - **REQ-NT-5:** A verse with a note shows a yellow background highlight on its
@@ -131,6 +132,31 @@ Multiple (KJV Gen 1:1-2):
   recent first; saving a note moves its key to the front, deleting removes
   it). The order is included in Drive backups and manual exports
   (`noteOrder.json`) and restored by both.
+
+### Scoped notes (book / chapter / verse levels)
+- **REQ-NT-14:** Notes exist at three scopes, mirroring commentary's
+  levels: a **book note** (one per book per version), a **chapter note**
+  (one per chapter), and **verse notes** (REQ-NT-9..13, unchanged). Book
+  and chapter notes live in their own stores — `PersonalData.bookNotes`
+  (`gw.bookNotes.v1`, key `"{moduleID}:{testament}:{book}"`, see
+  `BookNoteKey`) and `PersonalData.chapterNotes` (`gw.chapterNotes.v1`,
+  key `"{moduleID}:{testament}:{book}:{chapter}"`, see
+  `ChapterNoteKey`). An empty save deletes the note. They are included in
+  Drive backups (payload v7), iCloud sync (`bookNotes.json` /
+  `chapterNotes.json`), and manual export/import; applying older backups
+  or files never wipes them.
+- **REQ-NT-15:** Chapter notes supersede the verse-1 anchoring of the old
+  REQ-NT-3: "Take Notes" (reader long-press) and the bookmarks panel's
+  "Add Note" with no verse selected both edit the chapter-level note.
+  With verses selected, "Add Note" still edits the verse note anchored at
+  the first selected verse (REQ-NT-2). Verse notes written at verse 1
+  before this change remain verse notes.
+- **REQ-NT-16:** Because a pre-REQ-NT-15 chapter note is indistinguishable
+  from a genuine verse-1 note, nothing migrates automatically. When a
+  chapter has no chapter-level note but does have a verse-1 note, the
+  panel's Chapter scope shows that note labeled as stored on verse 1 and
+  offers "Move to Chapter Note", which copies it into the chapter store
+  and removes the verse-1 note (an explicit user action only).
 
 ---
 
@@ -272,8 +298,11 @@ Multiple (KJV Gen 1:1-2):
 
 ## 12. Backup (Drive)
 
-- **REQ-BK-1:** Payload v6 includes: reading settings, history log, bookmarks,
-  verse notes, Strong's visibility, Compare versions (REQ-CM-7).
+- **REQ-BK-1:** Payload v7 includes: reading settings, history log, bookmarks,
+  verse notes, Strong's visibility, Compare versions (REQ-CM-7), book and
+  chapter notes, the commentary module and Strong's fallback settings
+  (REQ-NT-14, REQ-AP-6/7). Payload v6 and older still load; fields they
+  lack never wipe existing data.
 - **REQ-BK-2:** Applying an old backup never wipes newer data types (notes,
   bookmarks, ribbons).
 - **REQ-BK-3:** Backup is opt-in, manual, to the private `appDataFolder`.
@@ -356,3 +385,56 @@ Multiple (KJV Gen 1:1-2):
   (`gw.compareVersions.v1`), in Drive backups (payload v6) and in
   `settings.json` for iCloud sync and manual export. Older backups and
   settings files (no Compare field) load without wiping the setting.
+
+## 15. Auxiliary panel
+
+- **REQ-AP-1:** Below the main reading panel sits an auxiliary panel
+  (a real panel under the chapter text, not an overlay; the main text
+  rendering is untouched). It has three tabs — **Notes**, **Commentary**,
+  **Strong's** — and a chevron collapses it to its tab bar.
+- **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
+  Each shows the scoped note for the book / chapter / selected verse
+  being read (REQ-NT-14) with an Add/Edit action opening the note
+  editor. The Verse sub-tab anchors at the lowest selected verse
+  (verse 1 when nothing is selected).
+- **REQ-AP-3:** The Commentary tab has the same **Book / Chapter /
+  Verse** sub-tabs, showing the chosen commentary's content at that
+  scope for the passage being read.
+- **REQ-AP-4:** A commentary is a SWORD **zCom** module. It is
+  renderable when it is OSIS, ZIP-compressed, whole-book blocks, UTF-8,
+  KJV/NRSV versification, and not enciphered (`ModuleInfo.isCommentary`
+  / `isCommentaryRenderable`; verified against MHCC — zCom shares the
+  zText `.bzv/.bzs/.bzz` layout, so `SwordModule` reads it unmodified).
+  ThML commentaries (e.g. TSK) are not renderable yet. Commentaries are
+  downloadable in the Repository (badged "Commentary") and never appear
+  in the Bible version lists (Library, version picker, Compare).
+- **REQ-AP-5:** A commentary stores one entry covering a run of verses
+  by repeating the same text at each verse it covers. The Chapter scope
+  collapses those consecutive duplicates into verse-range entries
+  (`CommentaryGrouping`); the Verse scope shows the single entry
+  covering the selected verse; the Book scope shows the whole book's
+  entries grouped by chapter, chapters collapsed except the one being
+  read.
+- **REQ-AP-6:** The commentary shown is `PersonalData.commentaryModuleID`
+  (persisted, in backups and `settings.json` like the Compare setting).
+  Empty/uninstalled means the first installed renderable commentary.
+  It is chosen in Settings > Auxiliary panel > Commentary or in the
+  panel's own header menu. With no commentary installed, the tab shows
+  an empty state offering the Repository.
+- **REQ-AP-7:** The Strong's tab renders the selected verse (lowest
+  selected verse; verse 1 when none) with tappable Strong's numbers,
+  exactly like the main reader's Strong's mode; tapping a number opens
+  its dictionary entry. The rendering comes from the version being read
+  when it supports Strong's; otherwise from the fallback version in
+  `PersonalData.strongsFallbackVersionID` (Settings > Strong's, or the
+  panel's own menu); when that is unset or uninstalled, the first
+  installed Strong's version. Resolution is `StrongsVerseSource.resolve`.
+  Private versions never supply Strong's. With no Strong's version
+  installed, the tab explains so.
+- **REQ-AP-8:** Commentaries are often copyrighted, so the panel's
+  Commentary tab header has an info button opening a sheet with the
+  commentary's name, its declared distribution license
+  (`ModuleInfo.distributionLicense`, the conf's DistributionLicense
+  field), and its About text (which carries the copyright notice).
+  The Settings commentary picker also shows the license under each
+  commentary's name when one is declared.

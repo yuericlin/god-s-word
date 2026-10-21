@@ -14,8 +14,12 @@ enum BibleVersion: Identifiable, Equatable {
     }
 
     /// All versions known to the library (downloaded + private imports).
+    /// Commentary modules are not Bible versions and never appear here;
+    /// the auxiliary panel reaches them via CommentaryModule.
     static func allInstalled(in store: ModuleStore) -> [BibleVersion] {
-        store.installedModules().map(BibleVersion.sword)
+        store.installedModules()
+            .filter { !$0.info.isCommentary }
+            .map(BibleVersion.sword)
             + PrivateBibleStore.loadAll().map(BibleVersion.private)
     }
 

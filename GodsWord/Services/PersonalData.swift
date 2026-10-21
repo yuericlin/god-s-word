@@ -6,6 +6,7 @@
 // when the user consents and signs in.
 
 import Foundation
+import SwordReader
 
 /// Where the user left off in a module: testament/book/chapter (1-based).
 public struct ReadingPosition: Codable, Sendable {
@@ -43,7 +44,7 @@ public struct HistoryEntry: Codable, Identifiable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 6
+    public var version: Int = 7
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -55,6 +56,14 @@ public struct BackupPayload: Codable, Sendable {
     public var verseNoteOrder: [String]
     /// Versions the Compare panel shows besides the current one.
     public var compareVersionIDs: [String]
+    /// Book-level notes (REQ-NT-14), keyed like BookNoteKey.
+    public var bookNotes: [String: String]
+    /// Chapter-level notes (REQ-NT-14), keyed like ChapterNoteKey.
+    public var chapterNotes: [String: String]
+    /// Commentary module the auxiliary panel shows (REQ-AP-4); "" = none.
+    public var commentaryModuleID: String
+    /// Fallback Strong's version for the panel (REQ-AP-7); "" = automatic.
+    public var strongsFallbackVersionID: String
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
@@ -62,6 +71,10 @@ public struct BackupPayload: Codable, Sendable {
                 bookmarks: [Bookmark] = [], verseNotes: [String: String] = [:],
                 verseNoteOrder: [String] = [],
                 compareVersionIDs: [String] = [],
+                bookNotes: [String: String] = [:],
+                chapterNotes: [String: String] = [:],
+                commentaryModuleID: String = "",
+                strongsFallbackVersionID: String = "",
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -72,6 +85,10 @@ public struct BackupPayload: Codable, Sendable {
         self.verseNotes = verseNotes
         self.verseNoteOrder = verseNoteOrder
         self.compareVersionIDs = compareVersionIDs
+        self.bookNotes = bookNotes
+        self.chapterNotes = chapterNotes
+        self.commentaryModuleID = commentaryModuleID
+        self.strongsFallbackVersionID = strongsFallbackVersionID
         self.backedUpAt = backedUpAt
     }
 
@@ -89,6 +106,10 @@ public struct BackupPayload: Codable, Sendable {
         verseNotes = try c.decodeIfPresent([String: String].self, forKey: .verseNotes) ?? [:]
         verseNoteOrder = try c.decodeIfPresent([String].self, forKey: .verseNoteOrder) ?? []
         compareVersionIDs = try c.decodeIfPresent([String].self, forKey: .compareVersionIDs) ?? []
+        bookNotes = try c.decodeIfPresent([String: String].self, forKey: .bookNotes) ?? [:]
+        chapterNotes = try c.decodeIfPresent([String: String].self, forKey: .chapterNotes) ?? [:]
+        commentaryModuleID = try c.decodeIfPresent(String.self, forKey: .commentaryModuleID) ?? ""
+        strongsFallbackVersionID = try c.decodeIfPresent(String.self, forKey: .strongsFallbackVersionID) ?? ""
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -106,6 +127,10 @@ public final class PersonalData: ObservableObject {
     private let verseNotesKey = "gw.verseNotes.v1"
     private let verseNoteOrderKey = "gw.verseNoteOrder.v1"
     private let compareVersionsKey = "gw.compareVersions.v1"
+    private let bookNotesKey = "gw.bookNotes.v1"
+    private let chapterNotesKey = "gw.chapterNotes.v1"
+    private let commentaryModuleKey = "gw.commentaryModule.v1"
+    private let strongsFallbackKey = "gw.strongsFallbackVersion.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -135,6 +160,10 @@ public final class PersonalData: ObservableObject {
         self.verseNotes = defaults.dictionary(forKey: verseNotesKey) as? [String: String] ?? [:]
         self.verseNoteOrder = defaults.stringArray(forKey: verseNoteOrderKey) ?? []
         self.compareVersionIDs = defaults.stringArray(forKey: compareVersionsKey) ?? []
+        self.bookNotes = defaults.dictionary(forKey: bookNotesKey) as? [String: String] ?? [:]
+        self.chapterNotes = defaults.dictionary(forKey: chapterNotesKey) as? [String: String] ?? [:]
+        self.commentaryModuleID = defaults.string(forKey: commentaryModuleKey) ?? ""
+        self.strongsFallbackVersionID = defaults.string(forKey: strongsFallbackKey) ?? ""
     }
 
     @Published public var fontSize: Double {
@@ -201,6 +230,84 @@ public final class PersonalData: ObservableObject {
             compareVersionIDs.remove(at: i)
         } else {
             compareVersionIDs.append(id)
+        }
+    }
+
+    /// Book-level notes (REQ-NT-14), keyed by
+    /// "<moduleID>:<testament>:<book>" (see BookNoteKey). One note per
+    /// book per version, alongside the chapter- and verse-level notes.
+    /// Persisted in UserDefaults.
+    @Published public var bookNotes: [String: String] {
+        didSet {
+            defaults.set(bookNotes, forKey: bookNotesKey)
+            syncBookNotesToiCloud()
+        }
+    }
+
+    /// Chapter-level notes (REQ-NT-14), keyed by
+    /// "<moduleID>:<testament>:<book>:<chapter>" (see ChapterNoteKey).
+    /// Persisted in UserDefaults.
+    @Published public var chapterNotes: [String: String] {
+        didSet {
+            defaults.set(chapterNotes, forKey: chapterNotesKey)
+            syncChapterNotesToiCloud()
+        }
+    }
+
+    /// The commentary module the auxiliary panel shows (REQ-AP-4).
+    /// "" means none chosen: the panel uses the first installed
+    /// renderable commentary. Persisted in UserDefaults.
+    @Published public var commentaryModuleID: String {
+        didSet { defaults.set(commentaryModuleID, forKey: commentaryModuleKey) }
+    }
+
+    /// Version whose Strong's numbers render the selected verse in the
+    /// auxiliary panel when the version being read has none (REQ-AP-7).
+    /// "" means automatic: the first installed Strong's version.
+    /// Persisted in UserDefaults.
+    @Published public var strongsFallbackVersionID: String {
+        didSet { defaults.set(strongsFallbackVersionID, forKey: strongsFallbackKey) }
+    }
+
+    /// Builds the storage key for a book-level note.
+    public func bookNoteKey(moduleID: String, testament: Int, book: Int) -> String {
+        BookNoteKey.make(moduleID: moduleID, testament: testament, book: book)
+    }
+
+    /// Returns the book-level note for a key, or nil when there is none.
+    public func bookNote(forKey key: String) -> String? {
+        let note = bookNotes[key]
+        return (note?.isEmpty ?? true) ? nil : note
+    }
+
+    /// Stores a book-level note; an empty/nil text removes it.
+    public func setBookNote(_ text: String?, forKey key: String) {
+        if let text, !text.isEmpty {
+            bookNotes[key] = text
+        } else {
+            bookNotes.removeValue(forKey: key)
+        }
+    }
+
+    /// Builds the storage key for a chapter-level note.
+    public func chapterNoteKey(moduleID: String, testament: Int, book: Int,
+                               chapter: Int) -> String {
+        ChapterNoteKey.make(moduleID: moduleID, testament: testament,
+                            book: book, chapter: chapter)
+    }
+
+    /// Returns the chapter-level note for a key, or nil when there is none.
+    public func chapterNote(forKey key: String) -> String? {
+        let note = chapterNotes[key]
+        return (note?.isEmpty ?? true) ? nil : note
+    }
+
+    /// Stores a chapter-level note; an empty/nil text removes it.
+    public func setChapterNote(_ text: String?, forKey key: String) {
+        if let text, !text.isEmpty {
+            chapterNotes[key] = text
+        } else {
+            chapterNotes.removeValue(forKey: key)
         }
     }
 
@@ -347,6 +454,10 @@ public final class PersonalData: ObservableObject {
                       verseNotes: verseNotes,
                       verseNoteOrder: verseNoteOrder,
                       compareVersionIDs: compareVersionIDs,
+                      bookNotes: bookNotes,
+                      chapterNotes: chapterNotes,
+                      commentaryModuleID: commentaryModuleID,
+                      strongsFallbackVersionID: strongsFallbackVersionID,
                       backedUpAt: Date())
     }
 
@@ -371,6 +482,19 @@ public final class PersonalData: ObservableObject {
         if !payload.compareVersionIDs.isEmpty {
             compareVersionIDs = payload.compareVersionIDs
         }
+        // Same guard for the scoped notes (payloads before v7 decode to [:]).
+        if !payload.bookNotes.isEmpty {
+            bookNotes = payload.bookNotes
+        }
+        if !payload.chapterNotes.isEmpty {
+            chapterNotes = payload.chapterNotes
+        }
+        if !payload.commentaryModuleID.isEmpty {
+            commentaryModuleID = payload.commentaryModuleID
+        }
+        if !payload.strongsFallbackVersionID.isEmpty {
+            strongsFallbackVersionID = payload.strongsFallbackVersionID
+        }
     }
 
     // MARK: - iCloud sync
@@ -386,6 +510,10 @@ public final class PersonalData: ObservableObject {
         /// Optional so settings.json files written before Compare existed
         /// still decode (nil = leave the current setting alone).
         public var compareVersionIDs: [String]?
+        /// Optional so older settings.json files still decode
+        /// (nil = leave the current setting alone).
+        public var commentaryModuleID: String?
+        public var strongsFallbackVersionID: String?
     }
 
     private func syncBookmarksToiCloud() {
@@ -396,6 +524,16 @@ public final class PersonalData: ObservableObject {
     private func syncNotesToiCloud() {
         guard iCloudSync.shared.isEnabled else { return }
         try? iCloudSync.shared.save(verseNotes, as: .notes)
+    }
+
+    private func syncBookNotesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(bookNotes, as: .bookNotes)
+    }
+
+    private func syncChapterNotesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(chapterNotes, as: .chapterNotes)
     }
 
     private func syncHistoryToiCloud() {
@@ -412,6 +550,8 @@ public final class PersonalData: ObservableObject {
         // Save even empty collections so the files (and folder) appear.
         try? iCloudSync.shared.save(bookmarks, as: .bookmarks)
         try? iCloudSync.shared.save(verseNotes, as: .notes)
+        try? iCloudSync.shared.save(bookNotes, as: .bookNotes)
+        try? iCloudSync.shared.save(chapterNotes, as: .chapterNotes)
         try? iCloudSync.shared.save(historyLog, as: .history)
         syncSettingsToiCloud(repositoryURL: repositoryURL,
                               installedModuleIDs: installedModuleIDs)
@@ -425,7 +565,9 @@ public final class PersonalData: ObservableObject {
             fontSize: fontSize, verseByVerse: verseByVerse,
             showStrongs: showStrongs, repositoryURL: repositoryURL,
             installedModuleIDs: installedModuleIDs,
-            compareVersionIDs: compareVersionIDs)
+            compareVersionIDs: compareVersionIDs,
+            commentaryModuleID: commentaryModuleID,
+            strongsFallbackVersionID: strongsFallbackVersionID)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -440,6 +582,14 @@ public final class PersonalData: ObservableObject {
         if let n: [String: String] = try? iCloudSync.shared.load(
             [String: String].self, as: .notes), !n.isEmpty {
             verseNotes = n
+        }
+        if let bn: [String: String] = try? iCloudSync.shared.load(
+            [String: String].self, as: .bookNotes), !bn.isEmpty {
+            bookNotes = bn
+        }
+        if let cn: [String: String] = try? iCloudSync.shared.load(
+            [String: String].self, as: .chapterNotes), !cn.isEmpty {
+            chapterNotes = cn
         }
         if let h: [HistoryEntry] = try? iCloudSync.shared.load(
             [HistoryEntry].self, as: .history), !h.isEmpty {
@@ -467,6 +617,10 @@ public final class PersonalData: ObservableObject {
             .write(to: folder.appendingPathComponent("notes.json"))
         try encoder.encode(verseNoteOrder)
             .write(to: folder.appendingPathComponent("noteOrder.json"))
+        try encoder.encode(bookNotes)
+            .write(to: folder.appendingPathComponent("bookNotes.json"))
+        try encoder.encode(chapterNotes)
+            .write(to: folder.appendingPathComponent("chapterNotes.json"))
         try encoder.encode(historyLog)
             .write(to: folder.appendingPathComponent("history.json"))
         let settings = iCloudSettings(
@@ -474,7 +628,9 @@ public final class PersonalData: ObservableObject {
             showStrongs: showStrongs,
             repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
             installedModuleIDs: [],
-            compareVersionIDs: compareVersionIDs)
+            compareVersionIDs: compareVersionIDs,
+            commentaryModuleID: commentaryModuleID,
+            strongsFallbackVersionID: strongsFallbackVersionID)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -510,6 +666,14 @@ public final class PersonalData: ObservableObject {
             case "noteOrder":
                 let o = try JSONDecoder().decode([String].self, from: json)
                 if !o.isEmpty { verseNoteOrder = o }
+            case "bookNotes":
+                let bn = try JSONDecoder().decode([String: String].self,
+                                                  from: json)
+                if !bn.isEmpty { bookNotes = bn }
+            case "chapterNotes":
+                let cn = try JSONDecoder().decode([String: String].self,
+                                                  from: json)
+                if !cn.isEmpty { chapterNotes = cn }
             case "history":
                 let h = try JSONDecoder().decode([HistoryEntry].self,
                                                  from: json)
@@ -521,6 +685,12 @@ public final class PersonalData: ObservableObject {
                 verseByVerse = s.verseByVerse
                 showStrongs = s.showStrongs
                 if let ids = s.compareVersionIDs { compareVersionIDs = ids }
+                if let cid = s.commentaryModuleID, !cid.isEmpty {
+                    commentaryModuleID = cid
+                }
+                if let fid = s.strongsFallbackVersionID, !fid.isEmpty {
+                    strongsFallbackVersionID = fid
+                }
             default:
                 continue
             }

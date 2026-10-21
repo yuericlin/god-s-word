@@ -378,3 +378,156 @@ final class VersionPickPositionRequirementsTests: XCTestCase {
         XCTAssertNil(BookLocation.clampedChapter(5, chapterCount: -1))
     }
 }
+
+// MARK: - REQ-AP: Auxiliary panel
+
+final class AuxiliaryPanelRequirementsTests: XCTestCase {
+    private func conf(_ text: String) -> ModuleInfo {
+        ModuleInfo(conf: SwordConf(text: text))
+    }
+
+    // REQ-AP-4: an OSIS zCom commentary (MHCC's conf shape) is a
+    // commentary and is renderable by the panel.
+    func testOSISCommentaryIsRenderable() {
+        let info = conf("""
+            [MHCC]
+            Description=Matthew Henry's Concise Commentary on the Whole Bible
+            DataPath=./modules/comments/zcom/mhcc/
+            ModDrv=zCom
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertTrue(info.isCommentary)
+        XCTAssertTrue(info.isCommentaryRenderable)
+        XCTAssertFalse(info.isRenderable)
+    }
+
+    // REQ-AP-4: a ThML commentary (TSK's conf shape) is a commentary but
+    // not renderable yet.
+    func testThMLCommentaryIsNotRenderable() {
+        let info = conf("""
+            [TSK]
+            DataPath=./modules/comments/zcom/tsk/
+            ModDrv=zCom
+            BlockType=BOOK
+            CompressType=ZIP
+            SourceType=ThML
+            Lang=en
+            """)
+        XCTAssertTrue(info.isCommentary)
+        XCTAssertFalse(info.isCommentaryRenderable)
+    }
+
+    // REQ-AP-4: a Bible is not a commentary.
+    func testBibleIsNotCommentary() {
+        let info = conf("""
+            [KJV]
+            DataPath=./modules/texts/ztext/kjv/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Category=Biblical Texts
+            Lang=en
+            """)
+        XCTAssertFalse(info.isCommentary)
+        XCTAssertTrue(info.isRenderable)
+    }
+
+    // REQ-AP-5: consecutive verses sharing one entry collapse into a
+    // range; a repeated text later starts a new entry; empties skip.
+    func testCommentaryGrouping() {
+        let grouped = CommentaryGrouping.group([
+            (verse: 1, text: "intro and verses 1-2"),
+            (verse: 2, text: "intro and verses 1-2"),
+            (verse: 3, text: "verses 3-5"),
+            (verse: 4, text: ""),
+            (verse: 5, text: "verses 3-5"),
+            (verse: 6, text: "intro and verses 1-2"),
+        ])
+        XCTAssertEqual(grouped, [
+            CommentaryGrouping.Entry(startVerse: 1, endVerse: 2,
+                                     text: "intro and verses 1-2"),
+            CommentaryGrouping.Entry(startVerse: 3, endVerse: 3,
+                                     text: "verses 3-5"),
+            CommentaryGrouping.Entry(startVerse: 5, endVerse: 5,
+                                     text: "verses 3-5"),
+            CommentaryGrouping.Entry(startVerse: 6, endVerse: 6,
+                                     text: "intro and verses 1-2"),
+        ])
+        XCTAssertEqual(CommentaryGrouping.entry(in: grouped, covering: 2)?.text,
+                       "intro and verses 1-2")
+        XCTAssertNil(CommentaryGrouping.entry(in: grouped, covering: 4))
+    }
+
+    // REQ-NT-14: book/chapter note keys round-trip and reject bad shapes.
+    func testScopedNoteKeys() {
+        let bookKey = BookNoteKey.make(moduleID: "KJV", testament: 1, book: 1)
+        XCTAssertEqual(bookKey, "KJV:1:1")
+        XCTAssertEqual(BookNoteKey.parse(bookKey),
+                       BookNoteKey.Parsed(moduleID: "KJV", testament: 1, book: 1))
+        XCTAssertNil(BookNoteKey.parse("KJV:1"))
+        XCTAssertNil(BookNoteKey.parse("KJV:1:1:1"))
+
+        let chapterKey = ChapterNoteKey.make(moduleID: "KJV", testament: 2,
+                                             book: 1, chapter: 3)
+        XCTAssertEqual(chapterKey, "KJV:2:1:3")
+        XCTAssertEqual(ChapterNoteKey.parse(chapterKey),
+                       ChapterNoteKey.Parsed(moduleID: "KJV", testament: 2,
+                                              book: 1, chapter: 3))
+        XCTAssertNil(ChapterNoteKey.parse("KJV:2:1"))
+        XCTAssertNil(ChapterNoteKey.parse("KJV:2:x:3"))
+    }
+
+    // REQ-AP-8: the module's DistributionLicense is exposed for the
+    // panel's commentary info (commentaries are often copyrighted).
+    func testModuleDistributionLicense() {
+        let licensed = conf("""
+            [Licensed]
+            DataPath=./modules/comments/zcom/licensed/
+            ModDrv=zCom
+            DistributionLicense=Copyrighted; Free for non-commercial use
+            Lang=en
+            """)
+        XCTAssertEqual(licensed.distributionLicense,
+                       "Copyrighted; Free for non-commercial use")
+
+        let silent = conf("""
+            [Silent]
+            DataPath=./modules/comments/zcom/silent/
+            ModDrv=zCom
+            Lang=en
+            """)
+        XCTAssertEqual(silent.distributionLicense, "")
+    }
+
+    // REQ-AP-7: the Strong's verse source resolution order.
+    func testStrongsVerseSourceResolution() {
+        // Current version carries Strong's: it wins over any fallback.
+        XCTAssertEqual(StrongsVerseSource.resolve(
+            currentID: "KJV", currentSupportsStrongs: true,
+            fallbackID: "ChiUns", strongsVersionIDs: ["KJV", "ChiUns"]), "KJV")
+        // Otherwise the configured fallback, when installed.
+        XCTAssertEqual(StrongsVerseSource.resolve(
+            currentID: "ASV", currentSupportsStrongs: false,
+            fallbackID: "ChiUns", strongsVersionIDs: ["KJV", "ChiUns"]), "ChiUns")
+        // Fallback not installed (or unset): first Strong's version.
+        XCTAssertEqual(StrongsVerseSource.resolve(
+            currentID: "ASV", currentSupportsStrongs: false,
+            fallbackID: "Gone", strongsVersionIDs: ["KJV", "ChiUns"]), "KJV")
+        XCTAssertEqual(StrongsVerseSource.resolve(
+            currentID: "ASV", currentSupportsStrongs: false,
+            fallbackID: nil, strongsVersionIDs: ["KJV"]), "KJV")
+        // No Strong's version at all.
+        XCTAssertNil(StrongsVerseSource.resolve(
+            currentID: "ASV", currentSupportsStrongs: false,
+            fallbackID: nil, strongsVersionIDs: []))
+    }
+}
