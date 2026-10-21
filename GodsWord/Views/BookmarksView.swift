@@ -2,7 +2,7 @@
 // A right-edge swipe at the reader slides this panel in from the right.
 // Small translucent ribbons sit at the panel's top-right corner, one per
 // bookmark. Single tap jumps to the bookmark; holding one for 3 seconds
-// offers "Mark" (assign the current chapter to it) and "Edit" (name,
+// offers "Assign" (point it at the current chapter) and "Edit" (name,
 // color, book & chapter). The reading view itself stays clean.
 
 import SwiftUI
@@ -40,7 +40,7 @@ struct HorizontalRibbonShape: Shape {
 }
 
 /// A row of bookmark ribbons: single tap jumps, holding 1 second offers
-/// Mark, Edit and Delete. Two styles: mini (small vertical ribbons, color
+/// Assign, Edit and Delete. Two styles: mini (small vertical ribbons, color
 /// only, for the reading view) and labeled (horizontal ribbons showing
 /// name plus book and chapter, for the bookmarks panel).
 struct BookmarkRibbonsRow: View {
@@ -78,7 +78,7 @@ struct BookmarkRibbonsRow: View {
             isPresented: $showingOptions,
             titleVisibility: .visible
         ) {
-            Button("Mark") {
+            Button("Assign") {
                 // Assign the current chapter to the held bookmark.
                 if let b = pendingBookmark {
                     personalData.assignBookmark(b, testament: history.testament,
@@ -96,7 +96,7 @@ struct BookmarkRibbonsRow: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Mark assigns the chapter you are reading to this bookmark. Edit changes its name, color, book and chapter.")
+            Text("Assign points this bookmark at the chapter you are reading. Edit changes its name, color, book and chapter.")
         }
         .sheet(item: $editingBookmark) { bookmark in
             BookmarkEditView(bookmark: bookmark, history: history)

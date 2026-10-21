@@ -351,3 +351,30 @@ final class BookLocationRequirementsTests: XCTestCase {
         }
     }
 }
+
+// MARK: - REQ-PK-5: version pick keeps the position
+
+final class VersionPickPositionRequirementsTests: XCTestCase {
+    // Within range: unchanged, so picking a version doesn't move the reader.
+    func testChapterWithinRangeIsKept() {
+        XCTAssertEqual(BookLocation.clampedChapter(1, chapterCount: 50), 1)
+        XCTAssertEqual(BookLocation.clampedChapter(23, chapterCount: 50), 23)
+        XCTAssertEqual(BookLocation.clampedChapter(50, chapterCount: 50), 50)
+    }
+
+    // A version with fewer chapters clamps to its last chapter.
+    func testChapterPastTheEndIsClamped() {
+        XCTAssertEqual(BookLocation.clampedChapter(150, chapterCount: 66), 66)
+    }
+
+    func testChapterBelowOneIsClampedToOne() {
+        XCTAssertEqual(BookLocation.clampedChapter(0, chapterCount: 10), 1)
+        XCTAssertEqual(BookLocation.clampedChapter(-3, chapterCount: 10), 1)
+    }
+
+    // A version that lacks the book has no chapters: the caller falls back.
+    func testNoChaptersReturnsNil() {
+        XCTAssertNil(BookLocation.clampedChapter(1, chapterCount: 0))
+        XCTAssertNil(BookLocation.clampedChapter(5, chapterCount: -1))
+    }
+}

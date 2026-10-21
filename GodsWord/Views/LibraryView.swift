@@ -192,9 +192,24 @@ struct LibraryView: View {
         }
     }
 
+    /// Opens a picked version at the book and chapter already being read
+    /// (chapter clamped to the new version's range), so switching versions
+    /// doesn't reset the position. The first pick, or a version that lacks
+    /// the current book, starts at Genesis 1.
+    private func historyForPickedVersion(_ version: BibleVersion) -> ReadingHistory {
+        guard let current = history else { return ReadingHistory(version: version) }
+        let next = ReadingHistory(version: version, testament: current.testament,
+                                  book: current.book, chapter: current.chapter)
+        guard let chapter = BookLocation.clampedChapter(current.chapter,
+                                                       chapterCount: next.chapterCount)
+        else { return ReadingHistory(version: version) }
+        next.chapter = chapter
+        return next
+    }
+
     private func versionRow(_ version: BibleVersion) -> some View {
         Button {
-            history = ReadingHistory(version: version)
+            history = historyForPickedVersion(version)
             path.append(Route.books)
         } label: {
             HStack {

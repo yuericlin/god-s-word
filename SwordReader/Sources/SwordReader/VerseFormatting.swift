@@ -67,6 +67,14 @@ public enum BookLocation {
         }
     }
 
+    /// Keeps `chapter` within 1...`chapterCount`. Nil when the book has no
+    /// chapters (e.g. a partial private Bible that lacks the book), so the
+    /// caller can fall back instead of opening a chapter that doesn't exist.
+    public static func clampedChapter(_ chapter: Int, chapterCount: Int) -> Int? {
+        guard chapterCount > 0 else { return nil }
+        return min(max(chapter, 1), chapterCount)
+    }
+
     /// The inverse of `overallIndex`; nil when `overall` isn't in 0...65.
     public static func testamentAndBook(overall: Int)
         -> (testament: Int, book: Int)?
