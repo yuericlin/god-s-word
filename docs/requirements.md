@@ -566,3 +566,50 @@ Multiple (KJV Gen 1:1-2):
   omit the Versification line, and the NET Bible and NA28 carry
   the empty cipher line, so without this they would never appear
   or open at all.
+
+## 17. Download languages and dictionaries
+
+- **REQ-LG-1:** Settings > Languages lists the languages the user
+  is interested in (primary language codes, e.g. `en`, `zh`). When
+  the list is non-empty, every download list — Add Bible, Add
+  Commentary, and Add Dictionary — shows only modules in those
+  languages; with an empty list nothing is filtered. Matching is
+  by primary subtag, case-insensitive (`zh` covers `zh`, `zh-Hans`,
+  and `zh-Hant` modules; `ModuleInfo.isInLanguages`), and a module
+  with no declared language passes only the empty filter. An
+  active filter is announced above the list ("Showing only: …"),
+  and a list emptied by the filter says so instead of showing a
+  blank page.
+- **REQ-LG-2:** The language choices are derived from the catalogs
+  of all repository sources: each language shows how many
+  downloadable modules (Bibles, commentaries, and dictionaries)
+  it has across the sources, de-duplicated by module ID. A
+  selected language no catalog currently offers stays listed so
+  it can be removed. The selection persists like the other module
+  settings: UserDefaults, backup payload v9 (additive; v8 and
+  older payloads still load), the iCloud/manual settings file,
+  and manual export/import.
+- **REQ-DC-1:** Dictionaries (lexicon modules) are a third
+  downloadable module type, with an "Add Dictionary" page mirroring
+  Add Commentary (source picker, search, license line, progress
+  with cancel). A module is a dictionary when it uses an LD driver
+  (`zLD`/`RawLD`) and is not a glossary or daily devotional (those
+  share the LD drivers); it is downloadable when it is zLD with
+  ZIP compression or uncompressed RawLD, is not enciphered, and
+  its text is UTF-8 (an absent Encoding is the SWORD default —
+  StrongsHebrew declares none). On CrossWire that is 50 of 52
+  dictionaries, including Easton, ISBE, Nave, Webster's, and the
+  Strong's lexicons in many languages. Installed dictionaries
+  never appear in the library's version lists.
+- **REQ-DC-2:** Settings > Dictionary chooses the dictionary
+  Strong's definitions come from, separately for Hebrew ("H")
+  and Greek ("G") keys, from the installed dictionaries. The
+  default (no choice) is unchanged: StrongsHebrew / StrongsGreek,
+  auto-downloaded on first use into their own store; chosen
+  dictionaries are read from the main module store (a chosen one
+  that isn't installed falls back to the automatic pair). Only
+  Strong's-keyed lexicons have entries for Strong's numbers —
+  the Strongs family in any language, BDBGlosses_Strongs,
+  AbbottSmithStrongs, MLStrong; other dictionaries install but
+  have no Strong's entries to show. The choices persist like
+  REQ-LG-2's selection (payload v9).

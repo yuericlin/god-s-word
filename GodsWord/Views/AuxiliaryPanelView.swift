@@ -1257,3 +1257,111 @@ struct StrongsFallbackPicker: View {
         }
     }
 }
+
+/// Chooses the dictionaries Strong's definitions come from
+/// (REQ-DC-2): one lexicon for Hebrew ("H") keys, one for Greek
+/// ("G") keys. Used from Settings > Dictionary. With no choice, the
+/// app uses (and downloads) StrongsHebrew / StrongsGreek. An
+/// installed dictionary can be deleted here.
+struct DictionarySettingsView: View {
+    @EnvironmentObject private var personalData: PersonalData
+    @Environment(\.moduleStore) private var store
+    @State private var dictionaries: [InstalledModule] = []
+    @State private var showingDownload = false
+
+    var body: some View {
+        List {
+            choiceSection(
+                header: "Hebrew dictionary",
+                automaticLabel: "Automatic (StrongsHebrew)",
+                selectedID: personalData.dictionaryHebrewID,
+                footer: "Definitions for Hebrew Strong's numbers (H…) come from this dictionary."
+            ) { personalData.dictionaryHebrewID = $0 }
+            choiceSection(
+                header: "Greek dictionary",
+                automaticLabel: "Automatic (StrongsGreek)",
+                selectedID: personalData.dictionaryGreekID,
+                footer: "Definitions for Greek Strong's numbers (G…) come from this dictionary."
+            ) { personalData.dictionaryGreekID = $0 }
+            Section {
+                Button("Download a Dictionary…") { showingDownload = true }
+            } footer: {
+                Text("Only Strong's-keyed lexicons have entries for Strong's numbers: the Strongs lexicons in any language (StrongsHebrew, ChiSstrongsGreek, FreStrongsGreek…), BDBGlosses_Strongs, AbbottSmithStrongs, MLStrong. Other dictionaries (Easton, ISBE, Webster…) download and install the same way but have no Strong's entries to show.")
+            }
+        }
+        .navigationTitle("Dictionary")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: reload)
+        .sheet(isPresented: $showingDownload, onDismiss: reload) {
+            DictionaryRepositoryView()
+        }
+    }
+
+    private func choiceSection(header: String, automaticLabel: String,
+                               selectedID: String, footer: String,
+                               select: @escaping (String) -> Void) -> some View {
+        Section {
+            Button {
+                select("")
+            } label: {
+                HStack {
+                    Text(automaticLabel).foregroundStyle(.primary)
+                    Spacer()
+                    if selectedID.isEmpty {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.tint)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            ForEach(dictionaries) { mod in
+                Button {
+                    select(mod.id)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(mod.info.description)
+                                .foregroundStyle(.primary)
+                            Text("\(mod.id) · \(mod.info.language)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if selectedID == mod.id {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .swipeActions {
+                    Button(role: .destructive) {
+                        delete(mod)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        } header: {
+            Text(header)
+        } footer: {
+            Text(footer)
+        }
+    }
+
+    private func reload() {
+        dictionaries = store.installedModules()
+            .filter { $0.info.isDictionaryRenderable }
+    }
+
+    private func delete(_ mod: InstalledModule) {
+        try? store.delete(mod.id)
+        if personalData.dictionaryHebrewID == mod.id {
+            personalData.dictionaryHebrewID = ""
+        }
+        if personalData.dictionaryGreekID == mod.id {
+            personalData.dictionaryGreekID = ""
+        }
+        reload()
+    }
+}
