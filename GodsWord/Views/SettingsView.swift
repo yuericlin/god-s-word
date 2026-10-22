@@ -2,6 +2,7 @@
 
 import SwiftUI
 import SwordReader
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject private var personalData: PersonalData
@@ -15,8 +16,8 @@ struct SettingsView: View {
     @State private var showingImporter = false
     @State private var showingExportShare = false
     @State private var exportFolder: URL?
-    /// Called when the user taps a history entry; the presenter navigates.
-    var onSelectHistoryEntry: ((HistoryEntry) -> Void)?
+    /// What the manual backup spinner says while exporting/importing.
+    @State private var progressText = ""
 
     /// The Google Drive backup section is hidden for now (the
     /// feature and its code stay in place). Flip to show it again.
@@ -31,80 +32,6 @@ struct SettingsView: View {
             List {
                 Section("Reading") {
                     ReadingSettingsView()
-                }
-
-                Section {
-                    NavigationLink {
-                        CompareVersionsPicker()
-                    } label: {
-                        HStack {
-                            Text("Compare versions")
-                            Spacer()
-                            Text(personalData.compareVersionIDs.isEmpty
-                                 ? "Current only"
-                                 : "\(personalData.compareVersionIDs.count) chosen")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Compare")
-                } footer: {
-                    Text("The Compare action on selected verses shows them in the version you are reading plus the versions chosen here.")
-                }
-
-                Section {
-                    NavigationLink {
-                        CommentaryModulePicker()
-                    } label: {
-                        HStack {
-                            Text("Commentary")
-                            Spacer()
-                            Text(personalData.commentaryModuleID.isEmpty
-                                 ? "Automatic"
-                                 : personalData.commentaryModuleID)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Auxiliary panel")
-                } footer: {
-                    Text("The panel below the reader has Notes, Commentary, and Strong's tabs. Commentary entries show for the book, chapter, or verse being read.")
-                }
-
-                Section {
-                    NavigationLink {
-                        StrongsFallbackPicker()
-                    } label: {
-                        HStack {
-                            Text("Strong's fallback version")
-                            Spacer()
-                            Text(personalData.strongsFallbackVersionID.isEmpty
-                                 ? "Automatic"
-                                 : personalData.strongsFallbackVersionID)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Strong's")
-                } footer: {
-                    Text("When the version you are reading has no Strong's numbers, the panel's Strong's tab renders the selected verse from this version instead.")
-                }
-
-                Section {
-                    NavigationLink {
-                        SourcesSettingsView()
-                    } label: {
-                        HStack {
-                            Text("Sources")
-                            Spacer()
-                            Text(BibleSourceStore.shared.source(withID: BibleSourceStore.shared.defaultSourceID)?.name ?? "CrossWire")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Sources")
-                } footer: {
-                    Text("Public repositories you can download Bibles and commentaries from. Pick the default, add your own, or update the public list.")
                 }
 
                 Section {
@@ -130,6 +57,25 @@ struct SettingsView: View {
 
                 Section {
                     NavigationLink {
+                        CompareVersionsPicker()
+                    } label: {
+                        HStack {
+                            Text("Compare versions")
+                            Spacer()
+                            Text(personalData.compareVersionIDs.isEmpty
+                                 ? "Current only"
+                                 : "\(personalData.compareVersionIDs.count) chosen")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Compare")
+                } footer: {
+                    Text("The Compare action on selected verses shows them in the version you are reading plus the versions chosen here.")
+                }
+
+                Section {
+                    NavigationLink {
                         DictionarySettingsView()
                     } label: {
                         HStack {
@@ -145,22 +91,83 @@ struct SettingsView: View {
                     Text("The dictionaries Strong's definitions come from, one for Hebrew and one for Greek. More dictionaries download from the same repositories as Bibles.")
                 }
 
-                Section("History") {
+                Section {
                     NavigationLink {
-                        HistoryView(onSelect: { entry in
-                            dismiss()
-                            onSelectHistoryEntry?(entry)
-                        })
+                        StrongsFallbackPicker()
                     } label: {
                         HStack {
-                            Text("Reading History")
+                            Text("Strong's fallback version")
                             Spacer()
-                            if !personalData.historyLog.isEmpty {
-                                Text("\(personalData.historyLog.count)")
-                                    .foregroundStyle(.secondary)
-                            }
+                            Text(personalData.strongsFallbackVersionID.isEmpty
+                                 ? "Automatic"
+                                 : personalData.strongsFallbackVersionID)
+                                .foregroundStyle(.secondary)
                         }
                     }
+                } header: {
+                    Text("Strong's")
+                } footer: {
+                    Text("When the version you are reading has no Strong's numbers, the panel's Strong's tab renders the selected verse from this version instead.")
+                }
+
+                Section {
+                    NavigationLink {
+                        CommentaryModulePicker()
+                    } label: {
+                        HStack {
+                            Text("Commentary")
+                            Spacer()
+                            Text(personalData.commentaryModuleID.isEmpty
+                                 ? "Automatic"
+                                 : personalData.commentaryModuleID)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Auxiliary panel")
+                } footer: {
+                    Text("The panel below the reader has Notes, Commentary, and Strong's tabs. Commentary entries show for the book, chapter, or verse being read.")
+                }
+
+                Section {
+                    NavigationLink {
+                        SourcesSettingsView()
+                    } label: {
+                        HStack {
+                            Text("Sources")
+                            Spacer()
+                            Text(BibleSourceStore.shared.source(withID: BibleSourceStore.shared.defaultSourceID)?.name ?? "CrossWire")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Sources")
+                } footer: {
+                    Text("Public repositories you can download Bibles and commentaries from. Pick the default, add your own, or update the public list.")
+                }
+
+                Section {
+                    Button {
+                        Task { await doExport() }
+                    } label: {
+                        Text("Export Data")
+                    }
+                    .disabled(working)
+                    Button("Import Data") {
+                        showingImporter = true
+                    }
+                    .disabled(working)
+                    if working {
+                        ProgressView(progressText).controlSize(.small)
+                    }
+                    if let msg = message,
+                       msg.hasPrefix("Export") || msg.hasPrefix("Import") {
+                        Text(msg).font(.callout).foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Manual backup")
+                } footer: {
+                    Text("Export saves your data as JSON files, plus every downloaded module (Bibles, commentaries, dictionaries) as a .zip in the modules folder, to On My iPhone > GodsWord > god-s-word-export/. Share the folder via AirDrop or Files. After a reinstall, Import and select the JSON files and module .zip files to restore everything without downloading again. Modules already installed are skipped.")
                 }
 
                 if Self.showICloudSync {
@@ -197,28 +204,6 @@ struct SettingsView: View {
                 }
                 }
 
-                Section {
-                    Button("Export Data") {
-                        do {
-                            exportFolder = try personalData.exportToDocuments()
-                            showingExportShare = true
-                            message = "Exported to Documents/god-s-word-export/"
-                        } catch {
-                            message = "Export failed: \(error.localizedDescription)"
-                        }
-                    }
-                    Button("Import Data") {
-                        showingImporter = true
-                    }
-                    if let msg = message,
-                       msg.hasPrefix("Export") || msg.hasPrefix("Import") {
-                        Text(msg).font(.callout).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Manual backup")
-                } footer: {
-                    Text("Export saves JSON files to On My iPhone > GodsWord > god-s-word-export/. Share them via AirDrop or Files. Import restores from selected JSON files.")
-                }
 
                 if Self.showGoogleDriveBackup {
                 Section {
@@ -273,13 +258,12 @@ struct SettingsView: View {
                 }
             }
             .fileImporter(isPresented: $showingImporter,
-                          allowedContentTypes: [.json],
+                          allowedContentTypes: [.json, .zip],
                           allowsMultipleSelection: true) { result in
-                do {
-                    let urls = try result.get()
-                    try personalData.importFrom(urls: urls)
-                    message = "Import complete: \(urls.count) file(s)."
-                } catch {
+                switch result {
+                case .success(let urls):
+                    Task { await doImport(urls) }
+                case .failure(let error):
                     message = "Import failed: \(error.localizedDescription)"
                 }
             }
@@ -314,6 +298,75 @@ struct SettingsView: View {
         let greek = personalData.dictionaryGreekID
         if hebrew.isEmpty && greek.isEmpty { return "Automatic" }
         return [hebrew, greek].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// Manual export (REQ-BK-6): the JSON data files, and every installed
+    /// module as its own package zip in `modules/`.
+    private func doExport() async {
+        working = true; message = nil
+        progressText = "Exporting your data…"
+        defer { working = false }
+        do {
+            let folder = try personalData.exportToDocuments()
+            progressText = "Packing downloaded modules…"
+            let modulesFolder = folder.appendingPathComponent("modules", isDirectory: true)
+            let store = self.store
+            let count = try await Task.detached(priority: .userInitiated) {
+                try store.exportPackages(to: modulesFolder)
+            }.value
+            exportFolder = folder
+            showingExportShare = true
+            message = "Exported your data and \(count) module(s) to Documents/god-s-word-export/"
+        } catch {
+            message = "Export failed: \(error.localizedDescription)"
+        }
+    }
+
+    /// Manual import: JSON files restore data; module .zip files are
+    /// installed unless that module is already installed.
+    private func doImport(_ urls: [URL]) async {
+        working = true; message = nil
+        progressText = "Importing…"
+        defer { working = false }
+        let zips = urls.filter { $0.pathExtension.lowercased() == "zip" }
+        let others = urls.filter { $0.pathExtension.lowercased() != "zip" }
+
+        let scoped = others.filter { $0.startAccessingSecurityScopedResource() }
+        defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+        do {
+            if !others.isEmpty { try personalData.importFrom(urls: others) }
+        } catch {
+            message = "Import failed: \(error.localizedDescription)"
+            return
+        }
+
+        let store = self.store
+        let have = Set(store.installedModules().map { $0.id })
+        var installed = 0, skipped = 0
+        var failed: [String] = []
+        for (i, url) in zips.enumerated() {
+            let name = url.deletingPathExtension().lastPathComponent
+            if have.contains(name) { skipped += 1; continue }
+            progressText = "Installing modules (\(i + 1) of \(zips.count))…"
+            let ok = await Task.detached(priority: .userInitiated) { () -> Bool in
+                let access = url.startAccessingSecurityScopedResource()
+                defer { if access { url.stopAccessingSecurityScopedResource() } }
+                guard let data = try? Data(contentsOf: url) else { return false }
+                return (try? store.install(packageData: [UInt8](data))) != nil
+            }.value
+            if ok { installed += 1 } else { failed.append(name) }
+        }
+
+        var parts = ["\(others.count) data file(s)"]
+        if !zips.isEmpty {
+            parts.append("\(installed) module(s) installed")
+            if skipped > 0 { parts.append("\(skipped) already installed") }
+        }
+        var text = "Import complete: " + parts.joined(separator: ", ") + "."
+        if !failed.isEmpty {
+            text += " Couldn't install: " + failed.joined(separator: ", ") + "."
+        }
+        message = text
     }
 
     private func doSignIn() async {

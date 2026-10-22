@@ -1313,3 +1313,86 @@ final class RawComRequirementsTests: XCTestCase {
         XCTAssertThrowsError(try SwordModule(moduleDir: dir2, versification: .kjv, format: .raw))
     }
 }
+
+// MARK: - REQ-BK-6: module packages for manual backup
+
+final class ModulePackageBackupRequirementsTests: XCTestCase {
+    // The standard CRC-32 check value.
+    func testCRC32CheckValue() {
+        XCTAssertEqual(ZipWriter.crc32(Array("123456789".utf8)), 0xCBF4_3926)
+        XCTAssertEqual(ZipWriter.crc32([]), 0)
+    }
+
+    // What the writer produces, the reader (used by ModuleStore.install)
+    // reads back, byte for byte.
+    func testWriterOutputIsReadByZipReader() throws {
+        var w = ZipWriter()
+        let conf = Array("[KJV]\nDataPath=./modules/texts/ztext/kjv/\n".utf8)
+        let blob = (0 ..< 5000).map { UInt8(truncatingIfNeeded: $0 &* 31) }
+        try w.add(name: "mods.d/kjv.conf", data: conf)
+        try w.add(name: "modules/texts/ztext/kjv/ot.bzs", data: blob)
+        try w.add(name: "modules/texts/ztext/kjv/empty", data: [])
+        let zip = try w.finish()
+        let reader = try ZipReader(data: zip)
+        XCTAssertEqual(reader.entries.map { $0.name },
+                       ["mods.d/kjv.conf", "modules/texts/ztext/kjv/ot.bzs",
+                        "modules/texts/ztext/kjv/empty"])
+        XCTAssertEqual(try reader.data(for: reader.entry(named: "mods.d/kjv.conf")!), conf)
+        XCTAssertEqual(try reader.data(for: reader.entry(named: "modules/texts/ztext/kjv/ot.bzs")!), blob)
+        XCTAssertEqual(try reader.data(for: reader.entry(named: "modules/texts/ztext/kjv/empty")!), [])
+    }
+
+    func testNonASCIINamesSurvive() throws {
+        var w = ZipWriter()
+        try w.add(name: "mods.d/和合本.conf", data: [1, 2, 3])
+        let reader = try ZipReader(data: try w.finish())
+        XCTAssertEqual(reader.entries.first?.name, "mods.d/和合本.conf")
+    }
+
+    func testEmptyArchiveIsValid() throws {
+        let reader = try ZipReader(data: try ZipWriter().finish())
+        XCTAssertTrue(reader.entries.isEmpty)
+    }
+
+    func testEmptyNameIsRejected() {
+        var w = ZipWriter()
+        XCTAssertThrowsError(try w.add(name: "", data: [1])) {
+            XCTAssertEqual($0 as? ZipWriteError, .emptyName)
+        }
+    }
+
+    // A module folder packs with paths relative to it (the layout of a
+    // CrossWire package), sorted, and unpacks to the same files.
+    func testArchiveOfAModuleFolderUsesRelativePaths() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory
+            .appendingPathComponent("zipw-\(UUID().uuidString)", isDirectory: true)
+        let mod = root.appendingPathComponent("KJV", isDirectory: true)
+        defer { try? fm.removeItem(at: root) }
+        let files: [String: [UInt8]] = [
+            "mods.d/kjv.conf": Array("[KJV]\n".utf8),
+            "modules/texts/ztext/kjv/ot.bzv": [9, 8, 7],
+            "modules/texts/ztext/kjv/nt.bzs": [6, 5],
+        ]
+        for (path, bytes) in files {
+            let url = mod.appendingPathComponent(path)
+            try fm.createDirectory(at: url.deletingLastPathComponent(),
+                                   withIntermediateDirectories: true)
+            try Data(bytes).write(to: url)
+        }
+        let zip = try ZipWriter.archive(directory: mod)
+        let reader = try ZipReader(data: zip)
+        XCTAssertEqual(reader.entries.map { $0.name },
+                       files.keys.sorted())
+        for entry in reader.entries {
+            XCTAssertEqual(try reader.data(for: entry), files[entry.name])
+        }
+    }
+
+    func testArchiveOfAMissingFolderIsEmpty() throws {
+        let missing = FileManager.default.temporaryDirectory
+            .appendingPathComponent("no-such-\(UUID().uuidString)")
+        let reader = try ZipReader(data: try ZipWriter.archive(directory: missing))
+        XCTAssertTrue(reader.entries.isEmpty)
+    }
+}

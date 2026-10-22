@@ -246,7 +246,8 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-HI-3:** Revisiting a chapter moves its entry to the front (no
   duplicates within the combine window, REQ-HI-7).
 - **REQ-HI-4:** The app restores the last reading position on launch.
-- **REQ-HI-5:** The Settings screen has a History section with jump-to-entry.
+- **REQ-HI-5:** The reading history is shown only in the auxiliary panel's
+  Recents tab (REQ-AP-11); the Settings screen has no History section.
 - **REQ-HI-6:** Bookmark jumps do NOT record history immediately. A 60-second
   dwell timer starts on arrival; the chapter is recorded only if the user is
   still there when it fires. Turning chapters restarts the timer. Normal
@@ -376,6 +377,21 @@ Multiple (KJV Gen 1:1-2):
   code stay in place (payload, sync, and restore paths
   unchanged); only the settings UI is not shown. Re-enable by
   flipping the sections' visibility flags in Settings.
+- **REQ-BK-6:** Manual export also saves every downloaded module (Bibles,
+  commentaries, dictionaries/lexicons, and any other installed type) as
+  `<ModuleID>.zip` in `god-s-word-export/modules/`, each in the layout of a
+  CrossWire package (`mods.d/…`, `modules/…`), written by `ZipWriter`
+  (stored entries; module data is already compressed). Zips from an earlier
+  export are replaced. Manual import accepts those `.zip` files together
+  with the JSON files: each is installed through the normal module
+  installer, so no source has to be visited again after a reinstall. A
+  module already installed is skipped; a package that can't be read is
+  reported by name and the rest continue. Private Bibles (imported JSON)
+  are not part of the module export.
+- **REQ-BK-7:** Settings sections appear in this order: Reading, Languages,
+  Compare versions, Dictionary, Strong's fallback version, Commentary,
+  Sources, Manual backup, then the hidden iCloud/Drive sections (REQ-BK-5)
+  and About.
 
 ---
 
@@ -527,8 +543,8 @@ Multiple (KJV Gen 1:1-2):
   from Settings > Commentary. The "Add Bible" page is unchanged.
 - **REQ-AP-11:** The Recents tab is the reading history (REQ-HI-1),
   moved here from the reader's left drawer (the drawer's History
-  button is gone; the Settings screen's History section, REQ-HI-5,
-  remains). It shows the same HistoryView list: most recent first,
+  button is gone, and so is the Settings History section, REQ-HI-5).
+  It shows the same HistoryView list: most recent first,
   tap an entry to jump back to it (switching to the entry's version
   when still installed), swipe to delete; a Clear button in the tab
   header clears the log.
