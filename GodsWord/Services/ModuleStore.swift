@@ -53,15 +53,21 @@ public final class ModuleStore: Sendable {
         installedModules().contains { $0.id == moduleID }
     }
 
-    /// Install a module from its downloaded package zip data.
+    /// Install a module from its package zip data (a download, or one
+    /// written by `exportPackages`). With `moduleID` nil the package's own
+    /// id is used; otherwise it must match.
     @discardableResult
-    public func install(packageData: [UInt8], moduleID: String) throws -> InstalledModule {
+    public func install(packageData: [UInt8], moduleID: String? = nil) throws -> InstalledModule {
         let reader = try ZipReader(data: packageData)
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tmp, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: tmp) }
         for entry in reader.entries where !entry.name.hasSuffix("/") {
+            // A package from a file the user picked: never write outside tmp.
+            guard !entry.name.hasPrefix("/"),
+                  !entry.name.split(separator: "/").contains("..")
+            else { throw ZipError.invalidName }
             let dest = tmp.appendingPathComponent(entry.name)
             try fm.createDirectory(at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data(try reader.data(for: entry)).write(to: dest)
@@ -70,8 +76,11 @@ public final class ModuleStore: Sendable {
               let text = confText(at: confURL)
         else { throw ModuleStoreError.noConfFound }
         let conf = SwordConf(text: text)
-        guard conf.moduleID == moduleID else { throw ModuleStoreError.idMismatch }
-        let dest = baseDir.appendingPathComponent(moduleID, isDirectory: true)
+        let id = moduleID ?? conf.moduleID
+        guard !id.isEmpty, !id.contains("/"), !id.contains("..")
+        else { throw ModuleStoreError.noConfFound }
+        guard conf.moduleID == id else { throw ModuleStoreError.idMismatch }
+        let dest = baseDir.appendingPathComponent(id, isDirectory: true)
         if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
         try fm.moveItem(at: tmp, to: dest)
         // findConf again under the final location for the module dir
@@ -81,6 +90,31 @@ public final class ModuleStore: Sendable {
         let info = ModuleInfo(conf: SwordConf(text: finalText))
         return InstalledModule(id: info.id, info: info,
                                moduleDir: dest.appendingPathComponent(info.dataDir, isDirectory: true))
+    }
+
+    /// Writes every installed module — Bibles, commentaries, dictionaries
+    /// and the rest — to `folder` as `<ModuleID>.zip`, each in the layout of
+    /// a CrossWire package, so importing them later (after a reinstall)
+    /// needs no trip back to the download sources (REQ-BK-6). Zips left
+    /// from an earlier export are removed first. Returns the module count.
+    @discardableResult
+    public func exportPackages(to folder: URL) throws -> Int {
+        let fm = FileManager.default
+        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        for old in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        where old.pathExtension.lowercased() == "zip" {
+            try fm.removeItem(at: old)
+        }
+        var count = 0
+        for module in installedModules() {
+            let root = baseDir.appendingPathComponent(module.id, isDirectory: true)
+            guard fm.fileExists(atPath: root.path) else { continue }
+            let zip = try ZipWriter.archive(directory: root)
+            try Data(zip).write(to: folder.appendingPathComponent("\(module.id).zip"),
+                                options: .atomic)
+            count += 1
+        }
+        return count
     }
 
     public func delete(_ moduleID: String) throws {

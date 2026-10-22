@@ -345,15 +345,7 @@ struct ReaderView: View {
         .onAppear { availableVersions = allLibraryVersions() }
         .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
-            SettingsView(onSelectHistoryEntry: { entry in
-                if let v = availableVersions.first(where: { $0.id == entry.moduleID }) {
-                    history.version = v
-                    history.testament = entry.testament
-                    history.book = entry.book
-                    history.chapter = entry.chapter
-                }
-                showingFullSettings = false
-            })
+            SettingsView()
         }
         .sheet(isPresented: $showingBookChapterPicker) {
             BookChapterPickerSheet(history: history) { t, b, c in

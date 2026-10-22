@@ -110,18 +110,7 @@ struct LibraryView: View {
                 RepositoryView()
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsView(onSelectHistoryEntry: { entry in
-                    if let version = allVersions().first(where: { $0.id == entry.moduleID }) {
-                        history = ReadingHistory(version: version,
-                                                 testament: entry.testament,
-                                                 book: entry.book,
-                                                 chapter: entry.chapter)
-                        path = NavigationPath()
-                        path.append(Route.books)
-                        path.append(Route.chapters)
-                        path.append(Route.reader)
-                    }
-                })
+                SettingsView()
             }
             .sheet(isPresented: $addingSource, onDismiss: refresh) {
                 SourceEditView()
