@@ -26,10 +26,6 @@ struct HistoryView: View {
                         ForEach(section.entries) { entry in
                             row(entry)
                         }
-                        .onDelete { offsets in
-                            personalData.deleteHistory(
-                                ids: Set(offsets.map { section.entries[$0].id }))
-                        }
                     } header: {
                         Text(Self.dayTitle(section.day))
                     }
@@ -71,6 +67,21 @@ struct HistoryView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            }
+        }
+        // Each entry can be deleted on its own, whatever day it is under.
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                personalData.deleteHistory(ids: [entry.id])
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .contextMenu {
+            Button(role: .destructive) {
+                personalData.deleteHistory(ids: [entry.id])
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
         }
     }

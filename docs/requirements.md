@@ -229,7 +229,8 @@ Multiple (KJV Gen 1:1-2):
   each under a header ("Today", "Yesterday", then the date; the year only when
   not the current year). An entry sits under the day of its earliest visit.
   A row shows the chapter, all its versions, and the time of that earliest
-  visit (not a time-ago). Swipe-delete removes the entry tapped.
+  visit (not a time-ago). Every entry can still be deleted individually (swipe, or long-press Delete),
+  whichever day it is under.
 - **REQ-HI-9:** The list loads incrementally: the latest 2 days at first, and
   2 more each time the end is scrolled to. The log itself still keeps up to
   100 entries (REQ-HI-2).
