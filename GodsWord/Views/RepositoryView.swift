@@ -148,7 +148,7 @@ struct RepositoryView: View {
             // Install off the main thread: unpacking a package must never
             // freeze the page.
             let store = self.store
-            try await Task.detached(priority: .userInitiated) {
+            _ = try await Task.detached(priority: .userInitiated) {
                 try store.install(packageData: data, moduleID: id)
             }.value
             // Tag the module with the source it was downloaded from so it
@@ -315,7 +315,7 @@ struct CommentaryRepositoryView: View {
             // Install off the main thread: unpacking a package must never
             // freeze the page.
             let store = self.store
-            try await Task.detached(priority: .userInitiated) {
+            _ = try await Task.detached(priority: .userInitiated) {
                 try store.install(packageData: data, moduleID: id)
             }.value
             // Tag the module with the source it was downloaded from.
