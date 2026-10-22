@@ -210,9 +210,9 @@ public final class PersonalData: ObservableObject {
         }
     }
 
-    /// Note keys ordered most-recently-saved first; the bookmarks panel
-    /// lists notes in this order (notes missing from the list sort last,
-    /// in canonical order). Maintained by `setVerseNote`.
+    /// Verse-note keys ordered most-recently-saved first (notes
+    /// missing from the list sort last, in canonical order).
+    /// Maintained by `setVerseNote`.
     @Published public var verseNoteOrder: [String] {
         didSet { defaults.set(verseNoteOrder, forKey: verseNoteOrderKey) }
     }
