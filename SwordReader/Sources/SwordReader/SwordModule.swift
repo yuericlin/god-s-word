@@ -87,12 +87,33 @@ public final class SwordModule: @unchecked Sendable {
             }
             return out
         }
-        otVerseIndex = try parseVerseIndex(read("ot.bzv"), "ot.bzv")
-        ntVerseIndex = try parseVerseIndex(read("nt.bzv"), "nt.bzv")
-        otBlockIndex = try parseBlockIndex(read("ot.bzs"), "ot.bzs")
-        ntBlockIndex = try parseBlockIndex(read("nt.bzs"), "nt.bzs")
-        otData = try read("ot.bzz")
-        ntData = try read("nt.bzz")
+        // A module may legitimately cover one testament only —
+        // NT-only commentaries (PNT, Lightfoot) and some NT-only
+        // Bibles ship just the nt.* files. An absent testament
+        // reads as empty instead of failing the whole module
+        // (REQ-AP-15). A partial file set (index present, data
+        // missing) is corruption and still throws, as does a
+        // directory with no testament data at all.
+        func loadTestament(_ prefix: String) throws
+            -> (verse: [VerseIndexEntry], block: [BlockIndexEntry], data: [UInt8])?
+        {
+            let bzvURL = moduleDir.appendingPathComponent("\(prefix).bzv")
+            guard let bzv = try? Data(contentsOf: bzvURL) else { return nil }
+            return (try parseVerseIndex([UInt8](bzv), "\(prefix).bzv"),
+                    try parseBlockIndex(read("\(prefix).bzs"), "\(prefix).bzs"),
+                    try read("\(prefix).bzz"))
+        }
+        let ot = try loadTestament("ot")
+        let nt = try loadTestament("nt")
+        guard ot != nil || nt != nil else {
+            throw SwordModuleError.missingFile("ot.bzv")
+        }
+        otVerseIndex = ot?.verse ?? []
+        otBlockIndex = ot?.block ?? []
+        otData = ot?.data ?? []
+        ntVerseIndex = nt?.verse ?? []
+        ntBlockIndex = nt?.block ?? []
+        ntData = nt?.data ?? []
     }
 
     private func decompressedBlock(testament: Int, block: UInt32) throws -> [UInt8] {
