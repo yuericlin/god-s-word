@@ -11,8 +11,10 @@ public actor ModuleLoader {
     public func module(for installed: InstalledModule) throws -> SwordModule {
         if let hit = cache[installed.id] { return hit }
         guard let v11n = installed.info.versification else { throw LoaderError.unsupported }
+        let format: SwordStorageFormat = installed.info.usesRawStorage ? .raw
+            : installed.info.usesV4Storage ? .zVerse4 : .zVerse
         let mod = try SwordModule(moduleDir: installed.moduleDir, versification: v11n,
-                                  format: installed.info.usesV4Storage ? .zVerse4 : .zVerse)
+                                  format: format)
         if cache.count > 3 { cache.removeAll() }
         cache[installed.id] = mod
         return mod

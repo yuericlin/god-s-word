@@ -1164,3 +1164,152 @@ final class SectionHeadingRequirementsTests: XCTestCase {
                        [1: "The Creation"])
     }
 }
+
+// MARK: - REQ-AP-17: raw drivers (RawCom)
+
+final class RawComRequirementsTests: XCTestCase {
+    private func conf(_ text: String) -> ModuleInfo {
+        ModuleInfo(conf: SwordConf(text: text))
+    }
+
+    // REQ-AP-17: DTN's real conf shape — RawCom, GBF source, no
+    // Category / Encoding / Versification / compression lines —
+    // is a renderable commentary in the raw storage format.
+    func testDTNShapeIsRenderableCommentary() {
+        let dtn = conf("""
+            [DTN]
+            DataPath=./modules/comments/rawcom/dtn/
+            ModDrv=RawCom
+            SourceType=GBF
+            Lang=en
+            Description=Darby Translation Notes
+            """)
+        XCTAssertTrue(dtn.isCommentary)
+        XCTAssertTrue(dtn.isCommentaryRenderable)
+        XCTAssertTrue(dtn.usesRawStorage)
+        XCTAssertFalse(dtn.usesV4Storage)
+        XCTAssertFalse(dtn.isRenderable)
+    }
+
+    // REQ-AP-17: the raw path's guards — GBF is admitted only for
+    // RawCom (a zCom GBF module stays excluded), an enciphered
+    // RawCom stays excluded, and a RawText Bible is raw storage
+    // but not yet a listed Bible.
+    func testRawComGuards() {
+        let zcomGbf = conf("""
+            [X]
+            ModDrv=zCom
+            SourceType=GBF
+            CompressType=ZIP
+            BlockType=BOOK
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertFalse(zcomGbf.isCommentaryRenderable)
+
+        let locked = conf("""
+            [Y]
+            ModDrv=RawCom
+            SourceType=OSIS
+            CipherKey=secret
+            Lang=en
+            """)
+        XCTAssertTrue(locked.isCommentary)
+        XCTAssertFalse(locked.isCommentaryRenderable)
+
+        let rawBible = conf("""
+            [Z]
+            ModDrv=RawText
+            SourceType=OSIS
+            Encoding=UTF-8
+            Category=Biblical Texts
+            Lang=en
+            """)
+        XCTAssertTrue(rawBible.usesRawStorage)
+        XCTAssertFalse(rawBible.isRenderable)
+    }
+
+    private func u32le(_ v: UInt32) -> [UInt8] {
+        [UInt8(v & 0xff), UInt8((v >> 8) & 0xff),
+         UInt8((v >> 16) & 0xff), UInt8((v >> 24) & 0xff)]
+    }
+
+    private func u16le(_ v: UInt16) -> [UInt8] {
+        [UInt8(v & 0xff), UInt8(v >> 8)]
+    }
+
+    /// A .vss index with `records` 6-byte entries; `filled` maps
+    /// slot -> (offset, size).
+    private func vss(records: Int, filled: [Int: (Int, Int)]) -> [UInt8] {
+        var out = [UInt8](repeating: 0, count: records * 6)
+        for (slot, range) in filled {
+            out.replaceSubrange(slot * 6 ..< slot * 6 + 4, with: u32le(UInt32(range.0)))
+            out.replaceSubrange(slot * 6 + 4 ..< slot * 6 + 6, with: u16le(UInt16(range.1)))
+        }
+        return out
+    }
+
+    private func tempDir() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("raw-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    // REQ-AP-17: a raw module opens and its entries read back —
+    // rawVerse verbatim, verse() with GBF tags stripped; verses
+    // without an entry (and slots past the index) read as absent.
+    func testRawModuleReadsEntries() throws {
+        let dir = try tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let e1 = "1:1\n  God (a-4)\n  Heb. <FI>Elohim<Fi>, the plural."
+        let e2 = "1:2\n  waste (b-5)\n  See Isa. 34.11; 45.18."
+        let data = [UInt8]((e1 + e2).utf8)
+        // Slots 0-3 are the heading slots; Genesis 1:1 is slot 4.
+        try Data(vss(records: 6, filled: [4: (0, e1.count), 5: (e1.count, e2.count)]))
+            .write(to: dir.appendingPathComponent("ot.vss"))
+        try Data(data).write(to: dir.appendingPathComponent("ot"))
+
+        let module = try SwordModule(moduleDir: dir, versification: .kjv, format: .raw)
+        XCTAssertEqual(module.rawVerse(testament: 1, book: 1, chapter: 1, verse: 1), e1)
+        XCTAssertEqual(module.rawVerse(testament: 1, book: 1, chapter: 1, verse: 2), e2)
+        let plain = module.verse(testament: 1, book: 1, chapter: 1, verse: 1)
+        XCTAssertTrue(plain?.contains("Elohim") ?? false)
+        XCTAssertFalse(plain?.contains("<FI>") ?? true)
+        XCTAssertNil(module.verse(testament: 1, book: 1, chapter: 1, verse: 3))
+        XCTAssertEqual(module.chapter(testament: 1, book: 1, chapter: 1).count, 2)
+        XCTAssertEqual(module.chapter(testament: 2, book: 1, chapter: 1).count, 0)
+    }
+
+    // REQ-AP-17 + REQ-AP-15: an NT-only raw module opens with
+    // the OT reading as empty.
+    func testRawNTOnlyModuleOpens() throws {
+        let dir = try tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let e = "1:11\n  away (a-14) In those days conquerors transported conquered nations."
+        // Matthew 1:11 is NT slot 14.
+        try Data(vss(records: 15, filled: [14: (0, e.count)]))
+            .write(to: dir.appendingPathComponent("nt.vss"))
+        try Data([UInt8](e.utf8)).write(to: dir.appendingPathComponent("nt"))
+
+        let module = try SwordModule(moduleDir: dir, versification: .kjv, format: .raw)
+        XCTAssertEqual(module.rawVerse(testament: 2, book: 1, chapter: 1, verse: 11), e)
+        XCTAssertNil(module.rawVerse(testament: 1, book: 1, chapter: 1, verse: 1))
+    }
+
+    // REQ-AP-17: a half-present testament (index without data)
+    // is corruption, and a .vss whose size isn't a multiple of
+    // the 6-byte stride is a corrupt index.
+    func testRawCorruptShapesThrow() throws {
+        let dir = try tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Data(vss(records: 6, filled: [:])).write(to: dir.appendingPathComponent("ot.vss"))
+        XCTAssertThrowsError(try SwordModule(moduleDir: dir, versification: .kjv, format: .raw))
+
+        let dir2 = try tempDir()
+        defer { try? FileManager.default.removeItem(at: dir2) }
+        try Data([UInt8](repeating: 0, count: 7)).write(to: dir2.appendingPathComponent("ot.vss"))
+        try Data().write(to: dir2.appendingPathComponent("ot"))
+        XCTAssertThrowsError(try SwordModule(moduleDir: dir2, versification: .kjv, format: .raw))
+    }
+}

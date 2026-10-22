@@ -577,6 +577,16 @@ Multiple (KJV Gen 1:1-2):
   David), MHC (Matthew Henry's Complete Commentary), JFB, and
   KD. Modules in a versification the app doesn't carry
   (Catholic, Vulg) stay excluded regardless of driver.
+- **REQ-AP-17:** Modules using the raw storage drivers
+  (RawCom commentaries) are downloadable and readable on the
+  same terms as compressed commentaries. Raw storage keeps
+  zVerse's heading-slot numbering; per testament it is an
+  uncompressed data file (ot / nt) plus a .vss index of 6-byte
+  records (32-bit offset, 16-bit size), with no CompressType
+  or BlockType. GBF is an accepted source type for raw
+  commentaries (its tags pass the same plain-text conversion).
+  This unlocks DTN (Darby Translation Notes) and The Fourfold
+  Gospel on CrossWire. RawText Bibles are not listed yet.
 
 ## 16. Module sources
 
