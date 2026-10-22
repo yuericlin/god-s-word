@@ -283,7 +283,7 @@ common_target = {
     "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
     "MARKETING_VERSION": "1.0",
     "CURRENT_PROJECT_VERSION": "1",
-    "PRODUCT_BUNDLE_IDENTIFIER": "com.yuericlin.godsword",
+    "PRODUCT_BUNDLE_IDENTIFIER": "com.lys.godsword",
     "PRODUCT_NAME": '"$(TARGET_NAME)"',
     "SWIFT_EMIT_LOC_STRINGS": "YES",
     "SWIFT_VERSION": "6.0",

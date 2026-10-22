@@ -5,7 +5,7 @@
     <!-- iCloud Drive document storage for god-s-word/ folder sync. -->
     <key>com.apple.developer.icloud-container-identifiers</key>
     <array>
-        <string>iCloud.com.yuericlin.godsword</string>
+        <string>iCloud.com.lys.godsword</string>
     </array>
     <key>com.apple.developer.icloud-services</key>
     <array>
@@ -13,7 +13,7 @@
     </array>
     <key>com.apple.developer.ubiquity-container-identifiers</key>
     <array>
-        <string>iCloud.com.yuericlin.godsword</string>
+        <string>iCloud.com.lys.godsword</string>
     </array>
 </dict>
 </plist>

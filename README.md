@@ -68,7 +68,7 @@ just explains the setup.
    project, and enable the **Google Drive API**.
 2. *APIs & Services → Credentials → Create Credentials → OAuth client ID*,
    type **iOS**. Use the bundle ID you build with
-   (default `com.yuericlin.godsword`).
+   (default `com.lys.godsword`).
 3. Copy the generated **Client ID** (`….apps.googleusercontent.com`).
 4. Copy `GodsWord/GoogleOAuth.plist.template` to `GodsWord/GoogleOAuth.plist`
    (git-ignored) and paste your client ID as `ClientID`.
