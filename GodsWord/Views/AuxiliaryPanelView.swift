@@ -177,7 +177,8 @@ struct AuxiliaryPanelView: View {
             case .book:
                 scopedNote(reference: history.bookTitle,
                            text: personalData.bookNote(forKey: bookNoteKey),
-                           emptyText: "No note for this book yet.") {
+                           emptyText: "No note for this book yet.",
+                           updated: personalData.bookNoteTimes[bookNoteKey]?.updatedAt) {
                     editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
                 }
             case .chapter:
@@ -185,7 +186,8 @@ struct AuxiliaryPanelView: View {
             case .verse:
                 scopedNote(reference: verseReference,
                            text: personalData.verseNote(forKey: verseNoteKey),
-                           emptyText: "No note for this verse yet.") {
+                           emptyText: "No note for this verse yet.",
+                           updated: personalData.verseNoteTimes[verseNoteKey]?.updatedAt) {
                     editorItem = .verse(key: verseNoteKey, reference: verseReference)
                 }
             }
@@ -195,6 +197,7 @@ struct AuxiliaryPanelView: View {
     /// One scoped note: its text (scrollable) and an Edit/Add button.
     private func scopedNote(reference: String, text: String?,
                             emptyText: String,
+                            updated: Date? = nil,
                             edit: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -202,6 +205,13 @@ struct AuxiliaryPanelView: View {
                 Spacer()
                 Button(text == nil ? "Add" : "Edit") { edit() }
                     .font(.subheadline)
+            }
+            // Last updated (REQ-NT-17); notes written before
+            // timestamps existed show nothing here.
+            if text != nil, let updated {
+                Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             if let text {
                 ScrollView {
@@ -264,7 +274,8 @@ struct AuxiliaryPanelView: View {
     private var chapterNoteView: some View {
         let reference = "\(history.bookTitle) \(history.chapter)"
         if let text = personalData.chapterNote(forKey: chapterNoteKey) {
-            scopedNote(reference: reference, text: text, emptyText: "") {
+            scopedNote(reference: reference, text: text, emptyText: "",
+                       updated: personalData.chapterNoteTimes[chapterNoteKey]?.updatedAt) {
                 editorItem = .chapter(key: chapterNoteKey, reference: reference)
             }
         } else if let legacy = personalData.verseNote(forKey: verse1NoteKey) {
@@ -280,6 +291,11 @@ struct AuxiliaryPanelView: View {
                 Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let updated = personalData.verseNoteTimes[verse1NoteKey]?.updatedAt {
+                    Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 ScrollView {
                     Text(legacy)
                         .font(.system(size: personalData.fontSize, design: .serif))

@@ -157,6 +157,16 @@ Multiple (KJV Gen 1:1-2):
   panel's Chapter scope shows that note labeled as stored on verse 1 and
   offers "Move to Chapter Note", which copies it into the chapter store
   and removes the verse-1 note (an explicit user action only).
+- **REQ-NT-17:** Every note (verse, chapter, and book) records when it
+  was created and when it was last edited, in a per-scope times store
+  keyed like the notes themselves (`NoteTimes`). A first save stamps
+  both times; saving changed text moves only the last-edit time;
+  saving identical text stamps nothing; deleting a note deletes its
+  times. Notes written before this have no creation time — their
+  first later edit stamps the last-edit time only. The Notes tab
+  shows "Updated <date, time>" under a note that has one. The times
+  travel with the notes: UserDefaults, payload v8, iCloud files, and
+  manual export/import.
 
 ---
 
@@ -263,6 +273,13 @@ Multiple (KJV Gen 1:1-2):
   Assign) is a draft until the user taps Save in its editor, which titles it
   "New Bookmark". Cancel, or swiping the sheet down, discards it: nothing is
   stored. Editing an existing bookmark is unchanged; Cancel keeps it as it was.
+- **REQ-BM-10:** Every bookmark records when it was created and when it
+  was last changed (`createdAt` / `updatedAt` on the bookmark itself).
+  Saving a new bookmark stamps both; saving an edit or assigning the
+  bookmark to another chapter stamps only the last-change time. The
+  bookmarks panel's labeled ribbons show "Updated <date, time>"
+  underneath. Bookmarks written before this carry no timestamps and
+  show none until they are next saved or assigned.
 
 ## 9. Two-level book/chapter picker
 
@@ -310,6 +327,11 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-BK-2:** Applying an old backup never wipes newer data types (notes,
   bookmarks, ribbons).
 - **REQ-BK-3:** Backup is opt-in, manual, to the private `appDataFolder`.
+- **REQ-BK-4:** Payload v8 adds bookmark timestamps and the note-times
+  stores (REQ-BM-10, REQ-NT-17). Payload v7 and older still load;
+  missing timestamps decode as absent and never wipe existing ones,
+  and times for notes that don't exist are dropped on apply. Older
+  app versions ignore the new fields.
 
 ---
 
