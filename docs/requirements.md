@@ -625,6 +625,16 @@ Multiple (KJV Gen 1:1-2):
   omit the Versification line, and the NET Bible and NA28 carry
   the empty cipher line, so without this they would never appear
   or open at all.
+- **REQ-SRC-5:** The app ships one first-party repository
+  source, the Converted Library, served from the `library/`
+  folder of the project repository (main branch): public-domain
+  works converted from other module formats (e.g. e-Sword) into
+  standard SWORD packages. It appears in the source lists like
+  the public sources and is part of the downloadable
+  public-sources list. Its first module is DarbySynopsis —
+  Darby's Synopsis of the Books of the Bible, chapter essays
+  for all 1,189 chapters, converted from the public-domain
+  text of the Synopsis (1857–62).
 
 ## 17. Download languages and dictionaries
 
