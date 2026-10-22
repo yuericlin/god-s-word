@@ -75,6 +75,19 @@ final class InflateTests: XCTestCase {
             XCTAssertEqual(e as? InflateError, .truncated)
         }
     }
+
+    func testOneBitHuffmanTablesDecode() throws {
+        // Regression: a dynamic block whose literal AND distance tables max
+        // out at 1-bit codes (a single distance code of one bit is explicitly
+        // legal, RFC 1951) used to trap in HuffmanDecoder.init on the range
+        // `2 ... maxBits` with maxBits == 1 — hit in the wild by the Clarke
+        // commentary package zip, which froze module installs. The stream
+        // below decodes to "A" (verified against zlib).
+        let stream: [UInt8] = [0x05, 0xC0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00,
+                               0x90, 0x36, 0xFF, 0x53, 0x08]
+        let out = try Inflate.decompressRawDeflate(stream)
+        XCTAssertEqual(String(bytes: out, encoding: .utf8), "A")
+    }
 }
 
 final class OsisPlainTests: XCTestCase {

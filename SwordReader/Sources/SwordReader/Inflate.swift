@@ -81,7 +81,12 @@ struct HuffmanDecoder {
         var counts = [Int](repeating: 0, count: maxBits + 1)
         for len in codeLengths where len > 0 { counts[len] += 1 }
         var offsets = [Int](repeating: 0, count: maxBits + 1)
-        for len in 2 ... maxBits { offsets[len] = offsets[len - 1] + counts[len - 1] }
+        // maxBits == 1 is legal (e.g. a distance table with a single 1-bit
+        // code, as in Clarke's package zip): the loop range would be empty —
+        // and `2 ... 1` traps — so guard it.
+        if maxBits >= 2 {
+            for len in 2 ... maxBits { offsets[len] = offsets[len - 1] + counts[len - 1] }
+        }
         var ordered = [Int]()
         ordered.reserveCapacity(codeLengths.count)
         for len in 1 ... maxBits {
@@ -101,7 +106,9 @@ struct HuffmanDecoder {
             code = (code << 1) | Int(try reader.readBit())
             let count = counts[len]
             if code >= first && code - first < count {
-                return symbols[offsets[len] + (code - first)]
+                let index = offsets[len] + (code - first)
+                guard index < symbols.count else { throw InflateError.invalidHuffmanCode }
+                return symbols[index]
             }
             first = (first + count) << 1
         }

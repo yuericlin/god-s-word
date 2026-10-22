@@ -466,3 +466,11 @@ Multiple (KJV Gen 1:1-2):
   tap an entry to jump back to it (switching to the entry's version
   when still installed), swipe to delete; a Clear button in the tab
   header clears the log.
+- **REQ-AP-12:** Module downloads (both "Add Bible" and
+  "Add Commentary") show progress with a cancel button
+  (`PackageDownloader`): the row shows the fraction downloaded,
+  tapping the cancel button aborts the transfer silently (no error
+  alert), and a transfer that stalls (30s without data, 15 minutes
+  total) fails with an error instead of spinning forever. The
+  downloaded package installs off the main thread, so the page stays
+  responsive throughout.
