@@ -334,6 +334,17 @@ Multiple (KJV Gen 1:1-2):
   swallows toggle drags.
 - **REQ-RS-4:** The Strong's numbers toggle appears only when the version
   supports Strong's (see REQ-ST-1).
+- **REQ-RS-5:** A section heading ("subtitle") a version prints before
+  a verse — an OSIS preverse section title, e.g. NASB's "The Seventy
+  Sent Out" at Luke 10:1 — renders as a semibold heading in the
+  reading serif: its own line above the verse in paragraph mode,
+  its own row in verse-by-verse mode, in both plain and Strong's
+  renderings. The heading no longer appears inline in the verse
+  text. Canonical psalm titles are scripture text and stay in the
+  verse. Versions whose modules carry no such titles are
+  unaffected. Private JSON versions carry a heading as a "¶…¶"
+  prefix on the verse string (the NKJV+ convention) and are
+  treated exactly the same way; the pilcrow markers never render.
 
 ---
 

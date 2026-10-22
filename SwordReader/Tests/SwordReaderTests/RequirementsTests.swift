@@ -1068,3 +1068,99 @@ final class V4StorageRequirementsTests: XCTestCase {
                                              format: .zVerse4))
     }
 }
+
+// MARK: - REQ-RS-5: section headings ("subtitles")
+
+final class SectionHeadingRequirementsTests: XCTestCase {
+    // NASB's Luke 10:1 entry shape: a preverse section title, then
+    // the verse text.
+    private let luke10_1 = """
+        <div type="x-milestone" subType="x-preverse" sID="pv1806"/><title subType="x-preverse" type="section">The Seventy Sent Out</title> <div type="x-milestone" subType="x-preverse" eID="pv1806"/>Now after this the Lord appointed seventy others
+        """
+
+    func testSectionTitleExtracted() {
+        XCTAssertEqual(OsisPlain.sectionTitle(from: luke10_1), "The Seventy Sent Out")
+    }
+
+    func testSectionTitleRemovedFromVerseText() {
+        let cleaned = OsisPlain.plainText(from: OsisPlain.removingSectionTitles(luke10_1))
+        XCTAssertEqual(cleaned, "Now after this the Lord appointed seventy others")
+    }
+
+    // NASB Psalm 3:1 carries TWO preverse titles: the section
+    // heading and the canonical psalm title. Only the section
+    // heading is a subtitle; the psalm title is scripture text
+    // and stays in the verse.
+    func testCanonicalPsalmTitleStaysInText() {
+        let ps3_1 = """
+            <title subType="x-preverse" type="section">Morning Prayer of Trust in God.</title> <title canonical="true" subType="x-preverse" type="psalm">A Psalm of David, when he fled from Absalom his son.</title> O Lord, how many are my foes!
+            """
+        XCTAssertEqual(OsisPlain.sectionTitle(from: ps3_1), "Morning Prayer of Trust in God.")
+        let cleaned = OsisPlain.plainText(from: OsisPlain.removingSectionTitles(ps3_1))
+        XCTAssertEqual(cleaned, "A Psalm of David, when he fled from Absalom his son. O Lord, how many are my foes!")
+    }
+
+    // A title that isn't a preverse section title (TDavid's
+    // "Psalm 1 OVERVIEW" shape) is not a heading and is untouched.
+    func testNonSectionTitleUntouched() {
+        let raw = "<title type=\"x-s\">Psalm 1 OVERVIEW</title> Blessed is the man"
+        XCTAssertNil(OsisPlain.sectionTitle(from: raw))
+        XCTAssertEqual(OsisPlain.removingSectionTitles(raw), raw)
+    }
+
+    /// A zlib stream holding `data` in one stored block.
+    private func storedZlib(_ data: [UInt8]) -> [UInt8] {
+        var out: [UInt8] = [0x78, 0x01, 0x01]
+        let len = UInt16(data.count)
+        out += [UInt8(len & 0xff), UInt8(len >> 8)]
+        let nlen = ~len
+        out += [UInt8(nlen & 0xff), UInt8(nlen >> 8)]
+        out += data
+        var a: UInt32 = 1, b: UInt32 = 0
+        for byte in data { a = (a + UInt32(byte)) % 65521; b = (b + a) % 65521 }
+        let adler = (b << 16) | a
+        out += [UInt8(adler >> 24), UInt8((adler >> 16) & 0xff),
+                UInt8((adler >> 8) & 0xff), UInt8(adler & 0xff)]
+        return out
+    }
+
+    private func u32le(_ v: UInt32) -> [UInt8] {
+        [UInt8(v & 0xff), UInt8((v >> 8) & 0xff),
+         UInt8((v >> 16) & 0xff), UInt8((v >> 24) & 0xff)]
+    }
+
+    private func u16le(_ v: UInt16) -> [UInt8] {
+        [UInt8(v & 0xff), UInt8(v >> 8)]
+    }
+
+    // End to end through SwordModule: Genesis 1:1 with a "The
+    // Creation" heading reads as clean verse text plus a heading.
+    func testModuleSeparatesHeadingFromVerse() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("hdg-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let raw = "<title subType=\"x-preverse\" type=\"section\">The Creation</title> In the beginning God created the heaven and the earth."
+        let block = [UInt8](raw.utf8)
+        let stream = storedZlib(block)
+        var bzv = [UInt8](repeating: 0, count: 24_115 * 10)
+        // Genesis 1:1 is testament index 4 in the classic format.
+        let o = 4 * 10
+        bzv.replaceSubrange(o ..< o + 4, with: u32le(0))
+        bzv.replaceSubrange(o + 4 ..< o + 8, with: u32le(0))
+        bzv.replaceSubrange(o + 8 ..< o + 10, with: u16le(UInt16(block.count)))
+        try Data(bzv).write(to: dir.appendingPathComponent("ot.bzv"))
+        try Data(u32le(0) + u32le(UInt32(stream.count)) + u32le(UInt32(block.count)))
+            .write(to: dir.appendingPathComponent("ot.bzs"))
+        try Data(stream).write(to: dir.appendingPathComponent("ot.bzz"))
+
+        let module = try SwordModule(moduleDir: dir, versification: .kjv)
+        XCTAssertEqual(module.verse(testament: 1, book: 1, chapter: 1, verse: 1),
+                       "In the beginning God created the heaven and the earth.")
+        XCTAssertEqual(module.heading(testament: 1, book: 1, chapter: 1, verse: 1),
+                       "The Creation")
+        XCTAssertEqual(module.chapterHeadings(testament: 1, book: 1, chapter: 1),
+                       [1: "The Creation"])
+    }
+}

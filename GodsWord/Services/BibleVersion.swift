@@ -150,7 +150,11 @@ enum BibleVersion: Identifiable, Equatable {
         case .private(let b):
             let ob = overallBook(testament: testament, book: book)
             guard let texts = b.chapter(book: ob, chapter: chapter) else { return [] }
-            return texts.enumerated().map { (verse: $0.offset + 1, text: $0.element) }
+            // A "¶…¶" prefix is the verse's section heading
+            // (REQ-RS-5), not verse text.
+            return texts.enumerated().map {
+                (verse: $0.offset + 1, text: PrivateBible.splitHeading($0.element).text)
+            }
         }
     }
 
@@ -161,5 +165,28 @@ enum BibleVersion: Identifiable, Equatable {
         guard case .sword(let m) = self, m.info.supportsStrongs else { return [] }
         guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [] }
         return mod.chapterTokens(testament: testament, book: book, chapter: chapter)
+    }
+
+    /// Section headings ("subtitles") for one chapter, keyed by
+    /// verse number (REQ-RS-5). SWORD versions read the preverse
+    /// section titles out of the module; private versions carry
+    /// theirs as a "¶…¶" prefix on the verse string (NKJV+).
+    func loadHeadings(testament: Int, book: Int, chapter: Int) async -> [Int: String] {
+        switch self {
+        case .sword(let m):
+            guard let mod = try? await ModuleLoader.shared.module(for: m)
+            else { return [:] }
+            return mod.chapterHeadings(testament: testament, book: book, chapter: chapter)
+        case .private(let b):
+            let ob = overallBook(testament: testament, book: book)
+            guard let texts = b.chapter(book: ob, chapter: chapter) else { return [:] }
+            var out = [Int: String]()
+            for (i, text) in texts.enumerated() {
+                if let heading = PrivateBible.splitHeading(text).heading {
+                    out[i + 1] = heading
+                }
+            }
+            return out
+        }
     }
 }
