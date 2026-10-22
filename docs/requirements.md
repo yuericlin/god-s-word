@@ -300,10 +300,10 @@ Multiple (KJV Gen 1:1-2):
   bookmark to another chapter stamps only the last-change time. The
   times are kept in the data (and backups); the bookmarks panel's
   labeled ribbons show the name and one line with the book and chapter
-  followed by the last-change date and time, with no "Updated" label
-  \u2014 "Genesis 12, Oct 21, 2026, 9:41 PM". Bookmarks written before
-  this carry no timestamps and show just the book and chapter until
-  they are next saved or assigned.
+  followed by the last-change date, with no "Updated" label \u2014
+  "Genesis 12, Oct 21, 2026". Bookmarks written before this carry no
+  timestamps and show just the book and chapter until they are next
+  saved or assigned.
 
 ## 9. Two-level book/chapter picker
 
@@ -531,6 +531,28 @@ Multiple (KJV Gen 1:1-2):
   of returning an empty chapter. The Commentary tab then shows an
   error state naming the module — never a "no commentary for this
   chapter" message — and a later successful load clears it.
+- **REQ-AP-14:** Module .conf files decode tolerantly
+  (`SwordConf.decodeText`): UTF-8 when valid, otherwise
+  Windows-1252. Older packages from several sources (Bible.org's
+  above all) carry cp1252 bytes (®, ©, smart quotes) in their
+  confs; strict UTF-8 decoding made those modules fail to
+  install with a misleading "no conf found" error and dropped
+  them from repository catalogs. The tolerance applies at
+  catalog parsing and at install/library scanning alike. ThML
+  commentaries are renderable on the same terms as OSIS ones
+  (zCom, ZIP, whole-book blocks; a missing Encoding line counts
+  as UTF-8 — TSK declares none): their entries pass through the
+  same plain-text conversion (verified against TSK). CHAPTER-
+  block commentaries remain excluded — their storage is the
+  .czv/.czs/.czz layout the reader doesn't handle (e.g.
+  NETnotes).
+- **REQ-AP-15:** A module covering only one testament (NT-only
+  commentaries such as PNT and Lightfoot; some NT-only Bibles)
+  opens normally: the missing testament's files (ot.bzv/.bzs/
+  .bzz or the nt.* set) read as an empty testament instead of
+  failing the whole module load. A partial file set still fails
+  as corrupt, and a directory with no testament data at all
+  still fails as missing.
 
 ## 16. Module sources
 
