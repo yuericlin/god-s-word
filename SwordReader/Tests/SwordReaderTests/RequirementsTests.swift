@@ -937,3 +937,134 @@ final class LegacyConfRequirementsTests: XCTestCase {
         XCTAssertFalse(netnotes.isCommentaryRenderable)
     }
 }
+
+// MARK: - REQ-AP-16: "4"-driver storage (zText4 / zCom4)
+
+final class V4StorageRequirementsTests: XCTestCase {
+    private func conf(_ text: String) -> ModuleInfo {
+        ModuleInfo(conf: SwordConf(text: text))
+    }
+
+    // REQ-AP-16: TDavid's real conf shape — zCom4, no Category line —
+    // is a renderable commentary in the v4 storage format.
+    func testTDavidShapeIsRenderableCommentary() {
+        let tdavid = conf("""
+            [TDavid]
+            DataPath=./modules/comments/zcom/tdavid/
+            ModDrv=zCom4
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Lang=en
+            """)
+        XCTAssertTrue(tdavid.isCommentary)
+        XCTAssertTrue(tdavid.isCommentaryRenderable)
+        XCTAssertTrue(tdavid.usesV4Storage)
+    }
+
+    // REQ-AP-16: a zText4 Bible is renderable; a classic zCom
+    // commentary is not v4 storage.
+    func testZText4BibleRenderableAndV1IsNotV4() {
+        let bible = conf("""
+            [KTuvB]
+            DataPath=./modules/texts/ztext4/ktuvb/
+            ModDrv=zText4
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Category=Biblical Texts
+            Lang=sw
+            """)
+        XCTAssertTrue(bible.isRenderable)
+        XCTAssertTrue(bible.usesV4Storage)
+
+        let mhcc = conf("""
+            [MHCC]
+            DataPath=./modules/comments/zcom/mhcc/
+            ModDrv=zCom
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertTrue(mhcc.isCommentaryRenderable)
+        XCTAssertFalse(mhcc.usesV4Storage)
+    }
+
+    /// A zlib stream holding `data` in one stored (uncompressed)
+    /// block — enough for Inflate to decompress in fixtures.
+    private func storedZlib(_ data: [UInt8]) -> [UInt8] {
+        var out: [UInt8] = [0x78, 0x01, 0x01]
+        let len = UInt16(data.count)
+        out += [UInt8(len & 0xff), UInt8(len >> 8)]
+        let nlen = ~len
+        out += [UInt8(nlen & 0xff), UInt8(nlen >> 8)]
+        out += data
+        var a: UInt32 = 1, b: UInt32 = 0
+        for byte in data { a = (a + UInt32(byte)) % 65521; b = (b + a) % 65521 }
+        let adler = (b << 16) | a
+        out += [UInt8(adler >> 24), UInt8((adler >> 16) & 0xff),
+                UInt8((adler >> 8) & 0xff), UInt8(adler & 0xff)]
+        return out
+    }
+
+    private func u32le(_ v: UInt32) -> [UInt8] {
+        [UInt8(v & 0xff), UInt8((v >> 8) & 0xff),
+         UInt8((v >> 16) & 0xff), UInt8((v >> 24) & 0xff)]
+    }
+
+    // REQ-AP-16: a zVerse4 module (12-byte index entries, 32-bit
+    // sizes, same heading-slot numbering as zVerse) opens and its
+    // verses read back. OT-only fixture: 24,115 KJV OT slots.
+    func testV4ModuleReadsVerses() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("v4-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        let v1 = "In the beginning God created the heaven and the earth."
+        let v2 = "And the earth was without form, and void."
+        let block = [UInt8]((v1 + v2).utf8)
+        let stream = storedZlib(block)
+
+        var bzv = [UInt8](repeating: 0, count: 24_115 * 12)
+        // Genesis 1:1 is testament index 4 (slots 0-3 are the
+        // module, testament, book and chapter headings); 1:2 is 5.
+        for (slot, start, size) in [(4, 0, v1.count), (5, v1.count, v2.count)] {
+            let o = slot * 12
+            bzv.replaceSubrange(o ..< o + 4, with: u32le(0))
+            bzv.replaceSubrange(o + 4 ..< o + 8, with: u32le(UInt32(start)))
+            bzv.replaceSubrange(o + 8 ..< o + 12, with: u32le(UInt32(size)))
+        }
+        try Data(bzv).write(to: dir.appendingPathComponent("ot.bzv"))
+        try Data(u32le(0) + u32le(UInt32(stream.count)) + u32le(UInt32(block.count)))
+            .write(to: dir.appendingPathComponent("ot.bzs"))
+        try Data(stream).write(to: dir.appendingPathComponent("ot.bzz"))
+
+        let module = try SwordModule(moduleDir: dir, versification: .kjv,
+                                     format: .zVerse4)
+        XCTAssertEqual(module.verse(testament: 1, book: 1, chapter: 1, verse: 1), v1)
+        XCTAssertEqual(module.verse(testament: 1, book: 1, chapter: 1, verse: 2), v2)
+        XCTAssertEqual(module.chapter(testament: 1, book: 1, chapter: 1).count, 2)
+        XCTAssertEqual(module.chapter(testament: 2, book: 1, chapter: 1).count, 0)
+    }
+
+    // REQ-AP-16: a classic-width index opened as v4 is corrupt
+    // (its byte count isn't a multiple of the 12-byte stride).
+    func testV1WidthIndexRejectedAsV4() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("v4-bad-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try Data([UInt8](repeating: 0, count: 241_150))
+            .write(to: dir.appendingPathComponent("ot.bzv"))
+        XCTAssertThrowsError(try SwordModule(moduleDir: dir, versification: .kjv,
+                                             format: .zVerse4))
+    }
+}

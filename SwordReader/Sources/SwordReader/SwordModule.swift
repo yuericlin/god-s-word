@@ -12,12 +12,24 @@ public enum SwordModuleError: Error, Equatable {
     case decompressionFailed
 }
 
+/// On-disk verse-index format of a zText/zCom module. The "4"
+/// drivers (zText4 / zCom4) keep the same heading-slot index
+/// layout as the classic drivers — module, testament, book and
+/// chapter heading slots included in the numbering — but each
+/// .bzv entry is 12 bytes with a 32-bit verse size instead of
+/// 10 bytes with a 16-bit size (REQ-AP-16). Everything else
+/// (.bzs block index, .bzz compressed blocks) is identical.
+public enum SwordStorageFormat: Sendable {
+    case zVerse
+    case zVerse4
+}
+
 /// One verse-index entry: which compressed block holds the verse, and the
 /// byte range of the verse within the decompressed block.
 private struct VerseIndexEntry {
     let block: UInt32
     let start: UInt32
-    let size: UInt16
+    let size: UInt32
 }
 
 private struct BlockIndexEntry {
@@ -53,7 +65,10 @@ public final class SwordModule: @unchecked Sendable {
     private let maxCachedBlocks = 4
 
     /// - Parameter moduleDir: directory containing ot.bzv/.bzs/.bzz and nt.*.
-    public init(moduleDir: URL, versification: Versification) throws {
+    /// - Parameter format: the module's verse-index format, from its
+    ///   driver (zText4/zCom4 → .zVerse4); the classic format by default.
+    public init(moduleDir: URL, versification: Versification,
+                format: SwordStorageFormat = .zVerse) throws {
         self.versification = versification
         func read(_ name: String) throws -> [UInt8] {
             let url = moduleDir.appendingPathComponent(name)
@@ -63,15 +78,18 @@ public final class SwordModule: @unchecked Sendable {
             return [UInt8](d)
         }
         func parseVerseIndex(_ bytes: [UInt8], _ name: String) throws -> [VerseIndexEntry] {
-            guard bytes.count % 10 == 0 else { throw SwordModuleError.corruptIndex(name) }
+            let stride = format == .zVerse4 ? 12 : 10
+            guard bytes.count % stride == 0 else { throw SwordModuleError.corruptIndex(name) }
             var out = [VerseIndexEntry]()
-            out.reserveCapacity(bytes.count / 10)
+            out.reserveCapacity(bytes.count / stride)
             var o = 0
             while o < bytes.count {
                 out.append(VerseIndexEntry(block: readU32LE(bytes, o),
                                           start: readU32LE(bytes, o + 4),
-                                          size: readU16LE(bytes, o + 8)))
-                o += 10
+                                          size: format == .zVerse4
+                                              ? readU32LE(bytes, o + 8)
+                                              : UInt32(readU16LE(bytes, o + 8))))
+                o += stride
             }
             return out
         }
