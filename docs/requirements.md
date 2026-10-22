@@ -625,7 +625,9 @@ Multiple (KJV Gen 1:1-2):
   StrongsHebrew declares none). On CrossWire that is 50 of 52
   dictionaries, including Easton, ISBE, Nave, Webster's, and the
   Strong's lexicons in many languages. Installed dictionaries
-  never appear in the library's version lists.
+  never appear in the library's version lists or the reader's
+  version picker (`BibleVersion.allInstalled` applies the same
+  exclusion as the library groups).
 - **REQ-DC-2:** Settings > Dictionary chooses the dictionary
   Strong's definitions come from, separately for Hebrew ("H")
   and Greek ("G") keys, from the installed dictionaries. The
