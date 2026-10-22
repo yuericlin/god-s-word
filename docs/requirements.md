@@ -225,11 +225,14 @@ Multiple (KJV Gen 1:1-2):
   A reload within 60 seconds adds no timestamp. History saved before this
   rule (one version and timestamp per entry) still loads, and is combined
   when loaded or imported.
-- **REQ-HI-8:** Each history row shows the chapter, all its versions, and the
-  entry's earliest timestamp as a date and time (with the year only when not
-  the current year), not a time-ago.
-- **REQ-HI-9:** The history list shows the latest 20 entries, followed by a
-  "…" row when there are more. The log itself still keeps up to 100 (REQ-HI-2).
+- **REQ-HI-8:** The history list is split into calendar days, newest first,
+  each under a header ("Today", "Yesterday", then the date; the year only when
+  not the current year). An entry sits under the day of its earliest visit.
+  A row shows the chapter, all its versions, and the time of that earliest
+  visit (not a time-ago). Swipe-delete removes the entry tapped.
+- **REQ-HI-9:** The list loads incrementally: the latest 2 days at first, and
+  2 more each time the end is scrolled to. The log itself still keeps up to
+  100 entries (REQ-HI-2).
 
 ---
 

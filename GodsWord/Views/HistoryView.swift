@@ -1,7 +1,8 @@
 // HistoryView.swift — full reading history log. Tapping an entry jumps
 // back to that location. An entry combines the visits to one chapter within
-// 24 hours: it shows the earliest visit and every version read. Only the
-// latest 20 entries are listed, followed by "…".
+// 24 hours: it shows the versions read and the time of its earliest visit.
+// The list is split by day. It starts with the latest two days; reaching
+// the end loads two more.
 
 import SwiftUI
 import SwordReader
@@ -9,40 +10,36 @@ import SwordReader
 struct HistoryView: View {
     @EnvironmentObject private var personalData: PersonalData
     var onSelect: ((HistoryEntry) -> Void)?
+    /// How many days are currently loaded.
+    @State private var shownDays = ReadingHistoryLog.dayPage
 
     var body: some View {
+        let all = ReadingHistoryLog.sections(personalData.historyLog)
+        let visible = ReadingHistoryLog.visibleSections(all, days: shownDays)
         List {
-            if personalData.historyLog.isEmpty {
+            if all.isEmpty {
                 Text("No reading history yet. Chapters you read will appear here.")
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(ReadingHistoryLog.visible(personalData.historyLog).entries) { entry in
-                    Button {
-                        onSelect?(entry)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(entry.bookName) \(entry.chapter)")
-                                .font(.headline)
-                            HStack(spacing: 4) {
-                                Text(entry.moduleIDs.joined(separator: ", "))
-                                Text("·")
-                                Text(Self.earliestText(entry.earliest))
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                ForEach(visible.sections) { section in
+                    Section {
+                        ForEach(section.entries) { entry in
+                            row(entry)
                         }
+                        .onDelete { offsets in
+                            personalData.deleteHistory(
+                                ids: Set(offsets.map { section.entries[$0].id }))
+                        }
+                    } header: {
+                        Text(Self.dayTitle(section.day))
                     }
                 }
-                .onDelete { offsets in
-                    // The visible entries are the log's first 20, so the
-                    // offsets are the log's offsets.
-                    personalData.deleteHistory(at: offsets)
-                }
-                if ReadingHistoryLog.visible(personalData.historyLog).hasMore {
-                    Text("…")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .accessibilityLabel("Older history not shown")
+                if visible.hasMore {
+                    // Appears only when scrolled to; loads the next two days.
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .listRowSeparator(.hidden)
+                        .onAppear { shownDays += ReadingHistoryLog.dayPage }
                 }
             }
         }
@@ -53,20 +50,41 @@ struct HistoryView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear", role: .destructive) {
                         personalData.clearHistory()
+                        shownDays = ReadingHistoryLog.dayPage
                     }
                 }
             }
         }
     }
 
-    /// The entry's earliest visit as a date and time; the year only when
-    /// it isn't this year.
-    private static func earliestText(_ date: Date) -> String {
-        let sameYear = Calendar.current.isDate(date, equalTo: Date(),
-                                               toGranularity: .year)
+    private func row(_ entry: HistoryEntry) -> some View {
+        Button {
+            onSelect?(entry)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(entry.bookName) \(entry.chapter)")
+                    .font(.headline)
+                HStack(spacing: 4) {
+                    Text(entry.moduleIDs.joined(separator: ", "))
+                    Text("·")
+                    Text(entry.earliest, format: .dateTime.hour().minute())
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// "Today", "Yesterday", or e.g. "Mon, Oct 19" (with the year when it
+    /// isn't this year).
+    private static func dayTitle(_ day: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(day) { return "Today" }
+        if cal.isDateInYesterday(day) { return "Yesterday" }
+        let sameYear = cal.isDate(day, equalTo: Date(), toGranularity: .year)
         let style: Date.FormatStyle = sameYear
-            ? .dateTime.month(.abbreviated).day().hour().minute()
-            : .dateTime.year().month(.abbreviated).day().hour().minute()
-        return date.formatted(style)
+            ? .dateTime.weekday(.abbreviated).month(.abbreviated).day()
+            : .dateTime.year().month(.abbreviated).day()
+        return day.formatted(style)
     }
 }

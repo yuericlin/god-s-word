@@ -370,8 +370,10 @@ public final class PersonalData: ObservableObject {
             limit: maxHistoryEntries)
     }
 
-    public func deleteHistory(at offsets: IndexSet) {
-        historyLog.remove(atOffsets: offsets)
+    /// Deletes entries by id (the list is split into days, so row offsets
+    /// no longer match the log's).
+    public func deleteHistory(ids: Set<UUID>) {
+        historyLog.removeAll { ids.contains($0.id) }
     }
 
     public func clearHistory() {

@@ -687,24 +687,51 @@ final class CombinedHistoryRequirementsTests: XCTestCase {
         XCTAssertEqual(ReadingHistoryLog.combined(once), once)
     }
 
-    // REQ-HI-9: the list shows the last 20 entries, then "...".
-    func testVisibleShowsTwentyAndSaysWhetherThereAreMore() {
-        func entries(_ n: Int) -> [ReadingHistoryEntry] {
-            (1...n).map {
-                ReadingHistoryEntry(bookName: "B", testament: 1, book: 1, chapter: $0,
-                                    moduleIDs: ["KJV"], timestamps: [hours(Double($0))])
-            }
+    // REQ-HI-8: the list is split by calendar day, newest day first.
+    func testSectionsSplitByDayOfEarliestVisit() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let noon = cal.startOfDay(for: t0).addingTimeInterval(12 * 3600)
+        func e(_ ch: Int, _ times: [Date]) -> ReadingHistoryEntry {
+            ReadingHistoryEntry(bookName: "B", testament: 1, book: 1, chapter: ch,
+                                moduleIDs: ["KJV"], timestamps: times)
         }
-        let many = ReadingHistoryLog.visible(entries(25))
-        XCTAssertEqual(many.entries.count, 20)
-        XCTAssertEqual(many.entries.first?.chapter, 1)   // log order is kept
-        XCTAssertTrue(many.hasMore)
-        let exactly = ReadingHistoryLog.visible(entries(20))
-        XCTAssertEqual(exactly.entries.count, 20)
-        XCTAssertFalse(exactly.hasMore)
-        let few = ReadingHistoryLog.visible(entries(3))
-        XCTAssertEqual(few.entries.count, 3)
-        XCTAssertFalse(few.hasMore)
-        XCTAssertFalse(ReadingHistoryLog.visible([]).hasMore)
+        let today1 = e(1, [noon])
+        let today2 = e(2, [noon.addingTimeInterval(3600)])
+        let yesterday = e(3, [noon.addingTimeInterval(-24 * 3600)])
+        // Started yesterday evening, revisited this morning: yesterday's.
+        let spanning = e(4, [noon.addingTimeInterval(-15 * 3600),
+                             noon.addingTimeInterval(-1 * 3600)])
+        let log = [today2, today1, spanning, yesterday]
+        let sections = ReadingHistoryLog.sections(log, calendar: cal)
+        XCTAssertEqual(sections.count, 2)
+        XCTAssertEqual(sections[0].day, cal.startOfDay(for: noon))
+        XCTAssertEqual(sections[0].entries.map { $0.chapter }, [2, 1])
+        XCTAssertEqual(sections[1].day, cal.startOfDay(for: noon) - 86400)
+        XCTAssertEqual(sections[1].entries.map { $0.chapter }, [4, 3])
+        XCTAssertTrue(ReadingHistoryLog.sections([], calendar: cal).isEmpty)
+    }
+
+    // REQ-HI-9: two days at first, two more each time the end is reached.
+    func testVisibleSectionsRevealsByDays() {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC")!
+        let log = (0..<5).map { d in
+            ReadingHistoryEntry(bookName: "B", testament: 1, book: 1, chapter: d + 1,
+                                moduleIDs: ["KJV"],
+                                timestamps: [t0.addingTimeInterval(-Double(d) * 86400)])
+        }
+        let all = ReadingHistoryLog.sections(log, calendar: cal)
+        XCTAssertEqual(all.count, 5)
+        let first = ReadingHistoryLog.visibleSections(all, days: ReadingHistoryLog.dayPage)
+        XCTAssertEqual(first.sections.count, 2)
+        XCTAssertTrue(first.hasMore)
+        let second = ReadingHistoryLog.visibleSections(all, days: 4)
+        XCTAssertEqual(second.sections.count, 4)
+        XCTAssertTrue(second.hasMore)
+        let third = ReadingHistoryLog.visibleSections(all, days: 6)
+        XCTAssertEqual(third.sections.count, 5)
+        XCTAssertFalse(third.hasMore)
+        XCTAssertFalse(ReadingHistoryLog.visibleSections([], days: 2).hasMore)
     }
 }

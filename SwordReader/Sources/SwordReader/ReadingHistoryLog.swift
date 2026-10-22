@@ -117,8 +117,9 @@ public enum ReadingHistoryLog {
     public static let visitGap: TimeInterval = 60
     /// Entries kept (REQ-HI-2).
     public static let limit = 100
-    /// Entries shown before the "…" row (REQ-HI-9).
-    public static let displayLimit = 20
+    /// Days of history revealed at first, and again each time the list is
+    /// scrolled to its end (REQ-HI-9).
+    public static let dayPage = 2
 
     /// Records a visit. Joins the most recent entry for the same chapter
     /// that started within `mergeWindow` of `now` (moving it to the front);
@@ -167,11 +168,32 @@ public enum ReadingHistoryLog {
         return out.sorted { $0.lastVisit > $1.lastVisit }
     }
 
-    /// The entries to show (the most recent `displayLimit`) and whether more
-    /// exist, in which case the list ends with "…".
-    public static func visible(_ log: [ReadingHistoryEntry])
-        -> (entries: [ReadingHistoryEntry], hasMore: Bool)
+    /// One calendar day of history.
+    public struct DaySection: Identifiable, Equatable, Sendable {
+        /// Start of the day.
+        public let day: Date
+        /// The day's entries, most recently visited first.
+        public let entries: [ReadingHistoryEntry]
+        public var id: Date { day }
+    }
+
+    /// Splits the log into calendar days (REQ-HI-8), newest day first. An
+    /// entry belongs to the day of its earliest visit, the time it shows.
+    public static func sections(_ log: [ReadingHistoryEntry],
+                                calendar: Calendar = .current) -> [DaySection] {
+        let byDay = Dictionary(grouping: log) { calendar.startOfDay(for: $0.earliest) }
+        return byDay.keys.sorted(by: >).map { day in
+            DaySection(day: day,
+                       entries: byDay[day]!.sorted { $0.lastVisit > $1.lastVisit })
+        }
+    }
+
+    /// The first `days` days of `sections`, and whether older ones remain to
+    /// be loaded by scrolling (REQ-HI-9).
+    public static func visibleSections(_ sections: [DaySection], days: Int)
+        -> (sections: [DaySection], hasMore: Bool)
     {
-        (Array(log.prefix(displayLimit)), log.count > displayLimit)
+        let n = max(days, 0)
+        return (Array(sections.prefix(n)), sections.count > n)
     }
 }
