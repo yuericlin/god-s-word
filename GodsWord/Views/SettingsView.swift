@@ -18,6 +18,14 @@ struct SettingsView: View {
     /// Called when the user taps a history entry; the presenter navigates.
     var onSelectHistoryEntry: ((HistoryEntry) -> Void)?
 
+    /// The Google Drive backup section is hidden for now (the
+    /// feature and its code stay in place). Flip to show it again.
+    private static let showGoogleDriveBackup = false
+
+    /// The iCloud section is hidden for now, the same way; only
+    /// Manual backup (export/import) shows. Flip to show it again.
+    private static let showICloudSync = false
+
     var body: some View {
         NavigationStack {
             List {
@@ -117,6 +125,7 @@ struct SettingsView: View {
                     }
                 }
 
+                if Self.showICloudSync {
                 Section {
                     Toggle("iCloud Sync", isOn: Binding(
                         get: { iCloudSync.shared.isEnabled },
@@ -148,6 +157,7 @@ struct SettingsView: View {
                 } header: {
                     Text("iCloud")
                 }
+                }
 
                 Section {
                     Button("Export Data") {
@@ -172,6 +182,7 @@ struct SettingsView: View {
                     Text("Export saves JSON files to On My iPhone > GodsWord > god-s-word-export/. Share them via AirDrop or Files. Import restores from selected JSON files.")
                 }
 
+                if Self.showGoogleDriveBackup {
                 Section {
                     if !GoogleDriveBackup.isConfigured {
                         Text("Google sign-in isn't configured in this build yet. " +
@@ -202,6 +213,7 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Google Drive backup")
+                }
                 }
 
                 Section("About") {
