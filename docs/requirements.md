@@ -298,9 +298,10 @@ Multiple (KJV Gen 1:1-2):
   was last changed (`createdAt` / `updatedAt` on the bookmark itself).
   Saving a new bookmark stamps both; saving an edit or assigning the
   bookmark to another chapter stamps only the last-change time. The
-  bookmarks panel's labeled ribbons show "Updated <date, time>"
-  underneath. Bookmarks written before this carry no timestamps and
-  show none until they are next saved or assigned.
+  times are kept in the data (and backups) but not shown: the bookmarks
+  panel's labeled ribbons show just the name and one line with the book
+  and chapter. Bookmarks written before this carry no timestamps and
+  get them when next saved or assigned.
 
 ## 9. Two-level book/chapter picker
 
