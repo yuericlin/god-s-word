@@ -353,11 +353,12 @@ Multiple (KJV Gen 1:1-2):
   missing timestamps decode as absent and never wipe existing ones,
   and times for notes that don't exist are dropped on apply. Older
   app versions ignore the new fields.
-- **REQ-BK-5:** The Google Drive backup section is hidden in
-  Settings for now. The feature and its code stay in place (the
-  backup payload, sync, and restore paths are unchanged); only
-  the settings UI is not shown. Re-enable by flipping the
-  section's visibility flag in Settings.
+- **REQ-BK-5:** The Google Drive backup and iCloud sections are
+  hidden in Settings for now; of the backup/sync sections only
+  Manual backup (export/import) shows. The features and their
+  code stay in place (payload, sync, and restore paths
+  unchanged); only the settings UI is not shown. Re-enable by
+  flipping the sections' visibility flags in Settings.
 
 ---
 

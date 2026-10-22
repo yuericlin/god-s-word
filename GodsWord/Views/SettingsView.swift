@@ -22,6 +22,10 @@ struct SettingsView: View {
     /// feature and its code stay in place). Flip to show it again.
     private static let showGoogleDriveBackup = false
 
+    /// The iCloud section is hidden for now, the same way; only
+    /// Manual backup (export/import) shows. Flip to show it again.
+    private static let showICloudSync = false
+
     var body: some View {
         NavigationStack {
             List {
@@ -121,6 +125,7 @@ struct SettingsView: View {
                     }
                 }
 
+                if Self.showICloudSync {
                 Section {
                     Toggle("iCloud Sync", isOn: Binding(
                         get: { iCloudSync.shared.isEnabled },
@@ -151,6 +156,7 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("iCloud")
+                }
                 }
 
                 Section {
