@@ -1,1 +1,420 @@
-Ly8gU3dvcmRSZWFkZXJUZXN0cy5zd2lmdAovLyBTZWxmLWNvbnRhaW5lZCB1bml0IHRlc3RzIChubyBuZXR3b3JrLCBubyBmaXh0dXJlcykuCgppbXBvcnQgWENUZXN0CkB0ZXN0YWJsZSBpbXBvcnQgU3dvcmRSZWFkZXIKCmZpbmFsIGNsYXNzIEluZmxhdGVUZXN0czogWENUZXN0Q2FzZSB7CiAgICAvLyAiVGhlIHF1aWNrIGJyb3duIGZveCBqdW1wcyBvdmVyIHRoZSBsYXp5IGRvZy4gIiAqIDgsIHpsaWIgbGV2ZWwgOS4KICAgIGxldCBmb3habGliOiBbVUludDhdID0gWwogICAgICAgIDEyMCwgMjE4LCAxMSwgMjAxLCA3MiwgODUsIDQwLCA0NCwgMjA1LCA3NiwgMjA2LCA4NiwgNzIsIDQyLCAyMDIsIDQ3LCAyMDcsIDgzLCA3MiwgMjAzLCAxNzUsCiAgICAgICAgODAsIDIwMCwgNDIsIDIwNSwgNDUsIDQwLCA4NiwgMjAwLCA0NywgNzUsIDQ1LCA4MiwgNDAsIDEsIDc0LCAyMzEsIDM2LCA4NiwgODUsIDQyLCAxNjQsIDIyOCwKICAgICAgICAxNjcsIDIzNSwgNDEsIDEzMiwgMTQwLCA0MiwgMzgsIDg3LCA0OSwgMCwgMTAxLCA0OSwgMTI5LCA1NywKICAgIF0KICAgIGxldCBmb3hQbGFpbiA9IFN0cmluZyhyZXBlYXRpbmc6ICJUaGUgcXVpY2sgYnJvd24gZm94IGp1bXBzIG92ZXIgdGhlIGxhenkgZG9nLiAiLCBjb3VudDogOCkKCiAgICBmdW5jIHRlc3RabGliUm91bmRUcmlwKCkgdGhyb3dzIHsKICAgICAgICBsZXQgb3V0ID0gdHJ5IEluZmxhdGUuZGVjb21wcmVzc1psaWIoZm94WmxpYikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChTdHJpbmcoYnl0ZXM6IG91dCwgZW5jb2Rpbmc6IC51dGY4KSwgZm94UGxhaW4pCiAgICB9CgogICAgZnVuYyB0ZXN0UmF3RGVmbGF0ZVJvdW5kVHJpcCgpIHRocm93cyB7CiAgICAgICAgbGV0IHJhdyA9IEFycmF5KGZveFpsaWJbMiAuLjwgZm94WmxpYi5jb3VudCAtIDRdKQogICAgICAgIGxldCBvdXQgPSB0cnkgSW5mbGF0ZS5kZWNvbXByZXNzUmF3RGVmbGF0ZShyYXcpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoU3RyaW5nKGJ5dGVzOiBvdXQsIGVuY29kaW5nOiAudXRmOCksIGZveFBsYWluKQogICAgfQoKICAgIGZ1bmMgdGVzdFN0b3JlZEJsb2NrKCkgdGhyb3dzIHsKICAgICAgICAvLyBCRklOQUw9MSwgQlRZUEU9MDAgKHN0b3JlZCksIExFTj0yLCBOTEVOPTB4RkZGRCwgIkhpIi4KICAgICAgICBsZXQgc3RvcmVkOiBbVUludDhdID0gWzB4MDEsIDB4MDIsIDB4MDAsIDB4RkQsIDB4RkYsIDB4NDgsIDB4NjldCiAgICAgICAgbGV0IG91dCA9IHRyeSBJbmZsYXRlLmRlY29tcHJlc3NSYXdEZWZsYXRlKHN0b3JlZCkKICAgICAgICBYQ1RBc3NlcnRFcXVhbChvdXQsIFsweDQ4LCAweDY5XSkKICAgIH0KCiAgICBmdW5jIHRlc3RCYWRabGliSGVhZGVyKCkgewogICAgICAgIFhDVEFzc2VydFRocm93c0Vycm9yKHRyeSBJbmZsYXRlLmRlY29tcHJlc3NabGliKFsweDAwLCAweDAwLCAweDAxLCAweDAyLCAweDAwLCAweDAwXSkpIHsgZSBpbgogICAgICAgICAgICBYQ1RBc3NlcnRFcXVhbChlIGFzPyBJbmZsYXRlRXJyb3IsIC5pbnZhbGlkWmxpYkhlYWRlcikKICAgICAgICB9CiAgICB9CgogICAgZnVuYyB0ZXN0QWRsZXJNaXNtYXRjaCgpIHsKICAgICAgICB2YXIgYmFkID0gZm94WmxpYgogICAgICAgIGJhZFtiYWQuY291bnQgLSAxXSBePSAweEZGCiAgICAgICAgWENUQXNzZXJ0VGhyb3dzRXJyb3IodHJ5IEluZmxhdGUuZGVjb21wcmVzc1psaWIoYmFkKSkgeyBlIGluCiAgICAgICAgICAgIFhDVEFzc2VydEVxdWFsKGUgYXM/IEluZmxhdGVFcnJvciwgLmFkbGVyTWlzbWF0Y2gpCiAgICAgICAgfQogICAgfQoKICAgIGZ1bmMgdGVzdEFkbGVyMzIoKSB7CiAgICAgICAgWENUQXNzZXJ0RXF1YWwoSW5mbGF0ZS5hZGxlcjMyKFtVSW50OF0oIldpa2lwZWRpYSIudXRmOCkpLCAweDExRTYwMzk4KQogICAgfQoKICAgIGZ1bmMgdGVzdEd6aXAoKSB0aHJvd3MgewogICAgICAgIC8vIGd6aXAgLTkgb2YgdGhlIGZveCBzdHJpbmcgYWJvdmUgKG10aW1lPTApLgogICAgICAgIGxldCBnejogW1VJbnQ4XSA9IFsKICAgICAgICAgICAgMzEsIDEzOSwgOCwgMCwgMCwgMCwgMCwgMCwgMiwgMywgMTEsIDIwMSwgNzIsIDg1LCA0MCwgNDQsIDIwNSwgNzYsIDIwNiwgODYsCiAgICAgICAgICAgIDcyLCA0MiwgMjAyLCA0NywgMjA3LCA4MywgNzIsIDIwMywgMTc1LCA4MCwgMjAwLCA0MiwgMjA1LCA0NSwgNDAsIDg2LCAyMDAsIDQ3LCA3NSwgNDUsCiAgICAgICAgICAgIDgyLCA0MCwgMSwgNzQsIDIzMSwgMzYsIDg2LCA4NSwgNDIsIDE2NCwgMjI4LCAxNjcsIDIzNSwgNDEsIDEzMiwgMTQwLCA0MiwgMzgsIDg3LCA0OSwKICAgICAgICAgICAgMCwgMTg3LCAyMiwgMTUsIDIyNywgMTA0LCAxLCAwLCAwLAogICAgICAgIF0KICAgICAgICBsZXQgb3V0ID0gdHJ5IEluZmxhdGUuZGVjb21wcmVzc0d6aXAoZ3opCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoU3RyaW5nKGJ5dGVzOiBvdXQsIGVuY29kaW5nOiAudXRmOCksIGZveFBsYWluKQogICAgfQoKICAgIGZ1bmMgdGVzdFpsaWJXaXRoUGFkZGluZygpIHRocm93cyB7CiAgICAgICAgLy8gU1dPUkQgLmJ6eiBibG9ja3MgYXJlIHplcm8tcGFkZGVkIGFmdGVyIHRoZSB6bGliIHN0cmVhbTsgdGhlCiAgICAgICAgLy8gZGVjb2RlciBtdXN0IHN0b3AgYXQgdGhlIHJlYWwgc3RyZWFtIGVuZCBsaWtlIHpsaWIgZG9lcy4KICAgICAgICB2YXIgcGFkZGVkID0gZm94WmxpYgogICAgICAgIHBhZGRlZC5hcHBlbmQoY29udGVudHNPZjogW1VJbnQ4XShyZXBlYXRpbmc6IDAsIGNvdW50OiAxMDI0KSkKICAgICAgICBsZXQgb3V0ID0gdHJ5IEluZmxhdGUuZGVjb21wcmVzc1psaWIocGFkZGVkKQogICAgICAgIFhDVEFzc2VydEVxdWFsKFN0cmluZyhieXRlczogb3V0LCBlbmNvZGluZzogLnV0ZjgpLCBmb3hQbGFpbikKICAgIH0KCiAgICBmdW5jIHRlc3RUcnVuY2F0ZWQoKSB7CiAgICAgICAgWENUQXNzZXJ0VGhyb3dzRXJyb3IodHJ5IEluZmxhdGUuZGVjb21wcmVzc1Jhd0RlZmxhdGUoWzB4MDEsIDB4MDJdKSkgeyBlIGluCiAgICAgICAgICAgIFhDVEFzc2VydEVxdWFsKGUgYXM/IEluZmxhdGVFcnJvciwgLnRydW5jYXRlZCkKICAgICAgICB9CiAgICB9CgogICAgZnVuYyB0ZXN0T25lQml0SHVmZm1hblRhYmxlc0RlY29kZSgpIHRocm93cyB7CiAgICAgICAgLy8gUmVncmVzc2lvbjogYSBkeW5hbWljIGJsb2NrIHdob3NlIGxpdGVyYWwgQU5EIGRpc3RhbmNlIHRhYmxlcyBtYXgKICAgICAgICAvLyBvdXQgYXQgMS1iaXQgY29kZXMgKGEgc2luZ2xlIGRpc3RhbmNlIGNvZGUgb2Ygb25lIGJpdCBpcyBleHBsaWNpdGx5CiAgICAgICAgLy8gbGVnYWwsIFJGQyAxOTUxKSB1c2VkIHRvIHRyYXAgaW4gSHVmZm1hbkRlY29kZXIuaW5pdCBvbiB0aGUgcmFuZ2UKICAgICAgICAvLyBgMiAuLi4gbWF4Qml0c2Agd2l0aCBtYXhCaXRzID09IDEg4oCUIGhpdCBpbiB0aGUgd2lsZCBieSB0aGUgQ2xhcmtlCiAgICAgICAgLy8gY29tbWVudGFyeSBwYWNrYWdlIHppcCwgd2hpY2ggZnJvemUgbW9kdWxlIGluc3RhbGxzLiBUaGUgc3RyZWFtCiAgICAgICAgLy8gYmVsb3cgZGVjb2RlcyB0byAiQSIgKHZlcmlmaWVkIGFnYWluc3QgemxpYikuCiAgICAgICAgbGV0IHN0cmVhbTogW1VJbnQ4XSA9IFsweDA1LCAweEMwLCAweDgxLCAweDAwLCAweDAwLCAweDAwLCAweDAwLCAweDAwLAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgMHg5MCwgMHgzNiwgMHhGRiwgMHg1MywgMHgwOF0KICAgICAgICBsZXQgb3V0ID0gdHJ5IEluZmxhdGUuZGVjb21wcmVzc1Jhd0RlZmxhdGUoc3RyZWFtKQogICAgICAgIFhDVEFzc2VydEVxdWFsKFN0cmluZyhieXRlczogb3V0LCBlbmNvZGluZzogLnV0ZjgpLCAiQSIpCiAgICB9Cn0KCmZpbmFsIGNsYXNzIE9zaXNQbGFpblRlc3RzOiBYQ1Rlc3RDYXNlIHsKICAgIGZ1bmMgdGVzdFN0cmlwc1RhZ3NLZWVwc1RleHQoKSB7CiAgICAgICAgbGV0IG9zaXMgPSAjIjx2ZXJzZSBvc2lzSUQ9Ikdlbi4xLjEiPkluIHRoZSA8dyBsZW1tYT0ic3Ryb25nOkgwNDMwIj5iZWdpbm5pbmc8L3c+IEdvZCBjcmVhdGVkPG5vdGU+Zm48L25vdGU+LjwvdmVyc2U+IiMKICAgICAgICBYQ1RBc3NlcnRFcXVhbChPc2lzUGxhaW4ucGxhaW5UZXh0KGZyb206IG9zaXMpLCAiSW4gdGhlIGJlZ2lubmluZyBHb2QgY3JlYXRlZC4iKQogICAgfQoKICAgIGZ1bmMgdGVzdEVudGl0aWVzKCkgewogICAgICAgIFhDVEFzc2VydEVxdWFsKE9zaXNQbGFpbi5wbGFpblRleHQoZnJvbTogImEgJmx0OyBiICZhbXA7IGMgJiM2NTsgJiN4NDI7IiksICJhIDwgYiAmIGMgQSBCIikKICAgIH0KCiAgICBmdW5jIHRlc3RMaW5lQnJlYWtzKCkgewogICAgICAgIGxldCBvc2lzID0gImZpcnN0PGxiLz5zZWNvbmQiCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoT3Npc1BsYWluLnBsYWluVGV4dChmcm9tOiBvc2lzKSwgImZpcnN0IHNlY29uZCIpCiAgICB9Cn0KCmZpbmFsIGNsYXNzIFN3b3JkQ29uZlRlc3RzOiBYQ1Rlc3RDYXNlIHsKICAgIGxldCBzYW1wbGUgPSAiIiIKICAgICAgICAjIyBjb21tZW50CiAgICAgICAgW0tKVl0KCiAgICAgICAgRGVzY3JpcHRpb249S2luZyBKYW1lcyBWZXJzaW9uCiAgICAgICAgRGF0YVBhdGg9Li9tb2R1bGVzL3RleHRzL3p0ZXh0L2tqdi8KICAgICAgICBNb2REcnY9elRleHQKICAgICAgICBCbG9ja1R5cGU9Qk9PSwogICAgICAgIFZlcnNpZmljYXRpb249S0pWCiAgICAgICAgTGFuZz1lbgogICAgICAgIEVtcHR5PQogICAgICAgICIiIgoKICAgIGZ1bmMgdGVzdFBhcnNlKCkgewogICAgICAgIGxldCBjb25mID0gU3dvcmRDb25mKHRleHQ6IHNhbXBsZSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbChjb25mLm1vZHVsZUlELCAiS0pWIikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChjb25mLmRpc3BsYXlOYW1lLCAiS2luZyBKYW1lcyBWZXJzaW9uIikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChjb25mLmRhdGFQYXRoLCAiLi9tb2R1bGVzL3RleHRzL3p0ZXh0L2tqdi8iKQogICAgICAgIFhDVEFzc2VydEVxdWFsKGNvbmYuZHJpdmVyLCAielRleHQiKQogICAgICAgIFhDVEFzc2VydEVxdWFsKGNvbmYuYmxvY2tUeXBlLCAiQk9PSyIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoY29uZi52ZXJzaWZpY2F0aW9uLCAiS0pWIikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChjb25mLmxhbmd1YWdlLCAiZW4iKQogICAgICAgIFhDVEFzc2VydEVxdWFsKGNvbmZbIkVtcHR5Il0sICIiKQogICAgICAgIFhDVEFzc2VydE5pbChjb25mWyJNaXNzaW5nIl0pCiAgICB9CgogICAgZnVuYyB0ZXN0Qk9NQW5kQ1JMRigpIHsKICAgICAgICBsZXQgY29uZiA9IFN3b3JkQ29uZih0ZXh0OiAiXHV7RkVGRn1bQ2hpVW5zXVxyXG5EZXNjcmlwdGlvbj3lkozlkIjmnKxcclxuTGFuZz16aC1IYW5zXHJcbiIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoY29uZi5tb2R1bGVJRCwgIkNoaVVucyIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoY29uZi5kaXNwbGF5TmFtZSwgIuWSjOWQiOacrCIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoY29uZi5sYW5ndWFnZSwgInpoLUhhbnMiKQogICAgfQp9CgpmaW5hbCBjbGFzcyBWZXJzaWZpY2F0aW9uVGVzdHM6IFhDVGVzdENhc2UgewogICAgZnVuYyB0ZXN0S0pWQmFzaWNzKCkgewogICAgICAgIGxldCB2ID0gVmVyc2lmaWNhdGlvbi5ranYKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh2LmJvb2tzLmNvdW50LCA2NikKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh2LnZlcnNlQ291bnQodGVzdGFtZW50OiAxLCBib29rOiAxLCBjaGFwdGVyOiAxKSwgMzEpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodi52ZXJzZUNvdW50KHRlc3RhbWVudDogMSwgYm9vazogMTksIGNoYXB0ZXI6IDExOSksIDE3NikKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh2LnZlcnNlQ291bnQodGVzdGFtZW50OiAyLCBib29rOiAyNywgY2hhcHRlcjogMjIpLCAyMSkKICAgICAgICAvLyBNaXJyb3JzIFNXT1JEOiBtb2R1bGUgaGVhZGluZz0wLCBPVCBoZWFkaW5nPTEsIEdlbiBoZWFkaW5nPTIsIEdlbiAxIGhlYWRpbmc9My4KICAgICAgICBYQ1RBc3NlcnRFcXVhbCh2LnRlc3RhbWVudEluZGV4KHRlc3RhbWVudDogMSwgYm9vazogMSwgY2hhcHRlcjogMSwgdmVyc2U6IDEpLCA0KQogICAgICAgIFhDVEFzc2VydEVxdWFsKHYudGVzdGFtZW50SW5kZXgodGVzdGFtZW50OiAyLCBib29rOiAxLCBjaGFwdGVyOiAxLCB2ZXJzZTogMSksIDQpCiAgICAgICAgWENUQXNzZXJ0TmlsKHYudGVzdGFtZW50SW5kZXgodGVzdGFtZW50OiAxLCBib29rOiAxLCBjaGFwdGVyOiAxLCB2ZXJzZTogMzIpKQogICAgICAgIFhDVEFzc2VydE5pbCh2LnRlc3RhbWVudEluZGV4KHRlc3RhbWVudDogMywgYm9vazogMSwgY2hhcHRlcjogMSwgdmVyc2U6IDEpKQogICAgfQoKICAgIGZ1bmMgdGVzdE5SU1ZFeGlzdHMoKSB7CiAgICAgICAgWENUQXNzZXJ0RXF1YWwoVmVyc2lmaWNhdGlvbi5ucnN2LmJvb2tzLmNvdW50LCA2NikKICAgICAgICBYQ1RBc3NlcnROb3ROaWwoVmVyc2lmaWNhdGlvbi5uYW1lZCgibnJzdiIpKQogICAgICAgIFhDVEFzc2VydE5pbChWZXJzaWZpY2F0aW9uLm5hbWVkKCJ2dWxnIikpCiAgICB9CgogICAgZnVuYyB0ZXN0Q2hpbmVzZUJvb2tOYW1lcygpIHsKICAgICAgICBYQ1RBc3NlcnRFcXVhbChCaWJsZUJvb2tOYW1lc1poSGFucy5jb3VudCwgNjYpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoQmlibGVCb29rTmFtZXNaaEhhbnNbMF0sICLliJvkuJbnuqoiKQogICAgICAgIFhDVEFzc2VydEVxdWFsKEJpYmxlQm9va05hbWVzWmhIYW5zWzY1XSwgIuWQr+ekuuW9lSIpCiAgICB9Cn0KCmZpbmFsIGNsYXNzIFRhclJlYWRlclRlc3RzOiBYQ1Rlc3RDYXNlIHsKICAgIC8vLyBCdWlsZHMgYSBtaW5pbWFsIHRhciBpbi1tZW1vcnk6IG9uZSBmaWxlICJtb2RzLmQva2p2LmNvbmYiIHdpdGggMTIgYnl0ZXMuCiAgICBmdW5jIHRlc3RSZWFkVGFyKCkgdGhyb3dzIHsKICAgICAgICB2YXIgdGFyID0gW1VJbnQ4XSgpCiAgICAgICAgdmFyIGhlYWRlciA9IFtVSW50OF0ocmVwZWF0aW5nOiAwLCBjb3VudDogNTEyKQogICAgICAgIGxldCBuYW1lID0gQXJyYXkoIm1vZHMuZC9ranYuY29uZiIudXRmOCkKICAgICAgICBoZWFkZXIucmVwbGFjZVN1YnJhbmdlKDAgLi48IG5hbWUuY291bnQsIHdpdGg6IG5hbWUpCiAgICAgICAgbGV0IHNpemVTdHIgPSBBcnJheSgiMDAwMDAwMDAwMTQiLnV0ZjgpIC8vIDEyIGluIG9jdGFsCiAgICAgICAgaGVhZGVyLnJlcGxhY2VTdWJyYW5nZSgxMjQgLi48IDEyNCArIHNpemVTdHIuY291bnQsIHdpdGg6IHNpemVTdHIpCiAgICAgICAgaGVhZGVyWzE1Nl0gPSA0OCAvLyAnMCcKICAgICAgICAvLyBjaGVja3N1bSAobm90IHZhbGlkYXRlZCBieSByZWFkZXIsIGJ1dCBmaWxsIGZvciByZWFsaXNtKQogICAgICAgIHZhciBjc3VtID0gMjU2CiAgICAgICAgZm9yIGIgaW4gaGVhZGVyIHsgY3N1bSArPSBJbnQoYikgfQogICAgICAgIGxldCBjc3VtU3RyID0gQXJyYXkoU3RyaW5nKGZvcm1hdDogIiUwNm8iLCBjc3VtKS51dGY4KQogICAgICAgIGhlYWRlci5yZXBsYWNlU3VicmFuZ2UoMTQ4IC4uPCAxNDggKyBjc3VtU3RyLmNvdW50LCB3aXRoOiBjc3VtU3RyKQogICAgICAgIHRhci5hcHBlbmQoY29udGVudHNPZjogaGVhZGVyKQogICAgICAgIHRhci5hcHBlbmQoY29udGVudHNPZjogQXJyYXkoImhlbGxvIHdvcmxkISIudXRmOCkpCiAgICAgICAgdGFyLmFwcGVuZChjb250ZW50c09mOiBbVUludDhdKHJlcGVhdGluZzogMCwgY291bnQ6IDUxMiAtIDEyKSkKICAgICAgICB0YXIuYXBwZW5kKGNvbnRlbnRzT2Y6IFtVSW50OF0ocmVwZWF0aW5nOiAwLCBjb3VudDogMTAyNCkpCiAgICAgICAgbGV0IGVudHJpZXMgPSB0cnkgVGFyUmVhZGVyLnJlYWQodGFyKQogICAgICAgIFhDVEFzc2VydEVxdWFsKGVudHJpZXMuY291bnQsIDEpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoZW50cmllc1swXS5uYW1lLCAibW9kcy5kL2tqdi5jb25mIikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChlbnRyaWVzWzBdLmJ5dGVzLCBBcnJheSgiaGVsbG8gd29ybGQhIi51dGY4KSkKICAgIH0KfQoKZmluYWwgY2xhc3MgWmlwUmVhZGVyVGVzdHM6IFhDVGVzdENhc2UgewogICAgLy8vIE1pbmltYWwgc3RvcmVkLWVudHJ5IHppcCBidWlsdCBpbi1tZW1vcnk6IG9uZSBmaWxlICJhLnR4dCIgPSAiaGkiLgogICAgZnVuYyB0ZXN0U3RvcmVkWmlwKCkgdGhyb3dzIHsKICAgICAgICB2YXIgemlwID0gW1VJbnQ4XSgpCiAgICAgICAgZnVuYyB1MTYoXyB2OiBJbnQpIHsgemlwLmFwcGVuZChVSW50OCh2ICYgMHhGRikpOyB6aXAuYXBwZW5kKFVJbnQ4KCh2ID4+IDgpICYgMHhGRikpIH0KICAgICAgICBmdW5jIHUzMihfIHY6IEludCkgeyBmb3IgcyBpbiBbMCwgOCwgMTYsIDI0XSB7IHppcC5hcHBlbmQoVUludDgoKHYgPj4gcykgJiAweEZGKSkgfSB9CiAgICAgICAgZnVuYyBzdHIoXyBzOiBTdHJpbmcpIHsgemlwLmFwcGVuZChjb250ZW50c09mOiBzLnV0ZjgpIH0KICAgICAgICBsZXQgbmFtZSA9ICJhLnR4dCIKICAgICAgICBsZXQgY29udGVudDogW1VJbnQ4XSA9IFsweDY4LCAweDY5XQogICAgICAgIGxldCBsb2NhbE9mZiA9IDAKICAgICAgICB1MzIoMHgwNDAzNEI1MCk7IHUxNigyMCk7IHUxNigweDA4MDApOyB1MTYoMCk7IHUxNigwKTsgdTE2KDApOyB1MzIoMCkKICAgICAgICB1MzIoY29udGVudC5jb3VudCk7IHUzMihjb250ZW50LmNvdW50KTsgdTE2KG5hbWUuY291bnQpOyB1MTYoMCk7IHN0cihuYW1lKQogICAgICAgIHppcC5hcHBlbmQoY29udGVudHNPZjogY29udGVudCkKICAgICAgICBsZXQgY2RPZmYgPSB6aXAuY291bnQKICAgICAgICB1MzIoMHgwMjAxNEI1MCk7IHUxNigyMCk7IHUxNigyMCk7IHUxNigweDA4MDApOyB1MTYoMCk7IHUxNigwKTsgdTE2KDApOyB1MzIoMCkKICAgICAgICB1MzIoY29udGVudC5jb3VudCk7IHUzMihjb250ZW50LmNvdW50KTsgdTE2KG5hbWUuY291bnQpCiAgICAgICAgdTE2KDApOyB1MTYoMCk7IHUxNigwKTsgdTE2KDApOyB1MzIoMCk7IHUzMihsb2NhbE9mZik7IHN0cihuYW1lKQogICAgICAgIGxldCBjZFNpemUgPSB6aXAuY291bnQgLSBjZE9mZgogICAgICAgIGxldCBjZENvdW50ID0gMQogICAgICAgIHUzMigweDA2MDU0QjUwKTsgdTE2KDApOyB1MTYoMCk7IHUxNihjZENvdW50KTsgdTE2KGNkQ291bnQpCiAgICAgICAgdTMyKGNkU2l6ZSk7IHUzMihjZE9mZik7IHUxNigwKQogICAgICAgIGxldCByZWFkZXIgPSB0cnkgWmlwUmVhZGVyKGRhdGE6IHppcCkKICAgICAgICBYQ1RBc3NlcnRFcXVhbChyZWFkZXIuZW50cmllcy5jb3VudCwgMSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbChyZWFkZXIuZW50cmllc1swXS5uYW1lLCAiYS50eHQiKQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRyeSByZWFkZXIuZGF0YShmb3I6IHJlYWRlci5lbnRyaWVzWzBdKSwgY29udGVudCkKICAgIH0KfQoKZmluYWwgY2xhc3MgU3Ryb25nc1Rlc3RzOiBYQ1Rlc3RDYXNlIHsKICAgIGZ1bmMgdGVzdENvbmZDb2xsZWN0c1JlcGVhdGVkS2V5cygpIHsKICAgICAgICBsZXQgY29uZiA9IFN3b3JkQ29uZih0ZXh0OiAiW0tKVl1cbkdsb2JhbE9wdGlvbkZpbHRlcj1PU0lTRm9vdG5vdGVzXG5HbG9iYWxPcHRpb25GaWx0ZXI9T1NJU1N0cm9uZ3NcbiIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoY29uZlsiR2xvYmFsT3B0aW9uRmlsdGVyIl0sICJPU0lTRm9vdG5vdGVzIikgLy8gZmlyc3Qgd2lucywgdW5jaGFuZ2VkCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoY29uZi5hbGxWYWx1ZXNbIkdsb2JhbE9wdGlvbkZpbHRlciJdLCBbIk9TSVNGb290bm90ZXMiLCAiT1NJU1N0cm9uZ3MiXSkKICAgIH0KCiAgICBmdW5jIHRlc3RTdXBwb3J0c1N0cm9uZ3MoKSB7CiAgICAgICAgbGV0IHdpdGhTdHJvbmdzID0gTW9kdWxlSW5mbyhjb25mOiBTd29yZENvbmYodGV4dDogIltLSlZdXG5HbG9iYWxPcHRpb25GaWx0ZXI9T1NJU1N0cm9uZ3NcbiIpKQogICAgICAgIFhDVEFzc2VydFRydWUod2l0aFN0cm9uZ3Muc3VwcG9ydHNTdHJvbmdzKQogICAgICAgIGxldCB3aXRob3V0ID0gTW9kdWxlSW5mbyhjb25mOiBTd29yZENvbmYodGV4dDogIltBQkNdXG5HbG9iYWxPcHRpb25GaWx0ZXI9T1NJU0Zvb3Rub3Rlc1xuIikpCiAgICAgICAgWENUQXNzZXJ0RmFsc2Uod2l0aG91dC5zdXBwb3J0c1N0cm9uZ3MpCiAgICB9CgogICAgZnVuYyB0ZXN0Tm9ybWFsaXplU3Ryb25ncygpIHsKICAgICAgICBYQ1RBc3NlcnRFcXVhbChPc2lzVG9rZW5zLm5vcm1hbGl6ZVN0cm9uZ3MoInN0cm9uZzpIMDcyMjUiKSwgIkg3MjI1IikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChPc2lzVG9rZW5zLm5vcm1hbGl6ZVN0cm9uZ3MoInN0cm9uZzpHMjYiKSwgIkcyNiIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoT3Npc1Rva2Vucy5ub3JtYWxpemVTdHJvbmdzKCJzdHJvbmc6SDAwMDAxIiksICJIMSIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoT3Npc1Rva2Vucy5ub3JtYWxpemVTdHJvbmdzKCJzdHJvbmc6SDA5MDAxIiksICJIOTAwMSIpCiAgICAgICAgWENUQXNzZXJ0TmlsKE9zaXNUb2tlbnMubm9ybWFsaXplU3Ryb25ncygieC1sZW1tYTpIMSIpKQogICAgICAgIFhDVEFzc2VydE5pbChPc2lzVG9rZW5zLm5vcm1hbGl6ZVN0cm9uZ3MoInN0cm9uZzpIMCIpKQogICAgICAgIC8vIE1vcnBob2xvZ3kgY29kZXMgaW4gQ2hpVW5zIGxlbW1hcyBhcmUgbm90IFN0cm9uZydzIG51bWJlcnMuCiAgICAgICAgWENUQXNzZXJ0TmlsKE9zaXNUb2tlbnMubm9ybWFsaXplU3Ryb25ncygic3Ryb25nOkg4ODA0IikpCiAgICAgICAgWENUQXNzZXJ0TmlsKE9zaXNUb2tlbnMubm9ybWFsaXplU3Ryb25ncygic3Ryb25nOkg4Njc1IikpCiAgICAgICAgWENUQXNzZXJ0TmlsKE9zaXNUb2tlbnMubm9ybWFsaXplU3Ryb25ncygic3Ryb25nOkc1NjU2IikpCiAgICAgICAgWENUQXNzZXJ0TmlsKE9zaXNUb2tlbnMubm9ybWFsaXplU3Ryb25ncygic3Ryb25nOkc1NzczIikpCiAgICAgICAgLy8gQm91bmRhcnk6IHJlYWwgbWF4aW1hIHBhc3MuCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoT3Npc1Rva2Vucy5ub3JtYWxpemVTdHJvbmdzKCJzdHJvbmc6SDg2NzQiKSwgIkg4Njc0IikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChPc2lzVG9rZW5zLm5vcm1hbGl6ZVN0cm9uZ3MoInN0cm9uZzpHNTYyNCIpLCAiRzU2MjQiKQogICAgfQoKICAgIGZ1bmMgdGVzdFRva2Vuc0Zyb21LSlZHZW4xdjEoKSB7CiAgICAgICAgLy8gUmVhbCBLSlYgR2VuZXNpcyAxOjEgcmF3IG1hcmt1cCAodmVyaWZpZWQgYWdhaW5zdCBDcm9zc1dpcmUpLgogICAgICAgIC8vIFNlZ21lbnRzIHNwbGl0IGF0IDx3PiBib3VuZGFyaWVzOyBjb25jYXRlbmF0aW5nIHJlcHJvZHVjZXMgcGxhaW4uCiAgICAgICAgbGV0IHJhdyA9ICMiPHcgbGVtbWE9InN0cm9uZzpIMDcyMjUiPkluIHRoZSBiZWdpbm5pbmc8L3c+IDx3IGxlbW1hPSJzdHJvbmc6SDA0MzAiPkdvZDwvdz4gPHcgbGVtbWE9InN0cm9uZzpIMDg1MyBzdHJvbmc6SDAxMjU0IiBtb3JwaD0ic3Ryb25nTW9ycGg6VEg4ODA0Ij5jcmVhdGVkPC93PiA8dyBsZW1tYT0ic3Ryb25nOkgwODA2NCI+dGhlIGhlYXZlbjwvdz4gPHcgbGVtbWE9InN0cm9uZzpIMDg1MyI+YW5kPC93PiA8dyBsZW1tYT0ic3Ryb25nOkgwNzc2Ij50aGUgZWFydGg8L3c+LiIjCiAgICAgICAgbGV0IHRva2VucyA9IE9zaXNUb2tlbnMudG9rZW5zV2l0aFN0cm9uZ3MoZnJvbTogcmF3KQogICAgICAgIGxldCB0ZXh0cyA9IHRva2Vucy5tYXAgeyAkMC50ZXh0IH0KICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0ZXh0cywgWyJJbiB0aGUgYmVnaW5uaW5nIiwgIiAiLCAiR29kIiwgIiAiLCAiY3JlYXRlZCIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAiICIsICJ0aGUgaGVhdmVuIiwgIiAiLCAiYW5kIiwgIiAiLCAidGhlIGVhcnRoIiwgIi4iXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0b2tlbnNbMF0uc3Ryb25ncywgWyJINzIyNSJdKQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRva2Vuc1syXS5zdHJvbmdzLCBbIkg0MzAiXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0b2tlbnNbNF0uc3Ryb25ncywgWyJIODUzIiwgIkgxMjU0Il0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzEwXS5zdHJvbmdzLCBbIkg3NzYiXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0ZXh0cy5qb2luZWQoKSwgT3Npc1BsYWluLnBsYWluVGV4dChmcm9tOiByYXcpKQogICAgfQoKICAgIGZ1bmMgdGVzdFN0cm9uZ3NOdW1iZXJQYXJzaW5nKCkgewogICAgICAgIFhDVEFzc2VydEVxdWFsKFN0cm9uZ3NMZXhpY29uLnN0cm9uZ3NOdW1iZXIoZnJvbTogIkgwNzIyNSIpLCA3MjI1KQogICAgICAgIFhDVEFzc2VydEVxdWFsKFN0cm9uZ3NMZXhpY29uLnN0cm9uZ3NOdW1iZXIoZnJvbTogIkcyNiIpLCAyNikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChTdHJvbmdzTGV4aWNvbi5zdHJvbmdzTnVtYmVyKGZyb206ICJoMSIpLCAxKQogICAgICAgIFhDVEFzc2VydE5pbChTdHJvbmdzTGV4aWNvbi5zdHJvbmdzTnVtYmVyKGZyb206ICI3MjI1IikpCiAgICAgICAgWENUQXNzZXJ0TmlsKFN0cm9uZ3NMZXhpY29uLnN0cm9uZ3NOdW1iZXIoZnJvbTogIlgxMiIpKQogICAgfQoKICAgIGZ1bmMgdGVzdENsZWFuRGVmaW5pdGlvbigpIHsKICAgICAgICBsZXQgcmF3ID0gIjAwMDAxXFxcbiAxICAnYWIgIGF3YlxyXG5cclxuIGEgcHJpbWl0aXZlIHdvcmQ7IGZhdGhlci4iCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoU3Ryb25nc0xleGljb24uY2xlYW5EZWZpbml0aW9uKHJhdyksICIxICdhYiBhd2IgYSBwcmltaXRpdmUgd29yZDsgZmF0aGVyLiIpCiAgICAgICAgbGV0IHhtbCA9ICI8ZW50cnlGcmVlPjxvcnRoPng8L29ydGg+IDxkZWY+aGVsbG8gPGI+d29ybGQ8L2I+PC9kZWY+IgogICAgICAgIFhDVEFzc2VydEVxdWFsKFN0cm9uZ3NMZXhpY29uLmNsZWFuRGVmaW5pdGlvbih4bWwpLCAieCBoZWxsbyB3b3JsZCIpCiAgICB9CgogICAgLy8gTUFSSzogLSBMZXhpY29uIGZpeHR1cmVzCgogICAgcHJpdmF0ZSBmdW5jIHRlbXBEaXIoKSB0aHJvd3MgLT4gVVJMIHsKICAgICAgICBsZXQgZGlyID0gRmlsZU1hbmFnZXIuZGVmYXVsdC50ZW1wb3JhcnlEaXJlY3RvcnkKICAgICAgICAgICAgLmFwcGVuZGluZ1BhdGhDb21wb25lbnQoVVVJRCgpLnV1aWRTdHJpbmcsIGlzRGlyZWN0b3J5OiB0cnVlKQogICAgICAgIHRyeSBGaWxlTWFuYWdlci5kZWZhdWx0LmNyZWF0ZURpcmVjdG9yeShhdDogZGlyLCB3aXRoSW50ZXJtZWRpYXRlRGlyZWN0b3JpZXM6IHRydWUpCiAgICAgICAgcmV0dXJuIGRpcgogICAgfQoKICAgIC8vLyBUaW55IFJhd0xEIGxleGljb246IHJlY29yZHMgMC4uMiAtPiBwcmVhbWJsZSwgSDEsIEgyLgogICAgZnVuYyB0ZXN0UmF3TERMb29rdXAoKSB0aHJvd3MgewogICAgICAgIGxldCBkaXIgPSB0cnkgdGVtcERpcigpCiAgICAgICAgbGV0IHBhcnRzID0gWyJwcmVhbWJsZSIsICIwMDAwMVxcXG4gMSAnYWIgLS0gZmF0aGVyLiIsICIwMDAwMlxcXG4gMiAnYWIgLS0gYXJhbWFpYyBmYXRoZXIuIl0KICAgICAgICB2YXIgZGF0ID0gRGF0YSgpCiAgICAgICAgdmFyIGlkeCA9IERhdGEoKQogICAgICAgIGZvciBwIGluIHBhcnRzIHsKICAgICAgICAgICAgbGV0IGJ5dGVzID0gW1VJbnQ4XShwLnV0ZjgpCiAgICAgICAgICAgIHZhciBvZmYgPSBVSW50MzIoZGF0LmNvdW50KS5saXR0bGVFbmRpYW4KICAgICAgICAgICAgdmFyIHNpemUgPSBVSW50MTYoYnl0ZXMuY291bnQpLmxpdHRsZUVuZGlhbgogICAgICAgICAgICBpZHguYXBwZW5kKERhdGEoYnl0ZXM6ICZvZmYsIGNvdW50OiA0KSkKICAgICAgICAgICAgaWR4LmFwcGVuZChEYXRhKGJ5dGVzOiAmc2l6ZSwgY291bnQ6IDIpKQogICAgICAgICAgICBkYXQuYXBwZW5kKGNvbnRlbnRzT2Y6IGJ5dGVzKQogICAgICAgIH0KICAgICAgICB0cnkgaWR4LndyaXRlKHRvOiBkaXIuYXBwZW5kaW5nUGF0aENvbXBvbmVudCgidGVzdC5pZHgiKSkKICAgICAgICB0cnkgZGF0LndyaXRlKHRvOiBkaXIuYXBwZW5kaW5nUGF0aENvbXBvbmVudCgidGVzdC5kYXQiKSkKICAgICAgICBsZXQgbGV4ID0gdHJ5IFN0cm9uZ3NMZXhpY29uLmxvYWQobW9kdWxlRGlyOiBkaXIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwobGV4LmRlZmluaXRpb24oZm9yOiAiSDEiKSwgIjEgJ2FiIC0tIGZhdGhlci4iKQogICAgICAgIFhDVEFzc2VydEVxdWFsKGxleC5kZWZpbml0aW9uKGZvcjogIkgwMDAwMiIpLCAiMiAnYWIgLS0gYXJhbWFpYyBmYXRoZXIuIikKICAgICAgICBYQ1RBc3NlcnROaWwobGV4LmRlZmluaXRpb24oZm9yOiAiSDMiKSkKICAgICAgICAvLyBIL0cgcm91dGluZyBoYXBwZW5zIGluIFN0cm9uZ3NTZXJ2aWNlOiBhIGxleGljb24gb25seSBrbm93cyBpdHMgb3duIG51bWJlcnMuCiAgICB9CgogICAgLy8vIFRpbnkgekxEIGxleGljb24gKGJhc2U2NCBmaXh0dXJlKTogcmVjb3JkcyAwLi4yIC0+IHByZWFtYmxlLCBHMSwgRzIuCiAgICBmdW5jIHRlc3RaTERMb29rdXAoKSB0aHJvd3MgewogICAgICAgIGxldCBkaXIgPSB0cnkgdGVtcERpcigpCiAgICAgICAgbGV0IGZpbGVzID0gWwogICAgICAgICAgICAoImcuaWR4IiwgIkFBQUFBQThBQUFBUEFBQUFEd0FBQUI0QUFBQVBBQUFBIiksCiAgICAgICAgICAgICgiZy5kYXQiLCAiTURBd01EQU5DZ0FBQUFBQUFBQUFNREF3TURFTkNnQUFBQUFCQUFBQU1EQXdNRElOQ2dBQUFBQUNBQUFBIiksCiAgICAgICAgICAgICgiZy56ZHgiLCAiQUFBQUFHZ0FBQUE9IiksCiAgICAgICAgICAgICgiZy56ZHQiLCAiZUp4alptQmdrQUZpRGlCV0FXSnJJSTZIMGdWRnFZbTVTVG1wTnFsNUpVV1Zia1dwcVFwNXRrcUdTblkyK1VVbEdYYUpPUVVaaVRiNllMYUNUVXBxbWwxYVpsRnhpVUpPYWtsSmFwR05Qa2dFVmFzUlRHdFNhZ21xenVMVTVQeThGQlN0QUt1aExXZz0iKSwKICAgICAgICBdCiAgICAgICAgZm9yIChuYW1lLCBiNjQpIGluIGZpbGVzIHsKICAgICAgICAgICAgdHJ5IERhdGEoYmFzZTY0RW5jb2RlZDogYjY0KSEud3JpdGUodG86IGRpci5hcHBlbmRpbmdQYXRoQ29tcG9uZW50KG5hbWUpKQogICAgICAgIH0KICAgICAgICBsZXQgbGV4ID0gdHJ5IFN0cm9uZ3NMZXhpY29uLmxvYWQobW9kdWxlRGlyOiBkaXIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwobGV4LmRlZmluaXRpb24oZm9yOiAiRzEiKSwgImFscGhhIGZpcnN0IGxldHRlciIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwobGV4LmRlZmluaXRpb24oZm9yOiAiRzIiKSwgImJldGEgc2Vjb25kIGxldHRlciIpCiAgICAgICAgWENUQXNzZXJ0TmlsKGxleC5kZWZpbml0aW9uKGZvcjogIkczIikpCiAgICAgICAgLy8gSC9HIHJvdXRpbmcgaGFwcGVucyBpbiBTdHJvbmdzU2VydmljZTogYSBsZXhpY29uIG9ubHkga25vd3MgaXRzIG93biBudW1iZXJzLgogICAgfQoKICAgIGZ1bmMgdGVzdExleGljb25NaXNzaW5nSWR4KCkgdGhyb3dzIHsKICAgICAgICBsZXQgZGlyID0gdHJ5IHRlbXBEaXIoKQogICAgICAgIFhDVEFzc2VydFRocm93c0Vycm9yKHRyeSBTdHJvbmdzTGV4aWNvbi5sb2FkKG1vZHVsZURpcjogZGlyKSkKICAgIH0KCiAgICAvLyBNQVJLOiAtIENyYXNoIHJlZ3Jlc3Npb25zIChPY3QgMTksIDIwMjYpCgogICAgLy8vIHBsYWluVGV4dCBtdXN0IHN1cnZpdmUgZW1wdHkgLyB3aGl0ZXNwYWNlLW9ubHkgaW5wdXQgaW5zdGVhZCBvZgogICAgLy8vIGZhdGFsLWVycm9yaW5nIGluIHJlbW92ZUxhc3QoKS4gVHJpZ2dlcmVkIGJ5IHRoZSB0b2tlbml6ZXIncwogICAgLy8vIGZsdXNoVGV4dFJ1biBvbiB2ZXJzZXMgc3RhcnRpbmcgd2l0aCA8dz4uCiAgICBmdW5jIHRlc3RQbGFpblRleHRFbXB0eUFuZEJsYW5rKCkgewogICAgICAgIFhDVEFzc2VydEVxdWFsKE9zaXNQbGFpbi5wbGFpblRleHQoZnJvbTogIiIpLCAiIikKICAgICAgICBYQ1RBc3NlcnRFcXVhbChPc2lzUGxhaW4ucGxhaW5UZXh0KGZyb206ICIgICAiKSwgIiIpCiAgICAgICAgWENUQXNzZXJ0RXF1YWwoT3Npc1BsYWluLnBsYWluVGV4dChmcm9tOiAiICBhICAiKSwgImEiKQogICAgICAgIFhDVEFzc2VydEVxdWFsKE9zaXNQbGFpbi5wbGFpblRleHQoZnJvbTogIjx3Png8L3c+IiksICJ4IikKICAgIH0KCiAgICAvLy8gVmVyc2Ugc3RhcnRpbmcgd2l0aCBhIDx3PiB0YWc6IG5vIGxlYWRpbmcgc2VnbWVudC4KICAgIGZ1bmMgdGVzdFRva2Vuc1ZlcnNlU3RhcnRpbmdXaXRoVygpIHsKICAgICAgICBsZXQgdG9rZW5zID0gT3Npc1Rva2Vucy50b2tlbnNXaXRoU3Ryb25ncygKICAgICAgICAgICAgZnJvbTogIjx3IGxlbW1hPVwic3Ryb25nOkgwNzIyNVwiPkluPC93PiA8dyBsZW1tYT1cInN0cm9uZzpIMDQzMFwiPkdvZDwvdz4iKQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRva2Vucy5tYXAoXC50ZXh0KSwgWyJJbiIsICIgIiwgIkdvZCJdKQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRva2Vuc1swXS5zdHJvbmdzLCBbIkg3MjI1Il0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzJdLnN0cm9uZ3MsIFsiSDQzMCJdKQogICAgfQoKICAgIC8vLyBMZWFkaW5nIHdoaXRlc3BhY2UgYW5kIGVtcHR5IDx3Pjwvdz4gcGFpcnMgbXVzdCBub3QgY3Jhc2ggZWl0aGVyLgogICAgZnVuYyB0ZXN0VG9rZW5zQmxhbmtSdW5zKCkgewogICAgICAgIGxldCB0b2tlbnMgPSBPc2lzVG9rZW5zLnRva2Vuc1dpdGhTdHJvbmdzKAogICAgICAgICAgICBmcm9tOiAiIDx3IGxlbW1hPVwic3Ryb25nOkgwNzIyNVwiPjwvdz48dyBsZW1tYT1cInN0cm9uZzpIMDQzMFwiPkdvZDwvdz4iKQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRva2Vucy5tYXAoXC50ZXh0KSwgWyJHb2QiXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0b2tlbnNbMF0uc3Ryb25ncywgWyJINDMwIl0pCiAgICB9CgogICAgLy8vIFNlbGYtY2xvc2luZyA8dy8+IGNhcnJpZXMgbm8gd29yZDogc2tpcHBlZCwgYW5kIG11c3Qgbm90IHN3YWxsb3cKICAgIC8vLyB0aGUgZm9sbG93aW5nIDx3Pi4uLjwvdz4gaW50byBpdHMgKGVtcHR5KSByYW5nZS4KICAgIGZ1bmMgdGVzdFRva2Vuc1NlbGZDbG9zaW5nVygpIHsKICAgICAgICBsZXQgcmF3ID0gIyI8dyBsZW1tYT0ic3Ryb25nOkczNTg4IiBzcmM9IjE4Ii8+PHcgbGVtbWE9InN0cm9uZzpHMTE2MSI+ZGU8L3c+IDx3IGxlbW1hPSJzdHJvbmc6RzI0MjQiPkplc3VzPC93PiIjCiAgICAgICAgbGV0IHRva2VucyA9IE9zaXNUb2tlbnMudG9rZW5zV2l0aFN0cm9uZ3MoZnJvbTogcmF3KQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRva2Vucy5tYXAoXC50ZXh0KSwgWyJkZSIsICIgIiwgIkplc3VzIl0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzBdLnN0cm9uZ3MsIFsiRzExNjEiXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0b2tlbnNbMl0uc3Ryb25ncywgWyJHMjQyNCJdKQogICAgfQoKICAgIC8vLyBQdW5jdHVhdGlvbiBnbHVlZCB0byB3b3JkcyBpbiB0aGUgcGxhaW4gdGV4dCBzdGF5cyBnbHVlZCwgd2l0aCB0aGUKICAgIC8vLyBudW1iZXIgc3RheWluZyBvbiB0aGUgd29yZCBpdCBiZWxvbmdzIHRvLgogICAgZnVuYyB0ZXN0VG9rZW5zUHVuY3R1YXRpb25HbHVlKCkgewogICAgICAgIGxldCByYXcgPSAjIjx3IGxlbW1hPSJzdHJvbmc6SDA2NjI1Ij5BbmQgUGF0aHJ1c2ltPC93PiwgKDx3IGxlbW1hPSJzdHJvbmc6SDAzNjk1Ij5hbmQgQ2FzbHVoaW08L3c+KSIjCiAgICAgICAgbGV0IHRva2VucyA9IE9zaXNUb2tlbnMudG9rZW5zV2l0aFN0cm9uZ3MoZnJvbTogcmF3KQogICAgICAgIGxldCB0ZXh0cyA9IHRva2Vucy5tYXAgeyAkMC50ZXh0IH0KICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0ZXh0cywgWyJBbmQgUGF0aHJ1c2ltIiwgIiwgKCIsICJhbmQgQ2FzbHVoaW0iLCAiKSJdKQogICAgICAgIFhDVEFzc2VydEVxdWFsKHRva2Vuc1swXS5zdHJvbmdzLCBbIkg2NjI1Il0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzJdLnN0cm9uZ3MsIFsiSDM2OTUiXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0ZXh0cy5qb2luZWQoKSwgT3Npc1BsYWluLnBsYWluVGV4dChmcm9tOiByYXcpKQogICAgfQoKICAgIC8vLyBDaGluZXNlIChubyBzcGFjZXMpOiBudW1iZXJzIGRpc3RyaWJ1dGUgdG8gZWFjaCA8dz4gd29yZCBpbnN0ZWFkIG9mCiAgICAvLy8gcGlsaW5nIG9udG8gb25lIHNwYWNlLXNlcGFyYXRlZCAid29yZCIuIFJlYWwgQ2hpVW5zIEdlbiAxOjEgbWFya3VwLgogICAgZnVuYyB0ZXN0VG9rZW5zQ2hpbmVzZURpc3RyaWJ1dGVzKCkgewogICAgICAgIGxldCByYXcgPSAjIjx3IGxlbW1hPSJzdHJvbmc6SDA5MDAyIHN0cm9uZzpIMDcyMjUiPui1t+WInTwvdz7vvIzjgIA8dyBsZW1tYT0ic3Ryb25nOkgwNDMwIj7npZ48L3c+PHcgbGVtbWE9InN0cm9uZzpIMDEyNTQgc3Ryb25nOkg4ODA0IHN0cm9uZzpIMDg1MyI+5Yib6YCgPC93Pjx3IGxlbW1hPSJzdHJvbmc6SDA4MDY0IHN0cm9uZzpIMDg1MyI+5aSpPC93Pjx3IGxlbW1hPSJzdHJvbmc6SDA3NzYiPuWcsDwvdz7jgIIiIwogICAgICAgIGxldCB0b2tlbnMgPSBPc2lzVG9rZW5zLnRva2Vuc1dpdGhTdHJvbmdzKGZyb206IHJhdykKICAgICAgICBsZXQgdGV4dHMgPSB0b2tlbnMubWFwIHsgJDAudGV4dCB9CiAgICAgICAgWENUQXNzZXJ0RXF1YWwodGV4dHMuam9pbmVkKCksIE9zaXNQbGFpbi5wbGFpblRleHQoZnJvbTogcmF3KSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0ZXh0cywgWyLotbfliJ0iLCAi77yMICIsICLnpZ4iLCAi5Yib6YCgIiwgIuWkqSIsICLlnLAiLCAi44CCIl0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzBdLnN0cm9uZ3MsIFsiSDkwMDIiLCAiSDcyMjUiXSkKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0b2tlbnNbMl0uc3Ryb25ncywgWyJINDMwIl0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzNdLnN0cm9uZ3MsIFsiSDEyNTQiLCAiSDg1MyJdKSAgLy8gSDg4MDQgaXMgbW9ycGhvbG9neTogZmlsdGVyZWQKICAgICAgICBYQ1RBc3NlcnRFcXVhbCh0b2tlbnNbNF0uc3Ryb25ncywgWyJIODA2NCIsICJIODUzIl0pCiAgICAgICAgWENUQXNzZXJ0RXF1YWwodG9rZW5zWzVdLnN0cm9uZ3MsIFsiSDc3NiJdKQogICAgfQoKICAgIC8vLyBDaGlVbnMtc3BlY2lmaWMgZXh0ZW5zaW9ucyAoSGVicmV3IGluc2VwYXJhYmxlIHByZXBvc2l0aW9ucykgcmVzb2x2ZQogICAgLy8vIHRvIGJ1aWx0LWluIGRlZmluaXRpb25zOyBhbnl0aGluZyBlbHNlIGZhbGxzIHRocm91Z2ggdG8gbmlsLgogICAgZnVuYyB0ZXN0Q2hpVW5zRXh0ZW5zaW9uRGVmaW5pdGlvbnMoKSB7CiAgICAgICAgWENUQXNzZXJ0Tm90TmlsKFN0cm9uZ3NMZXhpY29uLmNoaVVuc0V4dGVuc2lvbkRlZmluaXRpb24oZm9yOiAiSDkwMDEiKSkKICAgICAgICBYQ1RBc3NlcnROb3ROaWwoU3Ryb25nc0xleGljb24uY2hpVW5zRXh0ZW5zaW9uRGVmaW5pdGlvbihmb3I6ICJIOTAwMiIpKQogICAgICAgIFhDVEFzc2VydE5vdE5pbChTdHJvbmdzTGV4aWNvbi5jaGlVbnNFeHRlbnNpb25EZWZpbml0aW9uKGZvcjogIkg5MDAzIikpCiAgICAgICAgWENUQXNzZXJ0VHJ1ZShTdHJvbmdzTGV4aWNvbi5jaGlVbnNFeHRlbnNpb25EZWZpbml0aW9uKGZvcjogIkg5MDAxIikhLmNvbnRhaW5zKCLXnNawIikpCiAgICAgICAgWENUQXNzZXJ0VHJ1ZShTdHJvbmdzTGV4aWNvbi5jaGlVbnNFeHRlbnNpb25EZWZpbml0aW9uKGZvcjogIkg5MDAyIikhLmNvbnRhaW5zKCLXkdaw1rwiKSkKICAgICAgICBYQ1RBc3NlcnRUcnVlKFN0cm9uZ3NMZXhpY29uLmNoaVVuc0V4dGVuc2lvbkRlZmluaXRpb24oZm9yOiAiSDkwMDMiKSEuY29udGFpbnMoIteb1rDWvCIpKQogICAgICAgIFhDVEFzc2VydE5pbChTdHJvbmdzTGV4aWNvbi5jaGlVbnNFeHRlbnNpb25EZWZpbml0aW9uKGZvcjogIkg3MjI1IikpCiAgICAgICAgWENUQXNzZXJ0TmlsKFN0cm9uZ3NMZXhpY29uLmNoaVVuc0V4dGVuc2lvbkRlZmluaXRpb24oZm9yOiAiRzI2IikpCiAgICB9Cn0K
+// SwordReaderTests.swift
+// Self-contained unit tests (no network, no fixtures).
+
+import XCTest
+@testable import SwordReader
+
+final class InflateTests: XCTestCase {
+    // "The quick brown fox jumps over the lazy dog. " * 8, zlib level 9.
+    let foxZlib: [UInt8] = [
+        120, 218, 11, 201, 72, 85, 40, 44, 205, 76, 206, 86, 72, 42, 202, 47, 207, 83, 72, 203, 175,
+        80, 200, 42, 205, 45, 40, 86, 200, 47, 75, 45, 82, 40, 1, 74, 231, 36, 86, 85, 42, 164, 228,
+        167, 235, 41, 132, 140, 42, 38, 87, 49, 0, 101, 49, 129, 57,
+    ]
+    let foxPlain = String(repeating: "The quick brown fox jumps over the lazy dog. ", count: 8)
+
+    func testZlibRoundTrip() throws {
+        let out = try Inflate.decompressZlib(foxZlib)
+        XCTAssertEqual(String(bytes: out, encoding: .utf8), foxPlain)
+    }
+
+    func testRawDeflateRoundTrip() throws {
+        let raw = Array(foxZlib[2 ..< foxZlib.count - 4])
+        let out = try Inflate.decompressRawDeflate(raw)
+        XCTAssertEqual(String(bytes: out, encoding: .utf8), foxPlain)
+    }
+
+    func testStoredBlock() throws {
+        // BFINAL=1, BTYPE=00 (stored), LEN=2, NLEN=0xFFFD, "Hi".
+        let stored: [UInt8] = [0x01, 0x02, 0x00, 0xFD, 0xFF, 0x48, 0x69]
+        let out = try Inflate.decompressRawDeflate(stored)
+        XCTAssertEqual(out, [0x48, 0x69])
+    }
+
+    func testBadZlibHeader() {
+        XCTAssertThrowsError(try Inflate.decompressZlib([0x00, 0x00, 0x01, 0x02, 0x00, 0x00])) { e in
+            XCTAssertEqual(e as? InflateError, .invalidZlibHeader)
+        }
+    }
+
+    func testAdlerMismatch() {
+        var bad = foxZlib
+        bad[bad.count - 1] ^= 0xFF
+        XCTAssertThrowsError(try Inflate.decompressZlib(bad)) { e in
+            XCTAssertEqual(e as? InflateError, .adlerMismatch)
+        }
+    }
+
+    func testAdler32() {
+        XCTAssertEqual(Inflate.adler32([UInt8]("Wikipedia".utf8)), 0x11E60398)
+    }
+
+    func testGzip() throws {
+        // gzip -9 of the fox string above (mtime=0).
+        let gz: [UInt8] = [
+            31, 139, 8, 0, 0, 0, 0, 0, 2, 3, 11, 201, 72, 85, 40, 44, 205, 76, 206, 86,
+            72, 42, 202, 47, 207, 83, 72, 203, 175, 80, 200, 42, 205, 45, 40, 86, 200, 47, 75, 45,
+            82, 40, 1, 74, 231, 36, 86, 85, 42, 164, 228, 167, 235, 41, 132, 140, 42, 38, 87, 49,
+            0, 187, 22, 15, 227, 104, 1, 0, 0,
+        ]
+        let out = try Inflate.decompressGzip(gz)
+        XCTAssertEqual(String(bytes: out, encoding: .utf8), foxPlain)
+    }
+
+    func testZlibWithPadding() throws {
+        // SWORD .bzz blocks are zero-padded after the zlib stream; the
+        // decoder must stop at the real stream end like zlib does.
+        var padded = foxZlib
+        padded.append(contentsOf: [UInt8](repeating: 0, count: 1024))
+        let out = try Inflate.decompressZlib(padded)
+        XCTAssertEqual(String(bytes: out, encoding: .utf8), foxPlain)
+    }
+
+    func testTruncated() {
+        XCTAssertThrowsError(try Inflate.decompressRawDeflate([0x01, 0x02])) { e in
+            XCTAssertEqual(e as? InflateError, .truncated)
+        }
+    }
+
+    func testOneBitHuffmanTablesDecode() throws {
+        // Regression: a dynamic block whose literal AND distance tables max
+        // out at 1-bit codes (a single distance code of one bit is explicitly
+        // legal, RFC 1951) used to trap in HuffmanDecoder.init on the range
+        // `2 ... maxBits` with maxBits == 1 — hit in the wild by the Clarke
+        // commentary package zip, which froze module installs. The stream
+        // below decodes to "A" (verified against zlib).
+        let stream: [UInt8] = [0x05, 0xC0, 0x81, 0x00, 0x00, 0x00, 0x00, 0x00,
+                               0x90, 0x36, 0xFF, 0x53, 0x08]
+        let out = try Inflate.decompressRawDeflate(stream)
+        XCTAssertEqual(String(bytes: out, encoding: .utf8), "A")
+    }
+}
+
+final class OsisPlainTests: XCTestCase {
+    func testStripsTagsKeepsText() {
+        let osis = #"<verse osisID="Gen.1.1">In the <w lemma="strong:H0430">beginning</w> God created<note>fn</note>.</verse>"#
+        XCTAssertEqual(OsisPlain.plainText(from: osis), "In the beginning God created.")
+    }
+
+    func testEntities() {
+        XCTAssertEqual(OsisPlain.plainText(from: "a &lt; b &amp; c &#65; &#x42;"), "a < b & c A B")
+    }
+
+    func testLineBreaks() {
+        let osis = "first<lb/>second"
+        XCTAssertEqual(OsisPlain.plainText(from: osis), "first second")
+    }
+}
+
+final class SwordConfTests: XCTestCase {
+    let sample = """
+        ## comment
+        [KJV]
+
+        Description=King James Version
+        DataPath=./modules/texts/ztext/kjv/
+        ModDrv=zText
+        BlockType=BOOK
+        Versification=KJV
+        Lang=en
+        Empty=
+        """
+
+    func testParse() {
+        let conf = SwordConf(text: sample)
+        XCTAssertEqual(conf.moduleID, "KJV")
+        XCTAssertEqual(conf.displayName, "King James Version")
+        XCTAssertEqual(conf.dataPath, "./modules/texts/ztext/kjv/")
+        XCTAssertEqual(conf.driver, "zText")
+        XCTAssertEqual(conf.blockType, "BOOK")
+        XCTAssertEqual(conf.versification, "KJV")
+        XCTAssertEqual(conf.language, "en")
+        XCTAssertEqual(conf["Empty"], "")
+        XCTAssertNil(conf["Missing"])
+    }
+
+    func testBOMAndCRLF() {
+        let conf = SwordConf(text: "\u{FEFF}[ChiUns]\r\nDescription=和合本\r\nLang=zh-Hans\r\n")
+        XCTAssertEqual(conf.moduleID, "ChiUns")
+        XCTAssertEqual(conf.displayName, "和合本")
+        XCTAssertEqual(conf.language, "zh-Hans")
+    }
+}
+
+final class VersificationTests: XCTestCase {
+    func testKJVBasics() {
+        let v = Versification.kjv
+        XCTAssertEqual(v.books.count, 66)
+        XCTAssertEqual(v.verseCount(testament: 1, book: 1, chapter: 1), 31)
+        XCTAssertEqual(v.verseCount(testament: 1, book: 19, chapter: 119), 176)
+        XCTAssertEqual(v.verseCount(testament: 2, book: 27, chapter: 22), 21)
+        // Mirrors SWORD: module heading=0, OT heading=1, Gen heading=2, Gen 1 heading=3.
+        XCTAssertEqual(v.testamentIndex(testament: 1, book: 1, chapter: 1, verse: 1), 4)
+        XCTAssertEqual(v.testamentIndex(testament: 2, book: 1, chapter: 1, verse: 1), 4)
+        XCTAssertNil(v.testamentIndex(testament: 1, book: 1, chapter: 1, verse: 32))
+        XCTAssertNil(v.testamentIndex(testament: 3, book: 1, chapter: 1, verse: 1))
+    }
+
+    func testNRSVExists() {
+        XCTAssertEqual(Versification.nrsv.books.count, 66)
+        XCTAssertNotNil(Versification.named("nrsv"))
+        XCTAssertNil(Versification.named("vulg"))
+    }
+
+    func testChineseBookNames() {
+        XCTAssertEqual(BibleBookNamesZhHans.count, 66)
+        XCTAssertEqual(BibleBookNamesZhHans[0], "创世纪")
+        XCTAssertEqual(BibleBookNamesZhHans[65], "启示录")
+    }
+}
+
+final class TarReaderTests: XCTestCase {
+    /// Builds a minimal tar in-memory: one file "mods.d/kjv.conf" with 12 bytes.
+    func testReadTar() throws {
+        var tar = [UInt8]()
+        var header = [UInt8](repeating: 0, count: 512)
+        let name = Array("mods.d/kjv.conf".utf8)
+        header.replaceSubrange(0 ..< name.count, with: name)
+        let sizeStr = Array("00000000014".utf8) // 12 in octal
+        header.replaceSubrange(124 ..< 124 + sizeStr.count, with: sizeStr)
+        header[156] = 48 // '0'
+        // checksum (not validated by reader, but fill for realism)
+        var csum = 256
+        for b in header { csum += Int(b) }
+        let csumStr = Array(String(format: "%06o", csum).utf8)
+        header.replaceSubrange(148 ..< 148 + csumStr.count, with: csumStr)
+        tar.append(contentsOf: header)
+        tar.append(contentsOf: Array("hello world!".utf8))
+        tar.append(contentsOf: [UInt8](repeating: 0, count: 512 - 12))
+        tar.append(contentsOf: [UInt8](repeating: 0, count: 1024))
+        let entries = try TarReader.read(tar)
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].name, "mods.d/kjv.conf")
+        XCTAssertEqual(entries[0].bytes, Array("hello world!".utf8))
+    }
+}
+
+final class ZipReaderTests: XCTestCase {
+    /// Minimal stored-entry zip built in-memory: one file "a.txt" = "hi".
+    func testStoredZip() throws {
+        var zip = [UInt8]()
+        func u16(_ v: Int) { zip.append(UInt8(v & 0xFF)); zip.append(UInt8((v >> 8) & 0xFF)) }
+        func u32(_ v: Int) { for s in [0, 8, 16, 24] { zip.append(UInt8((v >> s) & 0xFF)) } }
+        func str(_ s: String) { zip.append(contentsOf: s.utf8) }
+        let name = "a.txt"
+        let content: [UInt8] = [0x68, 0x69]
+        let localOff = 0
+        u32(0x04034B50); u16(20); u16(0x0800); u16(0); u16(0); u16(0); u32(0)
+        u32(content.count); u32(content.count); u16(name.count); u16(0); str(name)
+        zip.append(contentsOf: content)
+        let cdOff = zip.count
+        u32(0x02014B50); u16(20); u16(20); u16(0x0800); u16(0); u16(0); u16(0); u32(0)
+        u32(content.count); u32(content.count); u16(name.count)
+        u16(0); u16(0); u16(0); u16(0); u32(0); u32(localOff); str(name)
+        let cdSize = zip.count - cdOff
+        let cdCount = 1
+        u32(0x06054B50); u16(0); u16(0); u16(cdCount); u16(cdCount)
+        u32(cdSize); u32(cdOff); u16(0)
+        let reader = try ZipReader(data: zip)
+        XCTAssertEqual(reader.entries.count, 1)
+        XCTAssertEqual(reader.entries[0].name, "a.txt")
+        XCTAssertEqual(try reader.data(for: reader.entries[0]), content)
+    }
+}
+
+final class StrongsTests: XCTestCase {
+    func testConfCollectsRepeatedKeys() {
+        let conf = SwordConf(text: "[KJV]\nGlobalOptionFilter=OSISFootnotes\nGlobalOptionFilter=OSISStrongs\n")
+        XCTAssertEqual(conf["GlobalOptionFilter"], "OSISFootnotes") // first wins, unchanged
+        XCTAssertEqual(conf.allValues["GlobalOptionFilter"], ["OSISFootnotes", "OSISStrongs"])
+    }
+
+    func testSupportsStrongs() {
+        let withStrongs = ModuleInfo(conf: SwordConf(text: "[KJV]\nGlobalOptionFilter=OSISStrongs\n"))
+        XCTAssertTrue(withStrongs.supportsStrongs)
+        let without = ModuleInfo(conf: SwordConf(text: "[ABC]\nGlobalOptionFilter=OSISFootnotes\n"))
+        XCTAssertFalse(without.supportsStrongs)
+    }
+
+    func testNormalizeStrongs() {
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H07225"), "H7225")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:G26"), "G26")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H00001"), "H1")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H09001"), "H9001")
+        XCTAssertNil(OsisTokens.normalizeStrongs("x-lemma:H1"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:H0"))
+        // Morphology codes in ChiUns lemmas are not Strong's numbers.
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:H8804"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:H8675"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:G5656"))
+        XCTAssertNil(OsisTokens.normalizeStrongs("strong:G5773"))
+        // Boundary: real maxima pass.
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:H8674"), "H8674")
+        XCTAssertEqual(OsisTokens.normalizeStrongs("strong:G5624"), "G5624")
+    }
+
+    func testTokensFromKJVGen1v1() {
+        // Real KJV Genesis 1:1 raw markup (verified against CrossWire).
+        // Segments split at <w> boundaries; concatenating reproduces plain.
+        let raw = #"<w lemma="strong:H07225">In the beginning</w> <w lemma="strong:H0430">God</w> <w lemma="strong:H0853 strong:H01254" morph="strongMorph:TH8804">created</w> <w lemma="strong:H08064">the heaven</w> <w lemma="strong:H0853">and</w> <w lemma="strong:H0776">the earth</w>."#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        let texts = tokens.map { $0.text }
+        XCTAssertEqual(texts, ["In the beginning", " ", "God", " ", "created",
+                               " ", "the heaven", " ", "and", " ", "the earth", "."])
+        XCTAssertEqual(tokens[0].strongs, ["H7225"])
+        XCTAssertEqual(tokens[2].strongs, ["H430"])
+        XCTAssertEqual(tokens[4].strongs, ["H853", "H1254"])
+        XCTAssertEqual(tokens[10].strongs, ["H776"])
+        XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
+    }
+
+    func testStrongsNumberParsing() {
+        XCTAssertEqual(StrongsLexicon.strongsNumber(from: "H07225"), 7225)
+        XCTAssertEqual(StrongsLexicon.strongsNumber(from: "G26"), 26)
+        XCTAssertEqual(StrongsLexicon.strongsNumber(from: "h1"), 1)
+        XCTAssertNil(StrongsLexicon.strongsNumber(from: "7225"))
+        XCTAssertNil(StrongsLexicon.strongsNumber(from: "X12"))
+    }
+
+    func testCleanDefinition() {
+        let raw = "00001\\\n 1  'ab  awb\r\n\r\n a primitive word; father."
+        XCTAssertEqual(StrongsLexicon.cleanDefinition(raw), "1 'ab awb a primitive word; father.")
+        let xml = "<entryFree><orth>x</orth> <def>hello <b>world</b></def>"
+        XCTAssertEqual(StrongsLexicon.cleanDefinition(xml), "x hello world")
+    }
+
+    // MARK: - Lexicon fixtures
+
+    private func tempDir() throws -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Tiny RawLD lexicon: records 0..2 -> preamble, H1, H2.
+    func testRawLDLookup() throws {
+        let dir = try tempDir()
+        let parts = ["preamble", "00001\\\n 1 'ab -- father.", "00002\\\n 2 'ab -- aramaic father."]
+        var dat = Data()
+        var idx = Data()
+        for p in parts {
+            let bytes = [UInt8](p.utf8)
+            var off = UInt32(dat.count).littleEndian
+            var size = UInt16(bytes.count).littleEndian
+            idx.append(Data(bytes: &off, count: 4))
+            idx.append(Data(bytes: &size, count: 2))
+            dat.append(contentsOf: bytes)
+        }
+        try idx.write(to: dir.appendingPathComponent("test.idx"))
+        try dat.write(to: dir.appendingPathComponent("test.dat"))
+        let lex = try StrongsLexicon.load(moduleDir: dir)
+        XCTAssertEqual(lex.definition(for: "H1"), "1 'ab -- father.")
+        XCTAssertEqual(lex.definition(for: "H00002"), "2 'ab -- aramaic father.")
+        XCTAssertNil(lex.definition(for: "H3"))
+        // H/G routing happens in StrongsService: a lexicon only knows its own numbers.
+    }
+
+    /// Tiny zLD lexicon (base64 fixture): records 0..2 -> preamble, G1, G2.
+    func testZLDLookup() throws {
+        let dir = try tempDir()
+        let files = [
+            ("g.idx", "AAAAAA8AAAAPAAAADwAAAB4AAAAPAAAA"),
+            ("g.dat", "MDAwMDANCgAAAAAAAAAAMDAwMDENCgAAAAABAAAAMDAwMDINCgAAAAACAAAA"),
+            ("g.zdx", "AAAAAGgAAAA="),
+            ("g.zdt", "eJxjZmBgkAFiDiBWAWJrII6H0gVFqYm5STmpNql5JUWVbkWpqQp5tkqGSnY2+UUlGXaJOQUZiTb6YLaCTUpqml1aZlFxiUJOaklJapGNPkgEVasRTGtSagmqzuLU5Py8FBStAKuhLWg="),
+        ]
+        for (name, b64) in files {
+            try Data(base64Encoded: b64)!.write(to: dir.appendingPathComponent(name))
+        }
+        let lex = try StrongsLexicon.load(moduleDir: dir)
+        XCTAssertEqual(lex.definition(for: "G1"), "alpha first letter")
+        XCTAssertEqual(lex.definition(for: "G2"), "beta second letter")
+        XCTAssertNil(lex.definition(for: "G3"))
+        // H/G routing happens in StrongsService: a lexicon only knows its own numbers.
+    }
+
+    func testLexiconMissingIdx() throws {
+        let dir = try tempDir()
+        XCTAssertThrowsError(try StrongsLexicon.load(moduleDir: dir))
+    }
+
+    // MARK: - Crash regressions (Oct 19, 2026)
+
+    /// plainText must survive empty / whitespace-only input instead of
+    /// fatal-erroring in removeLast(). Triggered by the tokenizer's
+    /// flushTextRun on verses starting with <w>.
+    func testPlainTextEmptyAndBlank() {
+        XCTAssertEqual(OsisPlain.plainText(from: ""), "")
+        XCTAssertEqual(OsisPlain.plainText(from: "   "), "")
+        XCTAssertEqual(OsisPlain.plainText(from: "  a  "), "a")
+        XCTAssertEqual(OsisPlain.plainText(from: "<w>x</w>"), "x")
+    }
+
+    /// Verse starting with a <w> tag: no leading segment.
+    func testTokensVerseStartingWithW() {
+        let tokens = OsisTokens.tokensWithStrongs(
+            from: "<w lemma=\"strong:H07225\">In</w> <w lemma=\"strong:H0430\">God</w>")
+        XCTAssertEqual(tokens.map(\.text), ["In", " ", "God"])
+        XCTAssertEqual(tokens[0].strongs, ["H7225"])
+        XCTAssertEqual(tokens[2].strongs, ["H430"])
+    }
+
+    /// Leading whitespace and empty <w></w> pairs must not crash either.
+    func testTokensBlankRuns() {
+        let tokens = OsisTokens.tokensWithStrongs(
+            from: " <w lemma=\"strong:H07225\"></w><w lemma=\"strong:H0430\">God</w>")
+        XCTAssertEqual(tokens.map(\.text), ["God"])
+        XCTAssertEqual(tokens[0].strongs, ["H430"])
+    }
+
+    /// Self-closing <w/> carries no word: skipped, and must not swallow
+    /// the following <w>...</w> into its (empty) range.
+    func testTokensSelfClosingW() {
+        let raw = #"<w lemma="strong:G3588" src="18"/><w lemma="strong:G1161">de</w> <w lemma="strong:G2424">Jesus</w>"#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        XCTAssertEqual(tokens.map(\.text), ["de", " ", "Jesus"])
+        XCTAssertEqual(tokens[0].strongs, ["G1161"])
+        XCTAssertEqual(tokens[2].strongs, ["G2424"])
+    }
+
+    /// Punctuation glued to words in the plain text stays glued, with the
+    /// number staying on the word it belongs to.
+    func testTokensPunctuationGlue() {
+        let raw = #"<w lemma="strong:H06625">And Pathrusim</w>, (<w lemma="strong:H03695">and Casluhim</w>)"#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        let texts = tokens.map { $0.text }
+        XCTAssertEqual(texts, ["And Pathrusim", ", (", "and Casluhim", ")"])
+        XCTAssertEqual(tokens[0].strongs, ["H6625"])
+        XCTAssertEqual(tokens[2].strongs, ["H3695"])
+        XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
+    }
+
+    /// Chinese (no spaces): numbers distribute to each <w> word instead of
+    /// piling onto one space-separated "word". Real ChiUns Gen 1:1 markup.
+    func testTokensChineseDistributes() {
+        let raw = #"<w lemma="strong:H09002 strong:H07225">起初</w>，　<w lemma="strong:H0430">神</w><w lemma="strong:H01254 strong:H8804 strong:H0853">创造</w><w lemma="strong:H08064 strong:H0853">天</w><w lemma="strong:H0776">地</w>。"#
+        let tokens = OsisTokens.tokensWithStrongs(from: raw)
+        let texts = tokens.map { $0.text }
+        XCTAssertEqual(texts.joined(), OsisPlain.plainText(from: raw))
+        XCTAssertEqual(texts, ["起初", "， ", "神", "创造", "天", "地", "。"])
+        XCTAssertEqual(tokens[0].strongs, ["H9002", "H7225"])
+        XCTAssertEqual(tokens[2].strongs, ["H430"])
+        XCTAssertEqual(tokens[3].strongs, ["H1254", "H853"])  // H8804 is morphology: filtered
+        XCTAssertEqual(tokens[4].strongs, ["H8064", "H853"])
+        XCTAssertEqual(tokens[5].strongs, ["H776"])
+    }
+
+    /// ChiUns-specific extensions (Hebrew inseparable prepositions) resolve
+    /// to built-in definitions; anything else falls through to nil.
+    func testChiUnsExtensionDefinitions() {
+        XCTAssertNotNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H9001"))
+        XCTAssertNotNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H9002"))
+        XCTAssertNotNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H9003"))
+        XCTAssertTrue(StrongsLexicon.chiUnsExtensionDefinition(for: "H9001")!.contains("לְ"))
+        XCTAssertTrue(StrongsLexicon.chiUnsExtensionDefinition(for: "H9002")!.contains("בְּ"))
+        XCTAssertTrue(StrongsLexicon.chiUnsExtensionDefinition(for: "H9003")!.contains("כְּ"))
+        XCTAssertNil(StrongsLexicon.chiUnsExtensionDefinition(for: "H7225"))
+        XCTAssertNil(StrongsLexicon.chiUnsExtensionDefinition(for: "G26"))
+    }
+}

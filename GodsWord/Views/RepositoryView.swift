@@ -1,1 +1,441 @@
-Ly8gUmVwb3NpdG9yeVZpZXcuc3dpZnQg4oCUIGJyb3dzZSB0aGUgQ3Jvc3NXaXJlIHJlcG9zaXRvcnkgYW5kIGRvd25sb2FkIHZlcnNpb25zLgoKaW1wb3J0IFN3aWZ0VUkKaW1wb3J0IFN3b3JkUmVhZGVyCgpzdHJ1Y3QgUmVwb3NpdG9yeVZpZXc6IFZpZXcgewogICAgQEVudmlyb25tZW50KFwubW9kdWxlU3RvcmUpIHByaXZhdGUgdmFyIHN0b3JlCiAgICBARW52aXJvbm1lbnQoXC5kaXNtaXNzKSBwcml2YXRlIHZhciBkaXNtaXNzCiAgICBAU3RhdGUgcHJpdmF0ZSB2YXIgbW9kdWxlczogW01vZHVsZUluZm9dID0gW10KICAgIEBTdGF0ZSBwcml2YXRlIHZhciBxdWVyeSA9ICIiCiAgICBAU3RhdGUgcHJpdmF0ZSB2YXIgbG9hZGluZyA9IHRydWUKICAgIEBTdGF0ZSBwcml2YXRlIHZhciBlcnJvck1lc3NhZ2U6IFN0cmluZz8KICAgIEBTdGF0ZSBwcml2YXRlIHZhciBkb3dubG9hZGluZzogU2V0PFN0cmluZz4gPSBbXQogICAgQFN0YXRlIHByaXZhdGUgdmFyIHByb2dyZXNzOiBbU3RyaW5nOiBEb3VibGVdID0gWzpdCiAgICBAU3RhdGUgcHJpdmF0ZSB2YXIgdGFza3M6IFtTdHJpbmc6IFRhc2s8Vm9pZCwgTmV2ZXI+XSA9IFs6XQogICAgQFN0YXRlIHByaXZhdGUgdmFyIGluc3RhbGxlZElEczogU2V0PFN0cmluZz4gPSBbXQogICAgQFN0YXRlIHByaXZhdGUgdmFyIHNlbGVjdGVkU291cmNlSUQgPSBCaWJsZVNvdXJjZS5jcm9zc1dpcmUuaWQKCiAgICAvLy8gQWxsIHJlbW90ZSAocmVwb3NpdG9yeSkgc291cmNlcyB0aGUgdXNlciBjYW4gZG93bmxvYWQgZnJvbS4KICAgIHByaXZhdGUgdmFyIHJlcG9zaXRvcnlTb3VyY2VzOiBbQmlibGVTb3VyY2VdIHsKICAgICAgICBCaWJsZVNvdXJjZVN0b3JlLnNoYXJlZC5hbGxTb3VyY2VzLmZpbHRlciB7ICQwLnJlcG9zaXRvcnlVUkwgIT0gbmlsIH0KICAgIH0KCiAgICBwcml2YXRlIHZhciBzZWxlY3RlZFNvdXJjZTogQmlibGVTb3VyY2UgewogICAgICAgIHJlcG9zaXRvcnlTb3VyY2VzLmZpcnN0IHsgJDAuaWQgPT0gc2VsZWN0ZWRTb3VyY2VJRCB9ID8/IEJpYmxlU291cmNlLmNyb3NzV2lyZQogICAgfQoKICAgIHByaXZhdGUgdmFyIHJlcG9zaXRvcnk6IFN3b3JkUmVwb3NpdG9yeSB7CiAgICAgICAgbGV0IHVybCA9IHNlbGVjdGVkU291cmNlLnJlcG9zaXRvcnlVUkwgPz8gQmlibGVTb3VyY2UuY3Jvc3NXaXJlLnJlcG9zaXRvcnlVUkwhCiAgICAgICAgcmV0dXJuIFN3b3JkUmVwb3NpdG9yeShuYW1lOiBzZWxlY3RlZFNvdXJjZS5uYW1lLCBiYXNlVVJMOiB1cmwpCiAgICB9CgogICAgcHJpdmF0ZSB2YXIgZmlsdGVyZWQ6IFtNb2R1bGVJbmZvXSB7CiAgICAgICAgLy8gQmlibGVzIHRoZSByZWFkZXIgY2FuIG9wZW4sIHBsdXMgY29tbWVudGFyaWVzIHRoZSBhdXhpbGlhcnkKICAgICAgICAvLyBwYW5lbCBjYW4gcmVhZCAoUkVRLUFQLTQpLgogICAgICAgIGxldCBiYXNlID0gbW9kdWxlcy5maWx0ZXIgeyAkMC5pc1JlbmRlcmFibGUgfHwgJDAuaXNDb21tZW50YXJ5UmVuZGVyYWJsZSB9CiAgICAgICAgZ3VhcmQgIXF1ZXJ5LmlzRW1wdHkgZWxzZSB7IHJldHVybiBiYXNlIH0KICAgICAgICBsZXQgcSA9IHF1ZXJ5Lmxvd2VyY2FzZWQoKQogICAgICAgIHJldHVybiBiYXNlLmZpbHRlciB7CiAgICAgICAgICAgICQwLmlkLmxvd2VyY2FzZWQoKS5jb250YWlucyhxKSB8fCAkMC5kZXNjcmlwdGlvbi5sb3dlcmNhc2VkKCkuY29udGFpbnMocSkKICAgICAgICB9CiAgICB9CgogICAgdmFyIGJvZHk6IHNvbWUgVmlldyB7CiAgICAgICAgTmF2aWdhdGlvblN0YWNrIHsKICAgICAgICAgICAgR3JvdXAgewogICAgICAgICAgICAgICAgaWYgbG9hZGluZyB7CiAgICAgICAgICAgICAgICAgICAgUHJvZ3Jlc3NWaWV3KCJMb2FkaW5nIHJlcG9zaXRvcnnigKYiKQogICAgICAgICAgICAgICAgfSBlbHNlIGlmIGxldCBlcnJvck1lc3NhZ2UgewogICAgICAgICAgICAgICAgICAgIENvbnRlbnRVbmF2YWlsYWJsZVZpZXcoIkNvdWxkbid0IGxvYWQiLCBzeXN0ZW1JbWFnZTogIndpZmkuZXhjbGFtYXRpb25tYXJrIiwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBkZXNjcmlwdGlvbjogVGV4dChlcnJvck1lc3NhZ2UpKQogICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICBWU3RhY2soc3BhY2luZzogMCkgewogICAgICAgICAgICAgICAgICAgICAgICBpZiByZXBvc2l0b3J5U291cmNlcy5jb3VudCA+IDEgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgUGlja2VyKCJTb3VyY2UiLCBzZWxlY3Rpb246ICRzZWxlY3RlZFNvdXJjZUlEKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgRm9yRWFjaChyZXBvc2l0b3J5U291cmNlcykgeyBzb3VyY2UgaW4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVGV4dChzb3VyY2UubmFtZSkudGFnKHNvdXJjZS5pZCkKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAucGlja2VyU3R5bGUoLnNlZ21lbnRlZCkKICAgICAgICAgICAgICAgICAgICAgICAgICAgIC5wYWRkaW5nKCkKICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICBMaXN0KGZpbHRlcmVkLCBpZDogXC5pZCkgeyBtb2QgaW4KICAgICAgICAgICAgICAgICAgICAgICAgICAgIEhTdGFjayB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVlN0YWNrKGFsaWdubWVudDogLmxlYWRpbmcsIHNwYWNpbmc6IDIpIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVGV4dChtb2QuZGVzY3JpcHRpb24pLmZvbnQoLmhlYWRsaW5lKQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBUZXh0KG1vZC5pc0NvbW1lbnRhcnkKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA/ICJcKG1vZC5pZCkgwrcgXChtb2QubGFuZ3VhZ2UpIMK3IENvbW1lbnRhcnkiCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgOiAiXChtb2QuaWQpIMK3IFwobW9kLmxhbmd1YWdlKSIpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuZm9udCguY2FwdGlvbikuZm9yZWdyb3VuZFN0eWxlKC5zZWNvbmRhcnkpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFNwYWNlcigpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc3RhdHVzVmlldyhmb3I6IG1vZCkKICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAuc2VhcmNoYWJsZSh0ZXh0OiAkcXVlcnksIHByb21wdDogIlNlYXJjaCB2ZXJzaW9ucyIpCiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICAgIC5uYXZpZ2F0aW9uVGl0bGUoIkFkZCBCaWJsZSIpCiAgICAgICAgICAgIC5uYXZpZ2F0aW9uQmFyVGl0bGVEaXNwbGF5TW9kZSguaW5saW5lKQogICAgICAgICAgICAudG9vbGJhciB7CiAgICAgICAgICAgICAgICBUb29sYmFySXRlbShwbGFjZW1lbnQ6IC5jYW5jZWxsYXRpb25BY3Rpb24pIHsKICAgICAgICAgICAgICAgICAgICBCdXR0b24oIkRvbmUiKSB7IGRpc21pc3MoKSB9CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICAgICAgLnRhc2sgeyBhd2FpdCBsb2FkKCkgfQogICAgICAgIC5vbkNoYW5nZShvZjogc2VsZWN0ZWRTb3VyY2VJRCkgeyBUYXNrIHsgYXdhaXQgbG9hZCgpIH0gfQogICAgICAgIC5vbkFwcGVhciB7IGluc3RhbGxlZElEcyA9IFNldChzdG9yZS5pbnN0YWxsZWRNb2R1bGVzKCkubWFwIHsgJDAuaWQgfSkgfQogICAgfQoKICAgIEBWaWV3QnVpbGRlcgogICAgcHJpdmF0ZSBmdW5jIHN0YXR1c1ZpZXcoZm9yIG1vZDogTW9kdWxlSW5mbykgLT4gc29tZSBWaWV3IHsKICAgICAgICBpZiBpbnN0YWxsZWRJRHMuY29udGFpbnMobW9kLmlkKSB7CiAgICAgICAgICAgIFRleHQoIkluc3RhbGxlZCIpLmZvbnQoLmNhcHRpb24pLmZvcmVncm91bmRTdHlsZSguc2Vjb25kYXJ5KQogICAgICAgIH0gZWxzZSBpZiBkb3dubG9hZGluZy5jb250YWlucyhtb2QuaWQpIHsKICAgICAgICAgICAgSFN0YWNrKHNwYWNpbmc6IDYpIHsKICAgICAgICAgICAgICAgIGlmIGxldCBmcmFjdGlvbiA9IHByb2dyZXNzW21vZC5pZF0gewogICAgICAgICAgICAgICAgICAgIFByb2dyZXNzVmlldyh2YWx1ZTogZnJhY3Rpb24pLmZyYW1lKHdpZHRoOiA2MCkKICAgICAgICAgICAgICAgICAgICBUZXh0KCJcKEludChmcmFjdGlvbiAqIDEwMCkpJSIpCiAgICAgICAgICAgICAgICAgICAgICAgIC5mb250KC5jYXB0aW9uKS5mb3JlZ3JvdW5kU3R5bGUoLnNlY29uZGFyeSkKICAgICAgICAgICAgICAgICAgICAgICAgLm1vbm9zcGFjZWREaWdpdCgpCiAgICAgICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgICAgICAgIFByb2dyZXNzVmlldygpLmNvbnRyb2xTaXplKC5zbWFsbCkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIEJ1dHRvbiB7CiAgICAgICAgICAgICAgICAgICAgdGFza3NbbW9kLmlkXT8uY2FuY2VsKCkKICAgICAgICAgICAgICAgIH0gbGFiZWw6IHsKICAgICAgICAgICAgICAgICAgICBJbWFnZShzeXN0ZW1OYW1lOiAieG1hcmsuY2lyY2xlLmZpbGwiKS5mb3JlZ3JvdW5kU3R5bGUoLnNlY29uZGFyeSkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIC5idXR0b25TdHlsZSguYm9yZGVybGVzcykKICAgICAgICAgICAgICAgIC5hY2Nlc3NpYmlsaXR5TGFiZWwoIkNhbmNlbCBkb3dubG9hZCIpCiAgICAgICAgICAgIH0KICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBCdXR0b24oIkdldCIpIHsgdGFza3NbbW9kLmlkXSA9IFRhc2sgeyBhd2FpdCBkb3dubG9hZChtb2QpIH0gfQogICAgICAgICAgICAgICAgLmJ1dHRvblN0eWxlKC5ib3JkZXJlZCkKICAgICAgICAgICAgICAgIC5jb250cm9sU2l6ZSguc21hbGwpCiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuYyBsb2FkKCkgYXN5bmMgewogICAgICAgIGxvYWRpbmcgPSB0cnVlCiAgICAgICAgZXJyb3JNZXNzYWdlID0gbmlsCiAgICAgICAgZG8gewogICAgICAgICAgICBsZXQgKGRhdGEsIF8pID0gdHJ5IGF3YWl0IFVSTFNlc3Npb24uc2hhcmVkLmRhdGEoZnJvbTogcmVwb3NpdG9yeS5jYXRhbG9nVVJMKQogICAgICAgICAgICBtb2R1bGVzID0gdHJ5IFN3b3JkUmVwb3NpdG9yeS5wYXJzZUNhdGFsb2coW1VJbnQ4XShkYXRhKSkKICAgICAgICB9IGNhdGNoIHsKICAgICAgICAgICAgZXJyb3JNZXNzYWdlID0gZXJyb3IubG9jYWxpemVkRGVzY3JpcHRpb24KICAgICAgICB9CiAgICAgICAgbG9hZGluZyA9IGZhbHNlCiAgICB9CgogICAgcHJpdmF0ZSBmdW5jIGRvd25sb2FkKF8gbW9kOiBNb2R1bGVJbmZvKSBhc3luYyB7CiAgICAgICAgbGV0IGlkID0gbW9kLmlkCiAgICAgICAgZG93bmxvYWRpbmcuaW5zZXJ0KGlkKQogICAgICAgIGRlZmVyIHsKICAgICAgICAgICAgZG93bmxvYWRpbmcucmVtb3ZlKGlkKQogICAgICAgICAgICBwcm9ncmVzc1tpZF0gPSBuaWwKICAgICAgICAgICAgdGFza3NbaWRdID0gbmlsCiAgICAgICAgfQogICAgICAgIGRvIHsKICAgICAgICAgICAgbGV0IGRhdGEgPSB0cnkgYXdhaXQgUGFja2FnZURvd25sb2FkZXIuZmV0Y2goCiAgICAgICAgICAgICAgICBmcm9tOiByZXBvc2l0b3J5LnBhY2thZ2VVUkwoZm9yOiBpZCkKICAgICAgICAgICAgKSB7IGZyYWN0aW9uIGluCiAgICAgICAgICAgICAgICBwcm9ncmVzc1tpZF0gPSBmcmFjdGlvbgogICAgICAgICAgICB9CiAgICAgICAgICAgIC8vIEluc3RhbGwgb2ZmIHRoZSBtYWluIHRocmVhZDogdW5wYWNraW5nIGEgcGFja2FnZSBtdXN0IG5ldmVyCiAgICAgICAgICAgIC8vIGZyZWV6ZSB0aGUgcGFnZS4KICAgICAgICAgICAgbGV0IHN0b3JlID0gc2VsZi5zdG9yZQogICAgICAgICAgICB0cnkgYXdhaXQgVGFzay5kZXRhY2hlZChwcmlvcml0eTogLnVzZXJJbml0aWF0ZWQpIHsKICAgICAgICAgICAgICAgIHRyeSBzdG9yZS5pbnN0YWxsKHBhY2thZ2VEYXRhOiBkYXRhLCBtb2R1bGVJRDogaWQpCiAgICAgICAgICAgIH0udmFsdWUKICAgICAgICAgICAgLy8gVGFnIHRoZSBtb2R1bGUgd2l0aCB0aGUgc291cmNlIGl0IHdhcyBkb3dubG9hZGVkIGZyb20gc28gaXQKICAgICAgICAgICAgLy8gYXBwZWFycyB1bmRlciB0aGF0IHNvdXJjZSBpbiB0aGUgbGlicmFyeS4KICAgICAgICAgICAgQmlibGVTb3VyY2VTdG9yZS5zaGFyZWQuc2V0U291cmNlSUQoc2VsZWN0ZWRTb3VyY2VJRCwgZm9yTW9kdWxlOiBtb2QuaWQpCiAgICAgICAgICAgIGluc3RhbGxlZElEcy5pbnNlcnQobW9kLmlkKQogICAgICAgIH0gY2F0Y2ggaXMgQ2FuY2VsbGF0aW9uRXJyb3IgewogICAgICAgICAgICAvLyBDYW5jZWxsZWQgYnkgdGhlIHVzZXIg4oCUIG5vdCBhbiBlcnJvci4KICAgICAgICB9IGNhdGNoIGxldCBlcnJvciBhcyBVUkxFcnJvciB3aGVyZSBlcnJvci5jb2RlID09IC5jYW5jZWxsZWQgewogICAgICAgICAgICAvLyBDYW5jZWxsZWQgYnkgdGhlIHVzZXIg4oCUIG5vdCBhbiBlcnJvci4KICAgICAgICB9IGNhdGNoIHsKICAgICAgICAgICAgZXJyb3JNZXNzYWdlID0gIkRvd25sb2FkIGZhaWxlZDogXChlcnJvci5sb2NhbGl6ZWREZXNjcmlwdGlvbikiCiAgICAgICAgfQogICAgfQp9CgovLy8gVGhlIGNvbW1lbnRhcnkgY291bnRlcnBhcnQgb2YgUmVwb3NpdG9yeVZpZXcgKFJFUS1BUC0xMCk6IHRoZSBzYW1lCi8vLyByZXBvc2l0b3J5IGJyb3dzZXIsIGJ1dCBsaXN0aW5nIG9ubHkgY29tbWVudGFyaWVzIHRoZSBhdXhpbGlhcnkKLy8vIHBhbmVsIGNhbiByZWFkLCB1bmRlciBhbiAiQWRkIENvbW1lbnRhcnkiIHRpdGxlLCB3aXRoIGVhY2gKLy8vIGNvbW1lbnRhcnkncyBkZWNsYXJlZCBsaWNlbnNlIHNob3duIHVuZGVyIGl0cyBuYW1lIChSRVEtQVAtOCkuCnN0cnVjdCBDb21tZW50YXJ5UmVwb3NpdG9yeVZpZXc6IFZpZXcgewogICAgQEVudmlyb25tZW50KFwubW9kdWxlU3RvcmUpIHByaXZhdGUgdmFyIHN0b3JlCiAgICBARW52aXJvbm1lbnQoXC5kaXNtaXNzKSBwcml2YXRlIHZhciBkaXNtaXNzCiAgICBAU3RhdGUgcHJpdmF0ZSB2YXIgbW9kdWxlczogW01vZHVsZUluZm9dID0gW10KICAgIEBTdGF0ZSBwcml2YXRlIHZhciBxdWVyeSA9ICIiCiAgICBAU3RhdGUgcHJpdmF0ZSB2YXIgbG9hZGluZyA9IHRydWUKICAgIEBTdGF0ZSBwcml2YXRlIHZhciBlcnJvck1lc3NhZ2U6IFN0cmluZz8KICAgIEBTdGF0ZSBwcml2YXRlIHZhciBkb3dubG9hZGluZzogU2V0PFN0cmluZz4gPSBbXQogICAgQFN0YXRlIHByaXZhdGUgdmFyIHByb2dyZXNzOiBbU3RyaW5nOiBEb3VibGVdID0gWzpdCiAgICBAU3RhdGUgcHJpdmF0ZSB2YXIgdGFza3M6IFtTdHJpbmc6IFRhc2s8Vm9pZCwgTmV2ZXI+XSA9IFs6XQogICAgQFN0YXRlIHByaXZhdGUgdmFyIGluc3RhbGxlZElEczogU2V0PFN0cmluZz4gPSBbXQogICAgQFN0YXRlIHByaXZhdGUgdmFyIHNlbGVjdGVkU291cmNlSUQgPSBCaWJsZVNvdXJjZS5jcm9zc1dpcmUuaWQKCiAgICAvLy8gQWxsIHJlbW90ZSAocmVwb3NpdG9yeSkgc291cmNlcyB0aGUgdXNlciBjYW4gZG93bmxvYWQgZnJvbS4KICAgIHByaXZhdGUgdmFyIHJlcG9zaXRvcnlTb3VyY2VzOiBbQmlibGVTb3VyY2VdIHsKICAgICAgICBCaWJsZVNvdXJjZVN0b3JlLnNoYXJlZC5hbGxTb3VyY2VzLmZpbHRlciB7ICQwLnJlcG9zaXRvcnlVUkwgIT0gbmlsIH0KICAgIH0KCiAgICBwcml2YXRlIHZhciBzZWxlY3RlZFNvdXJjZTogQmlibGVTb3VyY2UgewogICAgICAgIHJlcG9zaXRvcnlTb3VyY2VzLmZpcnN0IHsgJDAuaWQgPT0gc2VsZWN0ZWRTb3VyY2VJRCB9ID8/IEJpYmxlU291cmNlLmNyb3NzV2lyZQogICAgfQoKICAgIHByaXZhdGUgdmFyIHJlcG9zaXRvcnk6IFN3b3JkUmVwb3NpdG9yeSB7CiAgICAgICAgbGV0IHVybCA9IHNlbGVjdGVkU291cmNlLnJlcG9zaXRvcnlVUkwgPz8gQmlibGVTb3VyY2UuY3Jvc3NXaXJlLnJlcG9zaXRvcnlVUkwhCiAgICAgICAgcmV0dXJuIFN3b3JkUmVwb3NpdG9yeShuYW1lOiBzZWxlY3RlZFNvdXJjZS5uYW1lLCBiYXNlVVJMOiB1cmwpCiAgICB9CgogICAgcHJpdmF0ZSB2YXIgZmlsdGVyZWQ6IFtNb2R1bGVJbmZvXSB7CiAgICAgICAgLy8gT25seSBjb21tZW50YXJpZXMgdGhlIHBhbmVsIGNhbiByZWFkIChSRVEtQVAtNCkuCiAgICAgICAgbGV0IGJhc2UgPSBtb2R1bGVzLmZpbHRlciB7ICQwLmlzQ29tbWVudGFyeVJlbmRlcmFibGUgfQogICAgICAgIGd1YXJkICFxdWVyeS5pc0VtcHR5IGVsc2UgeyByZXR1cm4gYmFzZSB9CiAgICAgICAgbGV0IHEgPSBxdWVyeS5sb3dlcmNhc2VkKCkKICAgICAgICByZXR1cm4gYmFzZS5maWx0ZXIgewogICAgICAgICAgICAkMC5pZC5sb3dlcmNhc2VkKCkuY29udGFpbnMocSkgfHwgJDAuZGVzY3JpcHRpb24ubG93ZXJjYXNlZCgpLmNvbnRhaW5zKHEpCiAgICAgICAgfQogICAgfQoKICAgIHZhciBib2R5OiBzb21lIFZpZXcgewogICAgICAgIE5hdmlnYXRpb25TdGFjayB7CiAgICAgICAgICAgIEdyb3VwIHsKICAgICAgICAgICAgICAgIGlmIGxvYWRpbmcgewogICAgICAgICAgICAgICAgICAgIFByb2dyZXNzVmlldygiTG9hZGluZyByZXBvc2l0b3J54oCmIikKICAgICAgICAgICAgICAgIH0gZWxzZSBpZiBsZXQgZXJyb3JNZXNzYWdlIHsKICAgICAgICAgICAgICAgICAgICBDb250ZW50VW5hdmFpbGFibGVWaWV3KCJDb3VsZG4ndCBsb2FkIiwgc3lzdGVtSW1hZ2U6ICJ3aWZpLmV4Y2xhbWF0aW9ubWFyayIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZGVzY3JpcHRpb246IFRleHQoZXJyb3JNZXNzYWdlKSkKICAgICAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICAgICAgVlN0YWNrKHNwYWNpbmc6IDApIHsKICAgICAgICAgICAgICAgICAgICAgICAgaWYgcmVwb3NpdG9yeVNvdXJjZXMuY291bnQgPiAxIHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgIFBpY2tlcigiU291cmNlIiwgc2VsZWN0aW9uOiAkc2VsZWN0ZWRTb3VyY2VJRCkgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIEZvckVhY2gocmVwb3NpdG9yeVNvdXJjZXMpIHsgc291cmNlIGluCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFRleHQoc291cmNlLm5hbWUpLnRhZyhzb3VyY2UuaWQpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgLnBpY2tlclN0eWxlKC5zZWdtZW50ZWQpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAucGFkZGluZygpCiAgICAgICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICAgICAgTGlzdChmaWx0ZXJlZCwgaWQ6IFwuaWQpIHsgbW9kIGluCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBIU3RhY2sgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFZTdGFjayhhbGlnbm1lbnQ6IC5sZWFkaW5nLCBzcGFjaW5nOiAyKSB7CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFRleHQobW9kLmRlc2NyaXB0aW9uKS5mb250KC5oZWFkbGluZSkKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgVGV4dCgiXChtb2QuaWQpIMK3IFwobW9kLmxhbmd1YWdlKSIpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuZm9udCguY2FwdGlvbikuZm9yZWdyb3VuZFN0eWxlKC5zZWNvbmRhcnkpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGlmICFtb2QuZGlzdHJpYnV0aW9uTGljZW5zZS5pc0VtcHR5IHsKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFRleHQobW9kLmRpc3RyaWJ1dGlvbkxpY2Vuc2UpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLmZvbnQoLmNhcHRpb24pLmZvcmVncm91bmRTdHlsZSguc2Vjb25kYXJ5KQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFNwYWNlcigpCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc3RhdHVzVmlldyhmb3I6IG1vZCkKICAgICAgICAgICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAuc2VhcmNoYWJsZSh0ZXh0OiAkcXVlcnksIHByb21wdDogIlNlYXJjaCBjb21tZW50YXJpZXMiKQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAgICAubmF2aWdhdGlvblRpdGxlKCJBZGQgQ29tbWVudGFyeSIpCiAgICAgICAgICAgIC5uYXZpZ2F0aW9uQmFyVGl0bGVEaXNwbGF5TW9kZSguaW5saW5lKQogICAgICAgICAgICAudG9vbGJhciB7CiAgICAgICAgICAgICAgICBUb29sYmFySXRlbShwbGFjZW1lbnQ6IC5jYW5jZWxsYXRpb25BY3Rpb24pIHsKICAgICAgICAgICAgICAgICAgICBCdXR0b24oIkRvbmUiKSB7IGRpc21pc3MoKSB9CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICAgICAgLnRhc2sgeyBhd2FpdCBsb2FkKCkgfQogICAgICAgIC5vbkNoYW5nZShvZjogc2VsZWN0ZWRTb3VyY2VJRCkgeyBUYXNrIHsgYXdhaXQgbG9hZCgpIH0gfQogICAgICAgIC5vbkFwcGVhciB7IGluc3RhbGxlZElEcyA9IFNldChzdG9yZS5pbnN0YWxsZWRNb2R1bGVzKCkubWFwIHsgJDAuaWQgfSkgfQogICAgfQoKICAgIEBWaWV3QnVpbGRlcgogICAgcHJpdmF0ZSBmdW5jIHN0YXR1c1ZpZXcoZm9yIG1vZDogTW9kdWxlSW5mbykgLT4gc29tZSBWaWV3IHsKICAgICAgICBpZiBpbnN0YWxsZWRJRHMuY29udGFpbnMobW9kLmlkKSB7CiAgICAgICAgICAgIFRleHQoIkluc3RhbGxlZCIpLmZvbnQoLmNhcHRpb24pLmZvcmVncm91bmRTdHlsZSguc2Vjb25kYXJ5KQogICAgICAgIH0gZWxzZSBpZiBkb3dubG9hZGluZy5jb250YWlucyhtb2QuaWQpIHsKICAgICAgICAgICAgSFN0YWNrKHNwYWNpbmc6IDYpIHsKICAgICAgICAgICAgICAgIGlmIGxldCBmcmFjdGlvbiA9IHByb2dyZXNzW21vZC5pZF0gewogICAgICAgICAgICAgICAgICAgIFByb2dyZXNzVmlldyh2YWx1ZTogZnJhY3Rpb24pLmZyYW1lKHdpZHRoOiA2MCkKICAgICAgICAgICAgICAgICAgICBUZXh0KCJcKEludChmcmFjdGlvbiAqIDEwMCkpJSIpCiAgICAgICAgICAgICAgICAgICAgICAgIC5mb250KC5jYXB0aW9uKS5mb3JlZ3JvdW5kU3R5bGUoLnNlY29uZGFyeSkKICAgICAgICAgICAgICAgICAgICAgICAgLm1vbm9zcGFjZWREaWdpdCgpCiAgICAgICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgICAgICAgIFByb2dyZXNzVmlldygpLmNvbnRyb2xTaXplKC5zbWFsbCkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIEJ1dHRvbiB7CiAgICAgICAgICAgICAgICAgICAgdGFza3NbbW9kLmlkXT8uY2FuY2VsKCkKICAgICAgICAgICAgICAgIH0gbGFiZWw6IHsKICAgICAgICAgICAgICAgICAgICBJbWFnZShzeXN0ZW1OYW1lOiAieG1hcmsuY2lyY2xlLmZpbGwiKS5mb3JlZ3JvdW5kU3R5bGUoLnNlY29uZGFyeSkKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIC5idXR0b25TdHlsZSguYm9yZGVybGVzcykKICAgICAgICAgICAgICAgIC5hY2Nlc3NpYmlsaXR5TGFiZWwoIkNhbmNlbCBkb3dubG9hZCIpCiAgICAgICAgICAgIH0KICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBCdXR0b24oIkdldCIpIHsgdGFza3NbbW9kLmlkXSA9IFRhc2sgeyBhd2FpdCBkb3dubG9hZChtb2QpIH0gfQogICAgICAgICAgICAgICAgLmJ1dHRvblN0eWxlKC5ib3JkZXJlZCkKICAgICAgICAgICAgICAgIC5jb250cm9sU2l6ZSguc21hbGwpCiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuYyBsb2FkKCkgYXN5bmMgewogICAgICAgIGxvYWRpbmcgPSB0cnVlCiAgICAgICAgZXJyb3JNZXNzYWdlID0gbmlsCiAgICAgICAgZG8gewogICAgICAgICAgICBsZXQgKGRhdGEsIF8pID0gdHJ5IGF3YWl0IFVSTFNlc3Npb24uc2hhcmVkLmRhdGEoZnJvbTogcmVwb3NpdG9yeS5jYXRhbG9nVVJMKQogICAgICAgICAgICBtb2R1bGVzID0gdHJ5IFN3b3JkUmVwb3NpdG9yeS5wYXJzZUNhdGFsb2coW1VJbnQ4XShkYXRhKSkKICAgICAgICB9IGNhdGNoIHsKICAgICAgICAgICAgZXJyb3JNZXNzYWdlID0gZXJyb3IubG9jYWxpemVkRGVzY3JpcHRpb24KICAgICAgICB9CiAgICAgICAgbG9hZGluZyA9IGZhbHNlCiAgICB9CgogICAgcHJpdmF0ZSBmdW5jIGRvd25sb2FkKF8gbW9kOiBNb2R1bGVJbmZvKSBhc3luYyB7CiAgICAgICAgbGV0IGlkID0gbW9kLmlkCiAgICAgICAgZG93bmxvYWRpbmcuaW5zZXJ0KGlkKQogICAgICAgIGRlZmVyIHsKICAgICAgICAgICAgZG93bmxvYWRpbmcucmVtb3ZlKGlkKQogICAgICAgICAgICBwcm9ncmVzc1tpZF0gPSBuaWwKICAgICAgICAgICAgdGFza3NbaWRdID0gbmlsCiAgICAgICAgfQogICAgICAgIGRvIHsKICAgICAgICAgICAgbGV0IGRhdGEgPSB0cnkgYXdhaXQgUGFja2FnZURvd25sb2FkZXIuZmV0Y2goCiAgICAgICAgICAgICAgICBmcm9tOiByZXBvc2l0b3J5LnBhY2thZ2VVUkwoZm9yOiBpZCkKICAgICAgICAgICAgKSB7IGZyYWN0aW9uIGluCiAgICAgICAgICAgICAgICBwcm9ncmVzc1tpZF0gPSBmcmFjdGlvbgogICAgICAgICAgICB9CiAgICAgICAgICAgIC8vIEluc3RhbGwgb2ZmIHRoZSBtYWluIHRocmVhZDogdW5wYWNraW5nIGEgcGFja2FnZSBtdXN0IG5ldmVyCiAgICAgICAgICAgIC8vIGZyZWV6ZSB0aGUgcGFnZS4KICAgICAgICAgICAgbGV0IHN0b3JlID0gc2VsZi5zdG9yZQogICAgICAgICAgICB0cnkgYXdhaXQgVGFzay5kZXRhY2hlZChwcmlvcml0eTogLnVzZXJJbml0aWF0ZWQpIHsKICAgICAgICAgICAgICAgIHRyeSBzdG9yZS5pbnN0YWxsKHBhY2thZ2VEYXRhOiBkYXRhLCBtb2R1bGVJRDogaWQpCiAgICAgICAgICAgIH0udmFsdWUKICAgICAgICAgICAgLy8gVGFnIHRoZSBtb2R1bGUgd2l0aCB0aGUgc291cmNlIGl0IHdhcyBkb3dubG9hZGVkIGZyb20uCiAgICAgICAgICAgIEJpYmxlU291cmNlU3RvcmUuc2hhcmVkLnNldFNvdXJjZUlEKHNlbGVjdGVkU291cmNlSUQsIGZvck1vZHVsZTogbW9kLmlkKQogICAgICAgICAgICBpbnN0YWxsZWRJRHMuaW5zZXJ0KG1vZC5pZCkKICAgICAgICB9IGNhdGNoIGlzIENhbmNlbGxhdGlvbkVycm9yIHsKICAgICAgICAgICAgLy8gQ2FuY2VsbGVkIGJ5IHRoZSB1c2VyIOKAlCBub3QgYW4gZXJyb3IuCiAgICAgICAgfSBjYXRjaCBsZXQgZXJyb3IgYXMgVVJMRXJyb3Igd2hlcmUgZXJyb3IuY29kZSA9PSAuY2FuY2VsbGVkIHsKICAgICAgICAgICAgLy8gQ2FuY2VsbGVkIGJ5IHRoZSB1c2VyIOKAlCBub3QgYW4gZXJyb3IuCiAgICAgICAgfSBjYXRjaCB7CiAgICAgICAgICAgIGVycm9yTWVzc2FnZSA9ICJEb3dubG9hZCBmYWlsZWQ6IFwoZXJyb3IubG9jYWxpemVkRGVzY3JpcHRpb24pIgogICAgICAgIH0KICAgIH0KfQoKLy8vIE9uZS1zaG90IHBhY2thZ2UgZG93bmxvYWQgd2l0aCBwcm9ncmVzcywgY2FuY2VsbGF0aW9uLCBhbmQgdGltZW91dHMuCi8vLyBUaGUgcGxhaW4gYFVSTFNlc3Npb24uZGF0YShmcm9tOilgIEFQSSBvZmZlcnMgbm8gcHJvZ3Jlc3MgYW5kIG5vCi8vLyBjYW5jZWwsIGFuZCBpdHMgZGVmYXVsdCByZXNvdXJjZSB0aW1lb3V0IGlzIGRheXMg4oCUIGEgc3RhbGxlZCB0cmFuc2ZlcgovLy8gc3B1biBmb3JldmVyIGJlaGluZCBhIGJhcmUgc3Bpbm5lci4gSGVyZSB0aGUgc3Vycm91bmRpbmcgVGFzaydzCi8vLyBjYW5jZWxsYXRpb24gY2FuY2VscyB0aGUgdHJhbnNmZXIsIHByb2dyZXNzIGlzIHJlcG9ydGVkIGFzIGEgZnJhY3Rpb24KLy8vICh3aGVuIHRoZSBzZXJ2ZXIgZ2l2ZXMgYSBsZW5ndGgpLCBhbmQgYSB0cmFuc2ZlciB0aGF0IHN0YWxscyBmb3IKLy8vIDMwIHNlY29uZHMg4oCUIG9yIHJ1bnMgcGFzdCAxNSBtaW51dGVzIGluIHRvdGFsIOKAlCBmYWlscyB3aXRoIGFuIGVycm9yCi8vLyBpbnN0ZWFkIG9mIGhhbmdpbmcuCmZpbmFsIGNsYXNzIFBhY2thZ2VEb3dubG9hZGVyOiBOU09iamVjdCwgVVJMU2Vzc2lvbkRhdGFEZWxlZ2F0ZSwgQHVuY2hlY2tlZCBTZW5kYWJsZSB7CiAgICBwcml2YXRlIGxldCBsb2NrID0gTlNMb2NrKCkKICAgIHByaXZhdGUgdmFyIGNvbnRpbnVhdGlvbjogQ2hlY2tlZENvbnRpbnVhdGlvbjxbVUludDhdLCBFcnJvcj4/CiAgICBwcml2YXRlIHZhciBzZXNzaW9uOiBVUkxTZXNzaW9uPwogICAgcHJpdmF0ZSB2YXIgZGF0YVRhc2s6IFVSTFNlc3Npb25EYXRhVGFzaz8KICAgIHByaXZhdGUgdmFyIGNhbmNlbFJlcXVlc3RlZCA9IGZhbHNlCiAgICBwcml2YXRlIHZhciBmaW5pc2hlZCA9IGZhbHNlCiAgICAvLyBUb3VjaGVkIG9ubHkgb24gdGhlIHNlc3Npb24ncyBzZXJpYWwgZGVsZWdhdGUgcXVldWUuCiAgICBwcml2YXRlIHZhciBidWZmZXI6IFtVSW50OF0gPSBbXQogICAgcHJpdmF0ZSB2YXIgZXhwZWN0ZWRMZW5ndGg6IEludDY0ID0gMAogICAgcHJpdmF0ZSB2YXIgcHJvZ3Jlc3NIYW5kbGVyOiAoQE1haW5BY3RvciAoRG91YmxlKSAtPiBWb2lkKT8KCiAgICBzdGF0aWMgZnVuYyBmZXRjaChmcm9tIHVybDogVVJMLAogICAgICAgICAgICAgICAgICAgICAgcHJvZ3Jlc3M6IEBlc2NhcGluZyBATWFpbkFjdG9yIChEb3VibGUpIC0+IFZvaWQpIGFzeW5jIHRocm93cyAtPiBbVUludDhdIHsKICAgICAgICBsZXQgZG93bmxvYWRlciA9IFBhY2thZ2VEb3dubG9hZGVyKCkKICAgICAgICByZXR1cm4gdHJ5IGF3YWl0IHdpdGhUYXNrQ2FuY2VsbGF0aW9uSGFuZGxlciB7CiAgICAgICAgICAgIHRyeSBhd2FpdCB3aXRoQ2hlY2tlZFRocm93aW5nQ29udGludWF0aW9uIHsgY29udGludWF0aW9uIGluCiAgICAgICAgICAgICAgICBkb3dubG9hZGVyLmJlZ2luKHVybDogdXJsLCBjb250aW51YXRpb246IGNvbnRpbnVhdGlvbiwgcHJvZ3Jlc3M6IHByb2dyZXNzKQogICAgICAgICAgICB9CiAgICAgICAgfSBvbkNhbmNlbDogewogICAgICAgICAgICBkb3dubG9hZGVyLmNhbmNlbCgpCiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgZnVuYyBiZWdpbih1cmw6IFVSTCwgY29udGludWF0aW9uOiBDaGVja2VkQ29udGludWF0aW9uPFtVSW50OF0sIEVycm9yPiwKICAgICAgICAgICAgICAgICAgICAgICBwcm9ncmVzczogQGVzY2FwaW5nIEBNYWluQWN0b3IgKERvdWJsZSkgLT4gVm9pZCkgewogICAgICAgIGxvY2subG9jaygpCiAgICAgICAgc2VsZi5jb250aW51YXRpb24gPSBjb250aW51YXRpb24KICAgICAgICBwcm9ncmVzc0hhbmRsZXIgPSBwcm9ncmVzcwogICAgICAgIGxldCBhbHJlYWR5Q2FuY2VsbGVkID0gY2FuY2VsUmVxdWVzdGVkCiAgICAgICAgbG9jay51bmxvY2soKQogICAgICAgIGd1YXJkICFhbHJlYWR5Q2FuY2VsbGVkIGVsc2UgewogICAgICAgICAgICBmaW5pc2god2l0aDogLmZhaWx1cmUoQ2FuY2VsbGF0aW9uRXJyb3IoKSkpCiAgICAgICAgICAgIHJldHVybgogICAgICAgIH0KICAgICAgICBsZXQgY29uZmlnID0gVVJMU2Vzc2lvbkNvbmZpZ3VyYXRpb24uZGVmYXVsdAogICAgICAgIGNvbmZpZy50aW1lb3V0SW50ZXJ2YWxGb3JSZXF1ZXN0ID0gMzAKICAgICAgICBjb25maWcudGltZW91dEludGVydmFsRm9yUmVzb3VyY2UgPSA5MDAKICAgICAgICBsZXQgc2Vzc2lvbiA9IFVSTFNlc3Npb24oY29uZmlndXJhdGlvbjogY29uZmlnLCBkZWxlZ2F0ZTogc2VsZiwgZGVsZWdhdGVRdWV1ZTogbmlsKQogICAgICAgIGxldCB0YXNrID0gc2Vzc2lvbi5kYXRhVGFzayh3aXRoOiB1cmwpCiAgICAgICAgbG9jay5sb2NrKCkKICAgICAgICBzZWxmLnNlc3Npb24gPSBzZXNzaW9uCiAgICAgICAgZGF0YVRhc2sgPSB0YXNrCiAgICAgICAgbG9jay51bmxvY2soKQogICAgICAgIHRhc2sucmVzdW1lKCkKICAgIH0KCiAgICBwcml2YXRlIGZ1bmMgY2FuY2VsKCkgewogICAgICAgIGxvY2subG9jaygpCiAgICAgICAgY2FuY2VsUmVxdWVzdGVkID0gdHJ1ZQogICAgICAgIGxldCB0YXNrID0gZGF0YVRhc2sKICAgICAgICBsb2NrLnVubG9jaygpCiAgICAgICAgdGFzaz8uY2FuY2VsKCkKICAgIH0KCiAgICBwcml2YXRlIGZ1bmMgZmluaXNoKHdpdGggcmVzdWx0OiBSZXN1bHQ8W1VJbnQ4XSwgRXJyb3I+KSB7CiAgICAgICAgbG9jay5sb2NrKCkKICAgICAgICBndWFyZCAhZmluaXNoZWQsIGxldCBjb250aW51YXRpb24gZWxzZSB7IGxvY2sudW5sb2NrKCk7IHJldHVybiB9CiAgICAgICAgZmluaXNoZWQgPSB0cnVlCiAgICAgICAgc2VsZi5jb250aW51YXRpb24gPSBuaWwKICAgICAgICBsZXQgc2Vzc2lvbiA9IHNlbGYuc2Vzc2lvbgogICAgICAgIGxvY2sudW5sb2NrKCkKICAgICAgICBzZXNzaW9uPy5maW5pc2hUYXNrc0FuZEludmFsaWRhdGUoKQogICAgICAgIHN3aXRjaCByZXN1bHQgewogICAgICAgIGNhc2UgLnN1Y2Nlc3MobGV0IGJ5dGVzKTogY29udGludWF0aW9uLnJlc3VtZShyZXR1cm5pbmc6IGJ5dGVzKQogICAgICAgIGNhc2UgLmZhaWx1cmUobGV0IGVycm9yKTogY29udGludWF0aW9uLnJlc3VtZSh0aHJvd2luZzogZXJyb3IpCiAgICAgICAgfQogICAgfQoKICAgIGZ1bmMgdXJsU2Vzc2lvbihfIHNlc3Npb246IFVSTFNlc3Npb24sIGRhdGFUYXNrOiBVUkxTZXNzaW9uRGF0YVRhc2ssCiAgICAgICAgICAgICAgICAgICAgZGlkUmVjZWl2ZSByZXNwb25zZTogVVJMUmVzcG9uc2UpIGFzeW5jIC0+IFVSTFNlc3Npb24uUmVzcG9uc2VEaXNwb3NpdGlvbiB7CiAgICAgICAgaWYgbGV0IGh0dHAgPSByZXNwb25zZSBhcz8gSFRUUFVSTFJlc3BvbnNlLCBodHRwLnN0YXR1c0NvZGUgIT0gMjAwIHsKICAgICAgICAgICAgZmluaXNoKHdpdGg6IC5mYWlsdXJlKE1vZHVsZVN0b3JlRXJyb3IuZG93bmxvYWRGYWlsZWQpKQogICAgICAgICAgICByZXR1cm4gLmNhbmNlbAogICAgICAgIH0KICAgICAgICBleHBlY3RlZExlbmd0aCA9IHJlc3BvbnNlLmV4cGVjdGVkQ29udGVudExlbmd0aAogICAgICAgIHJldHVybiAuYWxsb3cKICAgIH0KCiAgICBmdW5jIHVybFNlc3Npb24oXyBzZXNzaW9uOiBVUkxTZXNzaW9uLCBkYXRhVGFzazogVVJMU2Vzc2lvbkRhdGFUYXNrLCBkaWRSZWNlaXZlIGRhdGE6IERhdGEpIHsKICAgICAgICBidWZmZXIuYXBwZW5kKGNvbnRlbnRzT2Y6IGRhdGEpCiAgICAgICAgaWYgZXhwZWN0ZWRMZW5ndGggPiAwLCBsZXQgcHJvZ3Jlc3NIYW5kbGVyIHsKICAgICAgICAgICAgbGV0IGZyYWN0aW9uID0gRG91YmxlKGJ1ZmZlci5jb3VudCkgLyBEb3VibGUoZXhwZWN0ZWRMZW5ndGgpCiAgICAgICAgICAgIFRhc2sgeyBATWFpbkFjdG9yIGluIHByb2dyZXNzSGFuZGxlcihmcmFjdGlvbikgfQogICAgICAgIH0KICAgIH0KCiAgICBmdW5jIHVybFNlc3Npb24oXyBzZXNzaW9uOiBVUkxTZXNzaW9uLCB0YXNrOiBVUkxTZXNzaW9uVGFzaywKICAgICAgICAgICAgICAgICAgICBkaWRDb21wbGV0ZVdpdGhFcnJvciBlcnJvcjogRXJyb3I/KSB7CiAgICAgICAgaWYgbGV0IGVycm9yIHsKICAgICAgICAgICAgaWYgKGVycm9yIGFzPyBVUkxFcnJvcik/LmNvZGUgPT0gLmNhbmNlbGxlZCB7CiAgICAgICAgICAgICAgICBmaW5pc2god2l0aDogLmZhaWx1cmUoQ2FuY2VsbGF0aW9uRXJyb3IoKSkpCiAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICBmaW5pc2god2l0aDogLmZhaWx1cmUoZXJyb3IpKQogICAgICAgICAgICB9CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgZmluaXNoKHdpdGg6IC5zdWNjZXNzKGJ1ZmZlcikpCiAgICAgICAgfQogICAgfQp9Cg==
+// RepositoryView.swift — browse the CrossWire repository and download versions.
+
+import SwiftUI
+import SwordReader
+
+struct RepositoryView: View {
+    @Environment(\.moduleStore) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var modules: [ModuleInfo] = []
+    @State private var query = ""
+    @State private var loading = true
+    @State private var errorMessage: String?
+    @State private var downloading: Set<String> = []
+    @State private var progress: [String: Double] = [:]
+    @State private var tasks: [String: Task<Void, Never>] = [:]
+    @State private var installedIDs: Set<String> = []
+    @State private var selectedSourceID = BibleSource.crossWire.id
+
+    /// All remote (repository) sources the user can download from.
+    private var repositorySources: [BibleSource] {
+        BibleSourceStore.shared.allSources.filter { $0.repositoryURL != nil }
+    }
+
+    private var selectedSource: BibleSource {
+        repositorySources.first { $0.id == selectedSourceID } ?? BibleSource.crossWire
+    }
+
+    private var repository: SwordRepository {
+        let url = selectedSource.repositoryURL ?? BibleSource.crossWire.repositoryURL!
+        return SwordRepository(name: selectedSource.name, baseURL: url)
+    }
+
+    private var filtered: [ModuleInfo] {
+        // Bibles the reader can open, plus commentaries the auxiliary
+        // panel can read (REQ-AP-4).
+        let base = modules.filter { $0.isRenderable || $0.isCommentaryRenderable }
+        guard !query.isEmpty else { return base }
+        let q = query.lowercased()
+        return base.filter {
+            $0.id.lowercased().contains(q) || $0.description.lowercased().contains(q)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView("Loading repository…")
+                } else if let errorMessage {
+                    ContentUnavailableView("Couldn't load", systemImage: "wifi.exclamationmark",
+                                            description: Text(errorMessage))
+                } else {
+                    VStack(spacing: 0) {
+                        if repositorySources.count > 1 {
+                            Picker("Source", selection: $selectedSourceID) {
+                                ForEach(repositorySources) { source in
+                                    Text(source.name).tag(source.id)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .padding()
+                        }
+                        List(filtered, id: \.id) { mod in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mod.description).font(.headline)
+                                    Text(mod.isCommentary
+                                         ? "\(mod.id) · \(mod.language) · Commentary"
+                                         : "\(mod.id) · \(mod.language)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                statusView(for: mod)
+                            }
+                        }
+                        .searchable(text: $query, prompt: "Search versions")
+                    }
+                }
+            }
+            .navigationTitle("Add Bible")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .task { await load() }
+        .onChange(of: selectedSourceID) { Task { await load() } }
+        .onAppear { installedIDs = Set(store.installedModules().map { $0.id }) }
+    }
+
+    @ViewBuilder
+    private func statusView(for mod: ModuleInfo) -> some View {
+        if installedIDs.contains(mod.id) {
+            Text("Installed").font(.caption).foregroundStyle(.secondary)
+        } else if downloading.contains(mod.id) {
+            HStack(spacing: 6) {
+                if let fraction = progress[mod.id] {
+                    ProgressView(value: fraction).frame(width: 60)
+                    Text("\(Int(fraction * 100))%")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .monospacedDigit()
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+                Button {
+                    tasks[mod.id]?.cancel()
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Cancel download")
+            }
+        } else {
+            Button("Get") { tasks[mod.id] = Task { await download(mod) } }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
+    }
+
+    private func load() async {
+        loading = true
+        errorMessage = nil
+        do {
+            let (data, _) = try await URLSession.shared.data(from: repository.catalogURL)
+            modules = try SwordRepository.parseCatalog([UInt8](data))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func download(_ mod: ModuleInfo) async {
+        let id = mod.id
+        downloading.insert(id)
+        defer {
+            downloading.remove(id)
+            progress[id] = nil
+            tasks[id] = nil
+        }
+        do {
+            let data = try await PackageDownloader.fetch(
+                from: repository.packageURL(for: id)
+            ) { fraction in
+                progress[id] = fraction
+            }
+            // Install off the main thread: unpacking a package must never
+            // freeze the page.
+            let store = self.store
+            try await Task.detached(priority: .userInitiated) {
+                try store.install(packageData: data, moduleID: id)
+            }.value
+            // Tag the module with the source it was downloaded from so it
+            // appears under that source in the library.
+            BibleSourceStore.shared.setSourceID(selectedSourceID, forModule: mod.id)
+            installedIDs.insert(mod.id)
+        } catch is CancellationError {
+            // Cancelled by the user — not an error.
+        } catch let error as URLError where error.code == .cancelled {
+            // Cancelled by the user — not an error.
+        } catch {
+            errorMessage = "Download failed: \(error.localizedDescription)"
+        }
+    }
+}
+
+/// The commentary counterpart of RepositoryView (REQ-AP-10): the same
+/// repository browser, but listing only commentaries the auxiliary
+/// panel can read, under an "Add Commentary" title, with each
+/// commentary's declared license shown under its name (REQ-AP-8).
+struct CommentaryRepositoryView: View {
+    @Environment(\.moduleStore) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var modules: [ModuleInfo] = []
+    @State private var query = ""
+    @State private var loading = true
+    @State private var errorMessage: String?
+    @State private var downloading: Set<String> = []
+    @State private var progress: [String: Double] = [:]
+    @State private var tasks: [String: Task<Void, Never>] = [:]
+    @State private var installedIDs: Set<String> = []
+    @State private var selectedSourceID = BibleSource.crossWire.id
+
+    /// All remote (repository) sources the user can download from.
+    private var repositorySources: [BibleSource] {
+        BibleSourceStore.shared.allSources.filter { $0.repositoryURL != nil }
+    }
+
+    private var selectedSource: BibleSource {
+        repositorySources.first { $0.id == selectedSourceID } ?? BibleSource.crossWire
+    }
+
+    private var repository: SwordRepository {
+        let url = selectedSource.repositoryURL ?? BibleSource.crossWire.repositoryURL!
+        return SwordRepository(name: selectedSource.name, baseURL: url)
+    }
+
+    private var filtered: [ModuleInfo] {
+        // Only commentaries the panel can read (REQ-AP-4).
+        let base = modules.filter { $0.isCommentaryRenderable }
+        guard !query.isEmpty else { return base }
+        let q = query.lowercased()
+        return base.filter {
+            $0.id.lowercased().contains(q) || $0.description.lowercased().contains(q)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView("Loading repository…")
+                } else if let errorMessage {
+                    ContentUnavailableView("Couldn't load", systemImage: "wifi.exclamationmark",
+                                            description: Text(errorMessage))
+                } else {
+                    VStack(spacing: 0) {
+                        if repositorySources.count > 1 {
+                            Picker("Source", selection: $selectedSourceID) {
+                                ForEach(repositorySources) { source in
+                                    Text(source.name).tag(source.id)
+                                }
+                            }
+                            .pickerStyle(.segmented)
+                            .padding()
+                        }
+                        List(filtered, id: \.id) { mod in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mod.description).font(.headline)
+                                    Text("\(mod.id) · \(mod.language)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    if !mod.distributionLicense.isEmpty {
+                                        Text(mod.distributionLicense)
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                statusView(for: mod)
+                            }
+                        }
+                        .searchable(text: $query, prompt: "Search commentaries")
+                    }
+                }
+            }
+            .navigationTitle("Add Commentary")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .task { await load() }
+        .onChange(of: selectedSourceID) { Task { await load() } }
+        .onAppear { installedIDs = Set(store.installedModules().map { $0.id }) }
+    }
+
+    @ViewBuilder
+    private func statusView(for mod: ModuleInfo) -> some View {
+        if installedIDs.contains(mod.id) {
+            Text("Installed").font(.caption).foregroundStyle(.secondary)
+        } else if downloading.contains(mod.id) {
+            HStack(spacing: 6) {
+                if let fraction = progress[mod.id] {
+                    ProgressView(value: fraction).frame(width: 60)
+                    Text("\(Int(fraction * 100))%")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .monospacedDigit()
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+                Button {
+                    tasks[mod.id]?.cancel()
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Cancel download")
+            }
+        } else {
+            Button("Get") { tasks[mod.id] = Task { await download(mod) } }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
+    }
+
+    private func load() async {
+        loading = true
+        errorMessage = nil
+        do {
+            let (data, _) = try await URLSession.shared.data(from: repository.catalogURL)
+            modules = try SwordRepository.parseCatalog([UInt8](data))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func download(_ mod: ModuleInfo) async {
+        let id = mod.id
+        downloading.insert(id)
+        defer {
+            downloading.remove(id)
+            progress[id] = nil
+            tasks[id] = nil
+        }
+        do {
+            let data = try await PackageDownloader.fetch(
+                from: repository.packageURL(for: id)
+            ) { fraction in
+                progress[id] = fraction
+            }
+            // Install off the main thread: unpacking a package must never
+            // freeze the page.
+            let store = self.store
+            try await Task.detached(priority: .userInitiated) {
+                try store.install(packageData: data, moduleID: id)
+            }.value
+            // Tag the module with the source it was downloaded from.
+            BibleSourceStore.shared.setSourceID(selectedSourceID, forModule: mod.id)
+            installedIDs.insert(mod.id)
+        } catch is CancellationError {
+            // Cancelled by the user — not an error.
+        } catch let error as URLError where error.code == .cancelled {
+            // Cancelled by the user — not an error.
+        } catch {
+            errorMessage = "Download failed: \(error.localizedDescription)"
+        }
+    }
+}
+
+/// One-shot package download with progress, cancellation, and timeouts.
+/// The plain `URLSession.data(from:)` API offers no progress and no
+/// cancel, and its default resource timeout is days — a stalled transfer
+/// spun forever behind a bare spinner. Here the surrounding Task's
+/// cancellation cancels the transfer, progress is reported as a fraction
+/// (when the server gives a length), and a transfer that stalls for
+/// 30 seconds — or runs past 15 minutes in total — fails with an error
+/// instead of hanging.
+final class PackageDownloader: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<[UInt8], Error>?
+    private var session: URLSession?
+    private var dataTask: URLSessionDataTask?
+    private var cancelRequested = false
+    private var finished = false
+    // Touched only on the session's serial delegate queue.
+    private var buffer: [UInt8] = []
+    private var expectedLength: Int64 = 0
+    private var progressHandler: (@MainActor (Double) -> Void)?
+
+    static func fetch(from url: URL,
+                      progress: @escaping @MainActor (Double) -> Void) async throws -> [UInt8] {
+        let downloader = PackageDownloader()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                downloader.begin(url: url, continuation: continuation, progress: progress)
+            }
+        } onCancel: {
+            downloader.cancel()
+        }
+    }
+
+    private func begin(url: URL, continuation: CheckedContinuation<[UInt8], Error>,
+                       progress: @escaping @MainActor (Double) -> Void) {
+        lock.lock()
+        self.continuation = continuation
+        progressHandler = progress
+        let alreadyCancelled = cancelRequested
+        lock.unlock()
+        guard !alreadyCancelled else {
+            finish(with: .failure(CancellationError()))
+            return
+        }
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30
+        config.timeoutIntervalForResource = 900
+        let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        let task = session.dataTask(with: url)
+        lock.lock()
+        self.session = session
+        dataTask = task
+        lock.unlock()
+        task.resume()
+    }
+
+    private func cancel() {
+        lock.lock()
+        cancelRequested = true
+        let task = dataTask
+        lock.unlock()
+        task?.cancel()
+    }
+
+    private func finish(with result: Result<[UInt8], Error>) {
+        lock.lock()
+        guard !finished, let continuation else { lock.unlock(); return }
+        finished = true
+        self.continuation = nil
+        let session = self.session
+        lock.unlock()
+        session?.finishTasksAndInvalidate()
+        switch result {
+        case .success(let bytes): continuation.resume(returning: bytes)
+        case .failure(let error): continuation.resume(throwing: error)
+        }
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
+                    didReceive response: URLResponse) async -> URLSession.ResponseDisposition {
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            finish(with: .failure(ModuleStoreError.downloadFailed))
+            return .cancel
+        }
+        expectedLength = response.expectedContentLength
+        return .allow
+    }
+
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        buffer.append(contentsOf: data)
+        if expectedLength > 0, let progressHandler {
+            let fraction = Double(buffer.count) / Double(expectedLength)
+            Task { @MainActor in progressHandler(fraction) }
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    didCompleteWithError error: Error?) {
+        if let error {
+            if (error as? URLError)?.code == .cancelled {
+                finish(with: .failure(CancellationError()))
+            } else {
+                finish(with: .failure(error))
+            }
+        } else {
+            finish(with: .success(buffer))
+        }
+    }
+}
