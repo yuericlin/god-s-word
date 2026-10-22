@@ -323,6 +323,15 @@ struct AuxiliaryPanelView: View {
         }
     }
 
+    /// " - Oct 22, 2026" for a note's last-edit date, "" when the
+    /// note has no timestamp (REQ-NT-17): the date rides the
+    /// note's title line — no "Updated" label and no separate
+    /// line under the note; date only, no time of day.
+    private func noteDateSuffix(_ updated: Date?) -> String {
+        guard let updated else { return "" }
+        return " - \(updated.formatted(date: .abbreviated, time: .omitted))"
+    }
+
     private func noteRowView(_ row: NoteRow) -> some View {
         Button {
             switch row.kind {
@@ -332,7 +341,7 @@ struct AuxiliaryPanelView: View {
             }
         } label: {
             VStack(alignment: .leading, spacing: 3) {
-                Text(row.reference)
+                Text(row.reference + noteDateSuffix(row.updated))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(row.text)
@@ -340,11 +349,6 @@ struct AuxiliaryPanelView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                if let updated = row.updated {
-                    Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
             }
             .contentShape(Rectangle())
         }
@@ -447,17 +451,10 @@ struct AuxiliaryPanelView: View {
                             edit: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(reference).font(.subheadline).foregroundStyle(.secondary)
+                Text(reference + noteDateSuffix(updated)).font(.subheadline).foregroundStyle(.secondary)
                 Spacer()
                 Button(text == nil ? "Add" : "Edit") { edit() }
                     .font(.subheadline)
-            }
-            // Last updated (REQ-NT-17); notes written before
-            // timestamps existed show nothing here.
-            if text != nil, let updated {
-                Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
             if let text {
                 ScrollView {
@@ -546,14 +543,10 @@ struct AuxiliaryPanelView: View {
     /// user moves it with one tap instead.
     private func legacyChapterNote(_ legacy: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored.")
+            Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored"
+                 + noteDateSuffix(personalData.verseNoteTimes[verse1NoteKey]?.updatedAt) + ".")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            if let updated = personalData.verseNoteTimes[verse1NoteKey]?.updatedAt {
-                Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
             Text(legacy)
                 .font(.system(size: personalData.fontSize, design: .serif))
                 .frame(maxWidth: .infinity, alignment: .leading)
