@@ -82,6 +82,23 @@ struct SettingsView: View {
                     Text("When the version you are reading has no Strong's numbers, the panel's Strong's tab renders the selected verse from this version instead.")
                 }
 
+                Section {
+                    NavigationLink {
+                        SourcesSettingsView()
+                    } label: {
+                        HStack {
+                            Text("Sources")
+                            Spacer()
+                            Text(BibleSourceStore.shared.source(withID: BibleSourceStore.shared.defaultSourceID)?.name ?? "CrossWire")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Sources")
+                } footer: {
+                    Text("Public repositories you can download Bibles and commentaries from. Pick the default, add your own, or update the public list.")
+                }
+
                 Section("History") {
                     NavigationLink {
                         HistoryView(onSelect: { entry in

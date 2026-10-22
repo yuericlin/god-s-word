@@ -17,21 +17,25 @@ public struct ModuleInfo: Sendable {
 
     /// True when God's Word v1 can download and render this module:
     /// zText driver, ZIP compression, whole-book blocks, OSIS source,
-    /// UTF-8 encoding, KJV/NRSV versification, not enciphered.
+    /// UTF-8 encoding, KJV/NRSV versification (an absent Versification
+    /// line means the KJV default), not enciphered.
     public var isRenderable: Bool {
-        guard conf.driver?.trimmingCharacters(in: .whitespaces) == "zText",
-              conf.compressType?.trimmingCharacters(in: .whitespaces) == "ZIP",
-              conf.blockType?.trimmingCharacters(in: .whitespaces) == "BOOK",
-              conf.sourceType?.trimmingCharacters(in: .whitespaces) == "OSIS",
+        guard conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZTEXT",
+              conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
+              conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
+              conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() == "OSIS",
               conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() == "UTF-8",
               conf.cipherKey == nil
         else { return false }
         let v = conf.versification?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
-        return v == "KJV" || v == "NRSV"
+        return v.isEmpty || v == "KJV" || v == "NRSV"
     }
 
     public var versification: Versification? {
-        Versification.named(conf.versification?.trimmingCharacters(in: .whitespaces) ?? "")
+        let name = conf.versification?.trimmingCharacters(in: .whitespaces) ?? ""
+        // An absent Versification line means the SWORD default, KJV
+        // (e.g. NASB1995 and the NET Bible declare none) — REQ-SRC-4.
+        return name.isEmpty ? .kjv : Versification.named(name)
     }
 
     /// Whether the module text is Chinese (for localized book names).
@@ -50,7 +54,7 @@ public struct ModuleInfo: Sendable {
     /// never appear in the version lists.
     public var isCommentary: Bool {
         category.lowercased() == "commentaries"
-            || conf.driver?.trimmingCharacters(in: .whitespaces) == "zCom"
+            || conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZCOM"
     }
 
     /// True when the auxiliary panel can read this commentary: zCom
@@ -61,15 +65,15 @@ public struct ModuleInfo: Sendable {
     /// ThML commentaries (e.g. TSK) are not renderable yet.
     public var isCommentaryRenderable: Bool {
         guard isCommentary,
-              conf.driver?.trimmingCharacters(in: .whitespaces) == "zCom",
-              conf.compressType?.trimmingCharacters(in: .whitespaces) == "ZIP",
-              conf.blockType?.trimmingCharacters(in: .whitespaces) == "BOOK",
-              conf.sourceType?.trimmingCharacters(in: .whitespaces) == "OSIS",
+              conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZCOM",
+              conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
+              conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
+              conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() == "OSIS",
               conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() == "UTF-8",
               conf.cipherKey == nil
         else { return false }
         let v = conf.versification?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
-        return v == "KJV" || v == "NRSV"
+        return v.isEmpty || v == "KJV" || v == "NRSV"
     }
 
     /// The module's distribution license as declared in its .conf

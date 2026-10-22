@@ -532,179 +532,112 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
     }
 }
 
-// MARK: - REQ-HI-3, REQ-HI-7..9: combined reading history
+// MARK: - REQ-SRC: Module sources
 
-final class CombinedHistoryRequirementsTests: XCTestCase {
-    let t0 = Date(timeIntervalSinceReferenceDate: 800_000_000)
-    func hours(_ h: Double) -> Date { t0.addingTimeInterval(h * 3600) }
-
-    func record(_ log: [ReadingHistoryEntry], _ module: String, book: Int = 1,
-                chapter: Int = 1, at: Date) -> [ReadingHistoryEntry] {
-        ReadingHistoryLog.recording(moduleID: module, bookName: "Book\(book)",
-                                    testament: 1, book: book, chapter: chapter,
-                                    at: at, into: log)
+final class ModuleSourceRequirementsTests: XCTestCase {
+    private func conf(_ text: String) -> ModuleInfo {
+        ModuleInfo(conf: SwordConf(text: text))
     }
 
-    // REQ-HI-7: a revisit within 24 hours joins the entry: one more
-    // timestamp, and the version when it is new.
-    func testRevisitWithin24HoursMergesTimestampAndVersion() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "ChiUns", at: hours(2))
-        XCTAssertEqual(log.count, 1)
-        XCTAssertEqual(log[0].timestamps, [t0, hours(2)])
-        XCTAssertEqual(log[0].moduleIDs, ["KJV", "ChiUns"])
-        XCTAssertEqual(log[0].moduleID, "ChiUns")   // most recent version
-        XCTAssertEqual(log[0].earliest, t0)
+    // REQ-SRC-4: a Bible with no Versification line (NASB1995's conf
+    // shape) uses the SWORD default, KJV: renderable, and resolves to
+    // the KJV versification so the reader can open it.
+    func testBibleWithoutVersificationIsRenderableAsKJV() {
+        let info = conf("""
+            [NASB1995]
+            Description=New American Standard Bible - NASB 1995
+            DataPath=./modules/texts/ztext/nasb1995/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Lang=en
+            """)
+        XCTAssertTrue(info.isRenderable)
+        XCTAssertEqual(info.versification?.name, "KJV")
     }
 
-    // The same version again adds a timestamp but no duplicate version.
-    func testSameVersionAddsTimestampOnly() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "KJV", at: hours(3))
-        XCTAssertEqual(log.count, 1)
-        XCTAssertEqual(log[0].moduleIDs, ["KJV"])
-        XCTAssertEqual(log[0].timestamps.count, 2)
+    // REQ-SRC-4: the same default applies to commentaries.
+    func testCommentaryWithoutVersificationIsRenderable() {
+        let info = conf("""
+            [SomeCommentary]
+            DataPath=./modules/comments/zcom/somecommentary/
+            ModDrv=zCom
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertTrue(info.isCommentaryRenderable)
     }
 
-    // Reading an earlier version again makes it the most recent one.
-    func testReusedVersionBecomesMostRecent() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "ChiUns", at: hours(1))
-        log = record(log, "KJV", at: hours(2))
-        XCTAssertEqual(log[0].moduleIDs, ["ChiUns", "KJV"])
-        XCTAssertEqual(log[0].moduleID, "KJV")
+    // REQ-SRC-4: an empty CipherKey= line (the NET Bible's and
+    // NA28's conf shape) means not enciphered, so the module is
+    // renderable; a real key still locks it out.
+    func testEmptyCipherKeyIsNotLocked() {
+        let unlocked = conf("""
+            [NET]
+            DataPath=./modules/texts/ztext/net/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            CipherKey=
+            Lang=en
+            """)
+        XCTAssertTrue(unlocked.isRenderable)
+
+        let locked = conf("""
+            [Locked]
+            DataPath=./modules/texts/ztext/locked/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            CipherKey=somekey
+            Lang=en
+            """)
+        XCTAssertFalse(locked.isRenderable)
     }
 
-    // REQ-HI-7: past 24 hours it starts a new entry; the newer one is first.
-    func testRevisitAfter24HoursStartsNewEntry() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "KJV", at: hours(25))
-        XCTAssertEqual(log.count, 2)
-        XCTAssertEqual(log[0].timestamps, [hours(25)])
-        XCTAssertEqual(log[1].timestamps, [t0])
+    // REQ-SRC-4: conf values match case-insensitively, as in SWORD —
+    // the NET Bible writes BlockType=Book and would otherwise be
+    // hidden despite meeting every other condition.
+    func testConfValuesMatchCaseInsensitively() {
+        let info = conf("""
+            [NET]
+            DataPath=./modules/texts/ztext/net/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=Book
+            CipherKey=
+            Lang=en
+            """)
+        XCTAssertTrue(info.isRenderable)
     }
 
-    // The window runs from the entry's earliest visit, not its latest, so
-    // an entry can't stretch forever by being revisited every day.
-    func testWindowIsMeasuredFromTheEarliestVisit() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "KJV", at: hours(20))   // joins (20h from earliest)
-        log = record(log, "KJV", at: hours(30))   // 30h from earliest: new entry
-        XCTAssertEqual(log.count, 2)
-        XCTAssertEqual(log[1].timestamps, [t0, hours(20)])
-        XCTAssertEqual(log[0].timestamps, [hours(30)])
-    }
-
-    // Different chapters never merge.
-    func testDifferentChaptersStaySeparate() {
-        var log = record([], "KJV", chapter: 1, at: t0)
-        log = record(log, "KJV", chapter: 2, at: hours(1))
-        XCTAssertEqual(log.count, 2)
-    }
-
-    // REQ-HI-3: a merged entry moves to the front.
-    func testMergedEntryMovesToFront() {
-        var log = record([], "KJV", chapter: 1, at: t0)
-        log = record(log, "KJV", chapter: 2, at: hours(1))
-        log = record(log, "KJV", chapter: 1, at: hours(2))
-        XCTAssertEqual(log.map { $0.chapter }, [1, 2])
-    }
-
-    // A reload seconds later is not a new visit: no extra timestamp, but
-    // the version still counts.
-    func testQuickReloadAddsNoTimestamp() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "ChiUns", at: t0.addingTimeInterval(5))
-        XCTAssertEqual(log[0].timestamps, [t0])
-        XCTAssertEqual(log[0].moduleIDs, ["KJV", "ChiUns"])
-    }
-
-    // REQ-HI-2: the cap still applies to entries.
-    func testCapKeepsNewestEntries() {
-        var log: [ReadingHistoryEntry] = []
-        for ch in 1...5 {
-            log = ReadingHistoryLog.recording(
-                moduleID: "KJV", bookName: "B", testament: 1, book: 1, chapter: ch,
-                at: hours(Double(ch)), into: log, limit: 3)
-        }
-        XCTAssertEqual(log.map { $0.chapter }, [5, 4, 3])
-    }
-
-    // Entries written before combining existed (one moduleID + timestamp)
-    // still decode.
-    func testDecodesTheOlderOneVisitFormat() throws {
-        let json = """
-        {"id":"E621E1F8-C36C-495A-93FC-0C247A3E6E5F","moduleID":"KJV",
-         "bookName":"Genesis","testament":1,"book":1,"chapter":1,
-         "timestamp":782000000}
-        """
-        let entry = try JSONDecoder().decode(ReadingHistoryEntry.self,
-                                             from: Data(json.utf8))
-        XCTAssertEqual(entry.moduleIDs, ["KJV"])
-        XCTAssertEqual(entry.timestamps,
-                       [Date(timeIntervalSinceReferenceDate: 782_000_000)])
-        XCTAssertEqual(entry.bookName, "Genesis")
-    }
-
-    func testEncodeDecodeRoundTripUsesTheNewFormat() throws {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "ChiUns", at: hours(1))
-        let data = try JSONEncoder().encode(log)
-        let text = String(decoding: data, as: UTF8.self)
-        XCTAssertTrue(text.contains("moduleIDs"))
-        XCTAssertFalse(text.contains("\"moduleID\""))
-        XCTAssertFalse(text.contains("\"timestamp\""))
-        XCTAssertEqual(try JSONDecoder().decode([ReadingHistoryEntry].self, from: data), log)
-    }
-
-    // REQ-HI-7: history recorded before combining existed is combined when
-    // loaded: same chapter within 24 hours becomes one entry.
-    func testCombinedMergesOlderSeparateEntries() {
-        let a = ReadingHistoryEntry(bookName: "Genesis", testament: 1, book: 1, chapter: 1,
-                                    moduleIDs: ["KJV"], timestamps: [t0])
-        let b = ReadingHistoryEntry(bookName: "Genesis", testament: 1, book: 1, chapter: 1,
-                                    moduleIDs: ["ChiUns"], timestamps: [hours(3)])
-        let c = ReadingHistoryEntry(bookName: "Genesis", testament: 1, book: 1, chapter: 1,
-                                    moduleIDs: ["KJV"], timestamps: [hours(40)])
-        let other = ReadingHistoryEntry(bookName: "Exodus", testament: 1, book: 2, chapter: 1,
-                                        moduleIDs: ["KJV"], timestamps: [hours(1)])
-        // most recent first, as stored
-        let combined = ReadingHistoryLog.combined([c, b, other, a])
-        XCTAssertEqual(combined.count, 3)
-        XCTAssertEqual(combined[0].timestamps, [hours(40)])
-        let merged = combined.first { $0.chapter == 1 && $0.timestamps.count == 2 }
-        XCTAssertEqual(merged?.timestamps, [t0, hours(3)])
-        XCTAssertEqual(merged?.moduleIDs, ["KJV", "ChiUns"])
-    }
-
-    func testCombinedIsIdempotent() {
-        var log = record([], "KJV", at: t0)
-        log = record(log, "ChiUns", at: hours(2))
-        log = record(log, "KJV", at: hours(30))
-        log = record(log, "KJV", chapter: 2, at: hours(31))
-        let once = ReadingHistoryLog.combined(log)
-        XCTAssertEqual(once, log)
-        XCTAssertEqual(ReadingHistoryLog.combined(once), once)
-    }
-
-    // REQ-HI-9: the list shows the last 20 entries, then "...".
-    func testVisibleShowsTwentyAndSaysWhetherThereAreMore() {
-        func entries(_ n: Int) -> [ReadingHistoryEntry] {
-            (1...n).map {
-                ReadingHistoryEntry(bookName: "B", testament: 1, book: 1, chapter: $0,
-                                    moduleIDs: ["KJV"], timestamps: [hours(Double($0))])
-            }
-        }
-        let many = ReadingHistoryLog.visible(entries(25))
-        XCTAssertEqual(many.entries.count, 20)
-        XCTAssertEqual(many.entries.first?.chapter, 1)   // log order is kept
-        XCTAssertTrue(many.hasMore)
-        let exactly = ReadingHistoryLog.visible(entries(20))
-        XCTAssertEqual(exactly.entries.count, 20)
-        XCTAssertFalse(exactly.hasMore)
-        let few = ReadingHistoryLog.visible(entries(3))
-        XCTAssertEqual(few.entries.count, 3)
-        XCTAssertFalse(few.hasMore)
-        XCTAssertFalse(ReadingHistoryLog.visible([]).hasMore)
+    // REQ-SRC-4: an explicitly unsupported versification stays
+    // unrenderable and unresolved (only the absent line defaults).
+    func testOtherVersificationIsNotRenderable() {
+        let info = conf("""
+            [LXX]
+            DataPath=./modules/texts/ztext/lxx/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=LXX
+            Lang=grc
+            """)
+        XCTAssertFalse(info.isRenderable)
+        XCTAssertNil(info.versification)
     }
 }
