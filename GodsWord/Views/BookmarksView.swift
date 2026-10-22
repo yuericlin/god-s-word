@@ -154,10 +154,10 @@ struct BookmarkRibbonsRow: View {
         }
         var text = "\(name) \(bookmark.chapter)"
         // Last-change date on the same line, without an "Updated"
-        // label (REQ-BM-10): "Genesis 12, Oct 21, 2026". Bookmarks
+        // label (REQ-BM-10): "Genesis 12 - Oct 22, 2026". Bookmarks
         // written before timestamps show no date part.
         if let updated = bookmark.lastUpdated {
-            text += ", \(updated.formatted(date: .abbreviated, time: .omitted))"
+            text += " - \(updated.formatted(date: .abbreviated, time: .omitted))"
         }
         return text
     }

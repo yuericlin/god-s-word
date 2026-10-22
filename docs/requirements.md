@@ -164,7 +164,9 @@ Multiple (KJV Gen 1:1-2):
   saving identical text stamps nothing; deleting a note deletes its
   times. Notes written before this have no creation time — their
   first later edit stamps the last-edit time only. The Notes tab
-  shows "Updated <date, time>" under a note that has one. The times
+  appends the last-edit date to the note's title line —
+  "Proverbs 8:31 - Oct 22, 2026" — date only, no "Updated"
+  label, and nothing under the note. The times
   travel with the notes: UserDefaults, payload v8, iCloud files, and
   manual export/import.
 - **REQ-NT-18:** The Notes tab has four sub-tabs, in this order:
@@ -301,7 +303,8 @@ Multiple (KJV Gen 1:1-2):
   times are kept in the data (and backups); the bookmarks panel's
   labeled ribbons show the name and one line with the book and chapter
   followed by the last-change date, with no "Updated" label \u2014
-  "Genesis 12, Oct 21, 2026". Bookmarks written before this carry no
+  "Genesis 12 - Oct 22, 2026" (book and chapter, then " - ", then
+  the date). Bookmarks written before this carry no
   timestamps and show just the book and chapter until they are next
   saved or assigned.
 
@@ -635,9 +638,7 @@ Multiple (KJV Gen 1:1-2):
   StrongsHebrew declares none). On CrossWire that is 50 of 52
   dictionaries, including Easton, ISBE, Nave, Webster's, and the
   Strong's lexicons in many languages. Installed dictionaries
-  never appear in the library's version lists or the reader's
-  version picker (`BibleVersion.allInstalled` applies the same
-  exclusion as the library groups).
+  never appear in the library's version lists.
 - **REQ-DC-2:** Settings > Dictionary chooses the dictionary
   Strong's definitions come from, separately for Hebrew ("H")
   and Greek ("G") keys, from the installed dictionaries. The
