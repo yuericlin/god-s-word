@@ -16,11 +16,11 @@ public struct ModuleInfo: Sendable {
     public let about: String
 
     /// True when God's Word v1 can download and render this module:
-    /// zText driver, ZIP compression, whole-book blocks, OSIS source,
-    /// UTF-8 encoding, KJV/NRSV versification (an absent Versification
-    /// line means the KJV default), not enciphered.
+    /// zText/zText4 driver, ZIP compression, whole-book blocks, OSIS
+    /// source, UTF-8 encoding, KJV/NRSV versification (an absent
+    /// Versification line means the KJV default), not enciphered.
     public var isRenderable: Bool {
-        guard conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZTEXT",
+        guard ["ZTEXT", "ZTEXT4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""),
               conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
               conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
               conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() == "OSIS",
@@ -49,27 +49,37 @@ public struct ModuleInfo: Sendable {
         (conf["Category"] ?? "").trimmingCharacters(in: .whitespaces)
     }
 
+    /// Whether this module is stored in the "4" verse-index format
+    /// (12-byte entries, 32-bit verse sizes) used by the zText4 /
+    /// zCom4 drivers instead of the classic 10-byte format
+    /// (REQ-AP-16). The reader opens the module accordingly.
+    public var usesV4Storage: Bool {
+        ["ZTEXT4", "ZCOM4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? "")
+    }
+
     /// Whether this module is a commentary: its catalog category says so,
-    /// or it uses the zCom driver. Commentaries are not Bible versions and
+    /// or it uses a zCom driver. Commentaries are not Bible versions and
     /// never appear in the version lists.
     public var isCommentary: Bool {
         category.lowercased() == "commentaries"
-            || conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZCOM"
+            || ["ZCOM", "ZCOM4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? "")
     }
 
     /// True when the auxiliary panel can read this commentary: zCom
-    /// driver, ZIP compression, whole-book blocks, OSIS or ThML
-    /// source, UTF-8 text (an absent Encoding counts — TSK declares
-    /// none and is UTF-8 text), KJV/NRSV versification, not
-    /// enciphered. A zCom module has the same .bzv/.bzs/.bzz file
-    /// layout as zText, so the existing SwordModule reader reads it
-    /// unmodified (verified against MHCC). ThML entries pass through
-    /// the same plain-text conversion as OSIS ones (verified against
-    /// TSK, REQ-AP-14); CHAPTER-block modules (e.g. NETnotes) are
-    /// still excluded — their storage differs (.czv/.czs/.czz files).
+    /// or zCom4 driver, ZIP compression, whole-book blocks, OSIS or
+    /// ThML source, UTF-8 text (an absent Encoding counts — TSK
+    /// declares none and is UTF-8 text), KJV/NRSV versification,
+    /// not enciphered. A zCom module has the same .bzv/.bzs/.bzz
+    /// file layout as zText, so the existing SwordModule reader
+    /// reads it (the "4" storage variant included, REQ-AP-16;
+    /// verified against MHCC and TDavid). ThML entries pass through
+    /// the same plain-text conversion as OSIS ones (verified
+    /// against TSK, REQ-AP-14); CHAPTER-block modules (e.g.
+    /// NETnotes) are still excluded — their storage differs
+    /// (.czv/.czs/.czz files).
     public var isCommentaryRenderable: Bool {
         guard isCommentary,
-              conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZCOM",
+              ["ZCOM", "ZCOM4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""),
               conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
               conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
               ["OSIS", "THML"].contains(conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""),

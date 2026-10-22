@@ -553,6 +553,16 @@ Multiple (KJV Gen 1:1-2):
   failing the whole module load. A partial file set still fails
   as corrupt, and a directory with no testament data at all
   still fails as missing.
+- **REQ-AP-16:** Modules using the "4" storage drivers (zText4
+  Bibles, zCom4 commentaries) are downloadable and readable on
+  the same terms as their classic counterparts. The v4 verse
+  index keeps zVerse's heading-slot numbering; only the entry
+  format differs (12 bytes per entry with a 32-bit verse size,
+  instead of 10 bytes / 16-bit). This unlocks CrossWire modules
+  that exist only as zCom4 — TDavid (Spurgeon's Treasury of
+  David), MHC (Matthew Henry's Complete Commentary), JFB, and
+  KD. Modules in a versification the app doesn't carry
+  (Catholic, Vulg) stay excluded regardless of driver.
 
 ## 16. Module sources
 
