@@ -22,11 +22,23 @@ public struct ReadingPosition: Codable, Sendable {
 /// 24 hours of the first) and every version read. See ReadingHistoryLog.
 public typealias HistoryEntry = ReadingHistoryEntry
 
+/// Creation / last-edit times for one note (REQ-NT-17). `createdAt`
+/// is nil for notes written before timestamps existed; their first
+/// later edit stamps `updatedAt` only.
+public struct NoteTimes: Codable, Sendable {
+    public var createdAt: Date?
+    public var updatedAt: Date
+    public init(createdAt: Date?, updatedAt: Date) {
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 /// Everything synced to Google Drive. Module *contents* are not included;
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 7
+    public var version: Int = 8
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -42,6 +54,10 @@ public struct BackupPayload: Codable, Sendable {
     public var bookNotes: [String: String]
     /// Chapter-level notes (REQ-NT-14), keyed like ChapterNoteKey.
     public var chapterNotes: [String: String]
+    /// Note creation/edit times (REQ-NT-17), keyed like the notes.
+    public var verseNoteTimes: [String: NoteTimes]
+    public var bookNoteTimes: [String: NoteTimes]
+    public var chapterNoteTimes: [String: NoteTimes]
     /// Commentary module the auxiliary panel shows (REQ-AP-4); "" = none.
     public var commentaryModuleID: String
     /// Fallback Strong's version for the panel (REQ-AP-7); "" = automatic.
@@ -55,6 +71,9 @@ public struct BackupPayload: Codable, Sendable {
                 compareVersionIDs: [String] = [],
                 bookNotes: [String: String] = [:],
                 chapterNotes: [String: String] = [:],
+                verseNoteTimes: [String: NoteTimes] = [:],
+                bookNoteTimes: [String: NoteTimes] = [:],
+                chapterNoteTimes: [String: NoteTimes] = [:],
                 commentaryModuleID: String = "",
                 strongsFallbackVersionID: String = "",
                 backedUpAt: Date) {
@@ -69,6 +88,9 @@ public struct BackupPayload: Codable, Sendable {
         self.compareVersionIDs = compareVersionIDs
         self.bookNotes = bookNotes
         self.chapterNotes = chapterNotes
+        self.verseNoteTimes = verseNoteTimes
+        self.bookNoteTimes = bookNoteTimes
+        self.chapterNoteTimes = chapterNoteTimes
         self.commentaryModuleID = commentaryModuleID
         self.strongsFallbackVersionID = strongsFallbackVersionID
         self.backedUpAt = backedUpAt
@@ -90,6 +112,9 @@ public struct BackupPayload: Codable, Sendable {
         compareVersionIDs = try c.decodeIfPresent([String].self, forKey: .compareVersionIDs) ?? []
         bookNotes = try c.decodeIfPresent([String: String].self, forKey: .bookNotes) ?? [:]
         chapterNotes = try c.decodeIfPresent([String: String].self, forKey: .chapterNotes) ?? [:]
+        verseNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .verseNoteTimes) ?? [:]
+        bookNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .bookNoteTimes) ?? [:]
+        chapterNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .chapterNoteTimes) ?? [:]
         commentaryModuleID = try c.decodeIfPresent(String.self, forKey: .commentaryModuleID) ?? ""
         strongsFallbackVersionID = try c.decodeIfPresent(String.self, forKey: .strongsFallbackVersionID) ?? ""
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
@@ -111,6 +136,9 @@ public final class PersonalData: ObservableObject {
     private let compareVersionsKey = "gw.compareVersions.v1"
     private let bookNotesKey = "gw.bookNotes.v1"
     private let chapterNotesKey = "gw.chapterNotes.v1"
+    private let verseNoteTimesKey = "gw.verseNoteTimes.v1"
+    private let bookNoteTimesKey = "gw.bookNoteTimes.v1"
+    private let chapterNoteTimesKey = "gw.chapterNoteTimes.v1"
     private let commentaryModuleKey = "gw.commentaryModule.v1"
     private let strongsFallbackKey = "gw.strongsFallbackVersion.v1"
     private let maxHistoryEntries = 100
@@ -144,6 +172,9 @@ public final class PersonalData: ObservableObject {
         self.compareVersionIDs = defaults.stringArray(forKey: compareVersionsKey) ?? []
         self.bookNotes = defaults.dictionary(forKey: bookNotesKey) as? [String: String] ?? [:]
         self.chapterNotes = defaults.dictionary(forKey: chapterNotesKey) as? [String: String] ?? [:]
+        self.verseNoteTimes = Self.decodeNoteTimes(defaults, verseNoteTimesKey)
+        self.bookNoteTimes = Self.decodeNoteTimes(defaults, bookNoteTimesKey)
+        self.chapterNoteTimes = Self.decodeNoteTimes(defaults, chapterNoteTimesKey)
         self.commentaryModuleID = defaults.string(forKey: commentaryModuleKey) ?? ""
         self.strongsFallbackVersionID = defaults.string(forKey: strongsFallbackKey) ?? ""
     }
@@ -236,6 +267,61 @@ public final class PersonalData: ObservableObject {
         }
     }
 
+    /// Creation / last-edit times for verse notes (REQ-NT-17), keyed
+    /// like `verseNotes`. Maintained by `setVerseNote`.
+    /// Persisted in UserDefaults.
+    @Published public var verseNoteTimes: [String: NoteTimes] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(verseNoteTimes), forKey: verseNoteTimesKey)
+            syncVerseNoteTimesToiCloud()
+        }
+    }
+
+    /// Creation / last-edit times for book notes (REQ-NT-17).
+    @Published public var bookNoteTimes: [String: NoteTimes] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(bookNoteTimes), forKey: bookNoteTimesKey)
+            syncBookNoteTimesToiCloud()
+        }
+    }
+
+    /// Creation / last-edit times for chapter notes (REQ-NT-17).
+    @Published public var chapterNoteTimes: [String: NoteTimes] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(chapterNoteTimes), forKey: chapterNoteTimesKey)
+            syncChapterNoteTimesToiCloud()
+        }
+    }
+
+    private static func decodeNoteTimes(_ defaults: UserDefaults,
+                                        _ key: String) -> [String: NoteTimes] {
+        guard let data = defaults.data(forKey: key),
+              let decoded = try? JSONDecoder().decode([String: NoteTimes].self, from: data)
+        else { return [:] }
+        return decoded
+    }
+
+    /// Applies the REQ-NT-17 stamping rules for one note key: a first
+    /// save sets both times, saving changed text moves only
+    /// `updatedAt`, saving identical text changes nothing. A note
+    /// that predates timestamps has no times entry; its first later
+    /// edit stamps `updatedAt` with `createdAt` left nil.
+    private func stampedTimes(_ times: [String: NoteTimes], key: String,
+                              isNew: Bool, changed: Bool) -> [String: NoteTimes] {
+        guard isNew || changed else { return times }
+        var t = times
+        let now = Date()
+        if isNew {
+            t[key] = NoteTimes(createdAt: now, updatedAt: now)
+        } else if var existing = t[key] {
+            existing.updatedAt = now
+            t[key] = existing
+        } else {
+            t[key] = NoteTimes(createdAt: nil, updatedAt: now)
+        }
+        return t
+    }
+
     /// The commentary module the auxiliary panel shows (REQ-AP-4).
     /// "" means none chosen: the panel uses the first installed
     /// renderable commentary. Persisted in UserDefaults.
@@ -262,12 +348,17 @@ public final class PersonalData: ObservableObject {
         return (note?.isEmpty ?? true) ? nil : note
     }
 
-    /// Stores a book-level note; an empty/nil text removes it.
+    /// Stores a book-level note; an empty/nil text removes it (and
+    /// its times). Saves stamp the note's times (REQ-NT-17).
     public func setBookNote(_ text: String?, forKey key: String) {
         if let text, !text.isEmpty {
+            let old = bookNotes[key]
             bookNotes[key] = text
+            bookNoteTimes = stampedTimes(bookNoteTimes, key: key,
+                                         isNew: old == nil, changed: old != text)
         } else {
             bookNotes.removeValue(forKey: key)
+            bookNoteTimes.removeValue(forKey: key)
         }
     }
 
@@ -284,12 +375,17 @@ public final class PersonalData: ObservableObject {
         return (note?.isEmpty ?? true) ? nil : note
     }
 
-    /// Stores a chapter-level note; an empty/nil text removes it.
+    /// Stores a chapter-level note; an empty/nil text removes it (and
+    /// its times). Saves stamp the note's times (REQ-NT-17).
     public func setChapterNote(_ text: String?, forKey key: String) {
         if let text, !text.isEmpty {
+            let old = chapterNotes[key]
             chapterNotes[key] = text
+            chapterNoteTimes = stampedTimes(chapterNoteTimes, key: key,
+                                            isNew: old == nil, changed: old != text)
         } else {
             chapterNotes.removeValue(forKey: key)
+            chapterNoteTimes.removeValue(forKey: key)
         }
     }
 
@@ -305,23 +401,33 @@ public final class PersonalData: ObservableObject {
         return (note?.isEmpty ?? true) ? nil : note
     }
 
-    /// Stores a verse note; an empty/nil text removes it. Saving moves
-    /// the note to the front of `verseNoteOrder` (latest on top).
+    /// Stores a verse note; an empty/nil text removes it (and its
+    /// times). Saving moves the note to the front of `verseNoteOrder`
+    /// (latest on top) and stamps its times (REQ-NT-17).
     public func setVerseNote(_ text: String?, forKey key: String) {
         if let text, !text.isEmpty {
+            let old = verseNotes[key]
             verseNotes[key] = text
             verseNoteOrder.removeAll { $0 == key }
             verseNoteOrder.insert(key, at: 0)
+            verseNoteTimes = stampedTimes(verseNoteTimes, key: key,
+                                           isNew: old == nil, changed: old != text)
         } else {
             verseNotes.removeValue(forKey: key)
             verseNoteOrder.removeAll { $0 == key }
+            verseNoteTimes.removeValue(forKey: key)
         }
     }
 
-    /// Replaces the bookmark with the same id.
+    /// Replaces the bookmark with the same id, stamping its
+    /// `updatedAt` (REQ-BM-10); `createdAt` is carried over from the
+    /// stored copy (or the passed one, or now, in that order).
     public func updateBookmark(_ bookmark: Bookmark) {
         if let i = bookmarks.firstIndex(where: { $0.id == bookmark.id }) {
-            bookmarks[i] = bookmark
+            var b = bookmark
+            b.createdAt = bookmarks[i].createdAt ?? b.createdAt ?? Date()
+            b.updatedAt = Date()
+            bookmarks[i] = b
         }
     }
 
@@ -350,12 +456,18 @@ public final class PersonalData: ObservableObject {
     }
 
     /// Stores a bookmark: replaces the one with the same id, or appends a
-    /// new one (a draft from `makeBookmarkDraft`).
+    /// new one (a draft from `makeBookmarkDraft`). Stamps its times
+    /// (REQ-BM-10): a new bookmark gets both, a replacement only
+    /// `updatedAt`.
     public func saveBookmark(_ bookmark: Bookmark) {
-        if let i = bookmarks.firstIndex(where: { $0.id == bookmark.id }) {
-            bookmarks[i] = bookmark
+        if bookmarks.contains(where: { $0.id == bookmark.id }) {
+            updateBookmark(bookmark)
         } else {
-            bookmarks.append(bookmark)
+            var b = bookmark
+            let now = Date()
+            if b.createdAt == nil { b.createdAt = now }
+            b.updatedAt = now
+            bookmarks.append(b)
         }
     }
 
@@ -432,6 +544,9 @@ public final class PersonalData: ObservableObject {
                       compareVersionIDs: compareVersionIDs,
                       bookNotes: bookNotes,
                       chapterNotes: chapterNotes,
+                      verseNoteTimes: verseNoteTimes,
+                      bookNoteTimes: bookNoteTimes,
+                      chapterNoteTimes: chapterNoteTimes,
                       commentaryModuleID: commentaryModuleID,
                       strongsFallbackVersionID: strongsFallbackVersionID,
                       backedUpAt: Date())
@@ -464,6 +579,18 @@ public final class PersonalData: ObservableObject {
         }
         if !payload.chapterNotes.isEmpty {
             chapterNotes = payload.chapterNotes
+        }
+        // Note times (payload v8+; older payloads decode to [:] and
+        // leave current times alone). Times for notes that don't
+        // exist are dropped.
+        if !payload.verseNoteTimes.isEmpty {
+            verseNoteTimes = payload.verseNoteTimes.filter { verseNotes[$0.key] != nil }
+        }
+        if !payload.bookNoteTimes.isEmpty {
+            bookNoteTimes = payload.bookNoteTimes.filter { bookNotes[$0.key] != nil }
+        }
+        if !payload.chapterNoteTimes.isEmpty {
+            chapterNoteTimes = payload.chapterNoteTimes.filter { chapterNotes[$0.key] != nil }
         }
         if !payload.commentaryModuleID.isEmpty {
             commentaryModuleID = payload.commentaryModuleID
@@ -512,6 +639,21 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(chapterNotes, as: .chapterNotes)
     }
 
+    private func syncVerseNoteTimesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(verseNoteTimes, as: .verseNoteTimes)
+    }
+
+    private func syncBookNoteTimesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(bookNoteTimes, as: .bookNoteTimes)
+    }
+
+    private func syncChapterNoteTimesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(chapterNoteTimes, as: .chapterNoteTimes)
+    }
+
     private func syncHistoryToiCloud() {
         guard iCloudSync.shared.isEnabled else { return }
         try? iCloudSync.shared.save(historyLog, as: .history)
@@ -528,6 +670,9 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(verseNotes, as: .notes)
         try? iCloudSync.shared.save(bookNotes, as: .bookNotes)
         try? iCloudSync.shared.save(chapterNotes, as: .chapterNotes)
+        try? iCloudSync.shared.save(verseNoteTimes, as: .verseNoteTimes)
+        try? iCloudSync.shared.save(bookNoteTimes, as: .bookNoteTimes)
+        try? iCloudSync.shared.save(chapterNoteTimes, as: .chapterNoteTimes)
         try? iCloudSync.shared.save(historyLog, as: .history)
         syncSettingsToiCloud(repositoryURL: repositoryURL,
                               installedModuleIDs: installedModuleIDs)
@@ -567,6 +712,18 @@ public final class PersonalData: ObservableObject {
             [String: String].self, as: .chapterNotes), !cn.isEmpty {
             chapterNotes = cn
         }
+        if let vt: [String: NoteTimes] = try? iCloudSync.shared.load(
+            [String: NoteTimes].self, as: .verseNoteTimes), !vt.isEmpty {
+            verseNoteTimes = vt
+        }
+        if let bt: [String: NoteTimes] = try? iCloudSync.shared.load(
+            [String: NoteTimes].self, as: .bookNoteTimes), !bt.isEmpty {
+            bookNoteTimes = bt
+        }
+        if let ct: [String: NoteTimes] = try? iCloudSync.shared.load(
+            [String: NoteTimes].self, as: .chapterNoteTimes), !ct.isEmpty {
+            chapterNoteTimes = ct
+        }
         if let h: [HistoryEntry] = try? iCloudSync.shared.load(
             [HistoryEntry].self, as: .history), !h.isEmpty {
             historyLog = ReadingHistoryLog.combined(h)
@@ -597,6 +754,12 @@ public final class PersonalData: ObservableObject {
             .write(to: folder.appendingPathComponent("bookNotes.json"))
         try encoder.encode(chapterNotes)
             .write(to: folder.appendingPathComponent("chapterNotes.json"))
+        try encoder.encode(verseNoteTimes)
+            .write(to: folder.appendingPathComponent("verseNoteTimes.json"))
+        try encoder.encode(bookNoteTimes)
+            .write(to: folder.appendingPathComponent("bookNoteTimes.json"))
+        try encoder.encode(chapterNoteTimes)
+            .write(to: folder.appendingPathComponent("chapterNoteTimes.json"))
         try encoder.encode(historyLog)
             .write(to: folder.appendingPathComponent("history.json"))
         let settings = iCloudSettings(
@@ -650,6 +813,18 @@ public final class PersonalData: ObservableObject {
                 let cn = try JSONDecoder().decode([String: String].self,
                                                   from: json)
                 if !cn.isEmpty { chapterNotes = cn }
+            case "verseNoteTimes":
+                let vt = try JSONDecoder().decode([String: NoteTimes].self,
+                                                  from: json)
+                if !vt.isEmpty { verseNoteTimes = vt }
+            case "bookNoteTimes":
+                let bt = try JSONDecoder().decode([String: NoteTimes].self,
+                                                  from: json)
+                if !bt.isEmpty { bookNoteTimes = bt }
+            case "chapterNoteTimes":
+                let ct = try JSONDecoder().decode([String: NoteTimes].self,
+                                                  from: json)
+                if !ct.isEmpty { chapterNoteTimes = ct }
             case "history":
                 let h = try JSONDecoder().decode([HistoryEntry].self,
                                                  from: json)

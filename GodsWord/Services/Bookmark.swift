@@ -16,10 +16,16 @@ public struct Bookmark: Codable, Identifiable, Sendable {
     public var testament: Int  // 1 = OT, 2 = NT
     public var book: Int       // 1-based within testament
     public var chapter: Int
+    /// When the bookmark was created and last changed (REQ-BM-10),
+    /// stamped by PersonalData on save/assign. Nil in bookmarks
+    /// written before timestamps existed.
+    public var createdAt: Date?
+    public var updatedAt: Date?
 
     public init(id: UUID = UUID(), name: String,
                 red: Double, green: Double, blue: Double,
-                testament: Int = 1, book: Int = 1, chapter: Int = 1) {
+                testament: Int = 1, book: Int = 1, chapter: Int = 1,
+                createdAt: Date? = nil, updatedAt: Date? = nil) {
         self.id = id
         self.name = name
         self.red = red
@@ -28,7 +34,13 @@ public struct Bookmark: Codable, Identifiable, Sendable {
         self.testament = testament
         self.book = book
         self.chapter = chapter
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
+
+    /// The time shown as the bookmark's last update: the last change,
+    /// falling back to creation; nil when it predates timestamps.
+    public var lastUpdated: Date? { updatedAt ?? createdAt }
 
     public var color: Color {
         Color(red: red, green: green, blue: blue)

@@ -120,7 +120,7 @@ struct BookmarkRibbonsRow: View {
     private func labeledRibbon(for bookmark: Bookmark) -> some View {
         HorizontalRibbonShape()
             .fill(bookmark.color.opacity(0.55))
-            .frame(height: 52)
+            .frame(height: bookmark.lastUpdated == nil ? 52 : 68)
             .overlay(alignment: .leading) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(bookmark.name)
@@ -131,6 +131,14 @@ struct BookmarkRibbonsRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                    // Last updated (REQ-BM-10); bookmarks written
+                    // before timestamps existed show nothing here.
+                    if let updated = bookmark.lastUpdated {
+                        Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
                 .padding(.leading, 16)
                 .padding(.trailing, 28)
