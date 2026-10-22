@@ -391,7 +391,8 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-AP-1:** Below the main reading panel sits an auxiliary panel
   (a real panel under the chapter text, not an overlay; the main text
   rendering is untouched). It has three tabs — **Notes**, **Commentary**,
-  **Strong's** — and a chevron collapses it to its tab bar.
+  **Strong's** — and a chevron collapses it to its tab bar. The panel
+  starts collapsed.
 - **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
   Each shows the scoped note for the book / chapter / selected verse
   being read (REQ-NT-14) with an Add/Edit action opening the note
@@ -438,3 +439,17 @@ Multiple (KJV Gen 1:1-2):
   field), and its About text (which carries the copyright notice).
   The Settings commentary picker also shows the license under each
   commentary's name when one is declared.
+- **REQ-AP-9:** The Book / Chapter / Verse sub-tab picker only appears
+  when the tab has at least one entry for the current location. For
+  Notes, an entry is a book or chapter note (including a legacy
+  verse-1 note) or any verse note in the current chapter; with no
+  entries the Notes tab falls back to the Verse scope (no picker) so
+  the first note can still be added. For Commentary, an entry is an
+  entry in the current chapter (or anywhere in the book while the
+  Book scope is selected); with none, the tab shows its empty state
+  without the picker.
+- **REQ-AP-10:** Commentaries are downloaded from a dedicated page
+  titled "Add Commentary" (`CommentaryRepositoryView`): the repository
+  browser listing only renderable commentaries, each with its declared
+  license. It is reached from the panel's Commentary empty state and
+  from Settings > Commentary. The "Add Bible" page is unchanged.
