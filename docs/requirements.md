@@ -167,6 +167,27 @@ Multiple (KJV Gen 1:1-2):
   shows "Updated <date, time>" under a note that has one. The times
   travel with the notes: UserDefaults, payload v8, iCloud files, and
   manual export/import.
+- **REQ-NT-18:** The Notes tab has four sub-tabs, in this order:
+  **Recents** — every note in the current version, from any book,
+  most recently updated first (REQ-NT-17 times; notes without times
+  fall back to the verse-note order); **Book** — every note in the
+  active book (the book note, then chapter and verse notes in
+  reading order); **Chapter** — every note in the active chapter
+  (the chapter note, then verse notes by verse; the legacy verse-1
+  presentation of REQ-NT-16 still applies and is not repeated as a
+  verse row); **Verse** — the note on the selected verse (the first
+  selected verse for multi-verse selections). All sub-tab scopes
+  are within the current version. A sub-tab is shown only when it
+  has notes; when the selected sub-tab becomes empty (e.g. after
+  navigating), the nearest visible sub-tab takes its place (ties
+  go to the earlier sub-tab; this logic is `NotesTabLogic` in
+  SwordReader, unit-tested). When there are no notes at all, the
+  sub-tab bar hides and one empty state shows. An add-note entry
+  point (for the selected verse) is always available, even when
+  the Verse sub-tab is hidden; the Book and Chapter sub-tabs offer
+  their own add entry when their scoped note is missing. Tapping a
+  note row opens its editor in place. (Supersedes the Notes half
+  of REQ-AP-9.)
 
 ---
 
@@ -496,6 +517,11 @@ Multiple (KJV Gen 1:1-2):
   total) fails with an error instead of spinning forever. The
   downloaded package installs off the main thread, so the page stays
   responsive throughout.
+- **REQ-AP-13:** `CommentaryModule.loadChapter` throws when the
+  module can't be opened (damaged, missing, unsupported) instead
+  of returning an empty chapter. The Commentary tab then shows an
+  error state naming the module — never a "no commentary for this
+  chapter" message — and a later successful load clears it.
 
 ## 16. Module sources
 

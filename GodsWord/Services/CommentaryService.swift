@@ -55,12 +55,14 @@ public struct CommentaryModule: Identifiable, Equatable, Sendable {
     }
 
     /// One chapter's entries as (verse, plain text), skipping verses the
-    /// commentary doesn't cover.
-    public func loadChapter(testament: Int, book: Int, chapter: Int) async
+    /// commentary doesn't cover. Throws when the module can't be opened
+    /// (damaged, missing, unsupported) so the caller can show an error
+    /// state instead of mistaking the failure for a chapter the
+    /// commentary doesn't cover (REQ-AP-13).
+    public func loadChapter(testament: Int, book: Int, chapter: Int) async throws
         -> [(verse: Int, text: String)]
     {
-        guard let mod = try? await ModuleLoader.shared.module(for: installed)
-        else { return [] }
+        let mod = try await ModuleLoader.shared.module(for: installed)
         return mod.chapter(testament: testament, book: book, chapter: chapter)
             .filter { !$0.text.isEmpty }
     }
