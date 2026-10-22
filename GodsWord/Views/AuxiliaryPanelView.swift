@@ -1,8 +1,9 @@
 // AuxiliaryPanelView.swift — the panel below the reading panel.
-// Three tabs: Notes, Commentary, and the selected verse rendered with
-// Strong's numbers. Notes and Commentary both have Book / Chapter /
-// Verse sub-tabs (REQ-AP-1..7): notes are scoped notes at those three
-// levels (REQ-NT-14); commentary shows the entries at those scopes.
+// Four tabs: Notes, Commentary, the selected verse rendered with
+// Strong's numbers, and Recents (the reading history). Notes and
+// Commentary both have Book / Chapter / Verse sub-tabs (REQ-AP-1..11):
+// notes are scoped notes at those three levels (REQ-NT-14); commentary
+// shows the entries at those scopes.
 //
 // The panel never alters the main reading text; it only reads the
 // shared ReadingHistory, the verse selection, and PersonalData.
@@ -18,16 +19,19 @@ struct AuxiliaryPanelView: View {
     let selectedVerses: Set<Int>
     /// All installed Bible versions (for the Strong's source resolution).
     let availableVersions: [BibleVersion]
+    /// Owned by ReaderView: the toggle button lives in the reader's
+    /// bottom bar, next to the chapter controls (REQ-AP-1). When
+    /// collapsed, the panel renders nothing at all.
+    @Binding var collapsed: Bool
 
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var tab: PanelTab = .notes
     @State private var notesScope: PanelScope = .verse
     @State private var commentaryScope: PanelScope = .verse
-    @State private var collapsed = false
     @State private var editorItem: EditorItem?
     @State private var commentaries: [CommentaryModule] = []
-    @State private var showingRepository = false
+    @State private var showingCommentaryDownload = false
     @State private var showingCommentaryInfo = false
     @State private var commentaryChapter: [CommentaryGrouping.Entry] = []
     @State private var commentaryBook: [BookSection] = []
@@ -48,6 +52,7 @@ struct AuxiliaryPanelView: View {
         case notes = "Notes"
         case commentary = "Commentary"
         case strongs = "Strong's"
+        case recents = "Recents"
     }
 
     enum PanelScope: String, CaseIterable {
@@ -79,34 +84,35 @@ struct AuxiliaryPanelView: View {
     }
 
     var body: some View {
+        // Collapsed, the panel renders nothing: the only trace is the
+        // up-arrow button in the reader's bottom bar (REQ-AP-1).
+        if !collapsed {
+            expandedBody
+        }
+    }
+
+    /// The expanded panel: the tab bar plus the selected tab's content.
+    private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
-            HStack(spacing: 8) {
-                Picker("Panel", selection: $tab) {
-                    ForEach(PanelTab.allCases, id: \.self) { t in
-                        Text(t.rawValue).tag(t)
-                    }
+            Picker("Panel", selection: $tab) {
+                ForEach(PanelTab.allCases, id: \.self) { t in
+                    Text(t.rawValue).tag(t)
                 }
-                .pickerStyle(.segmented)
-                Button { collapsed.toggle() } label: {
-                    Image(systemName: collapsed ? "chevron.up" : "chevron.down")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
             }
+            .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
-            if !collapsed {
-                Group {
-                    switch tab {
-                    case .notes: notesTab
-                    case .commentary: commentaryTab
-                    case .strongs: strongsTab
-                    }
+            Group {
+                switch tab {
+                case .notes: notesTab
+                case .commentary: commentaryTab
+                case .strongs: strongsTab
+                case .recents: recentsTab
                 }
-                .frame(height: 264)
             }
+            .frame(height: 264)
         }
         .background(.regularMaterial)
         .onAppear {
@@ -132,10 +138,10 @@ struct AuxiliaryPanelView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingRepository, onDismiss: {
+        .sheet(isPresented: $showingCommentaryDownload, onDismiss: {
             commentaries = CommentaryModule.allInstalled(in: store)
         }) {
-            RepositoryView()
+            CommentaryRepositoryView()
         }
         .sheet(isPresented: Binding(
             get: { strongsDefKey != nil },
@@ -149,10 +155,25 @@ struct AuxiliaryPanelView: View {
 
     // MARK: - Notes tab
 
+    /// Whether the Notes tab has any note for the current location —
+    /// a book or chapter note, a legacy verse-1 note, or any verse note
+    /// in this chapter. The scope sub-tabs only appear when there is
+    /// at least one entry (REQ-AP-9); with none, the tab falls back to
+    /// the Verse scope so the first note can still be added.
+    private var notesHasEntries: Bool {
+        if personalData.bookNote(forKey: bookNoteKey) != nil { return true }
+        if personalData.chapterNote(forKey: chapterNoteKey) != nil { return true }
+        if personalData.verseNote(forKey: verse1NoteKey) != nil { return true }
+        let prefix = "\(history.version.id):\(history.testament):\(history.book):\(history.chapter):"
+        return personalData.verseNotes.keys.contains { $0.hasPrefix(prefix) }
+    }
+
     private var notesTab: some View {
         VStack(spacing: 0) {
-            scopePicker(selection: $notesScope)
-            switch notesScope {
+            if notesHasEntries {
+                scopePicker(selection: $notesScope)
+            }
+            switch notesHasEntries ? notesScope : .verse {
             case .book:
                 scopedNote(reference: history.bookTitle,
                            text: personalData.bookNote(forKey: bookNoteKey),
@@ -292,10 +313,25 @@ struct AuxiliaryPanelView: View {
         "\(resolvedCommentary?.id ?? "none")-\(locationKey)-\(commentaryScope.rawValue)"
     }
 
+    /// Whether the Commentary tab has any entry at the current
+    /// location — in the current chapter for the Verse/Chapter
+    /// scopes, or anywhere in the book for the Book scope. The scope
+    /// sub-tabs only appear when there is at least one entry
+    /// (REQ-AP-9).
+    private var commentaryHasEntries: Bool {
+        commentaryScope == .book
+            ? commentaryBook.contains { !$0.entries.isEmpty }
+            : !commentaryChapter.isEmpty
+    }
+
     private var commentaryTab: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                scopePicker(selection: $commentaryScope)
+                if commentaryHasEntries || commentaryLoading {
+                    scopePicker(selection: $commentaryScope)
+                } else {
+                    Spacer()
+                }
                 Menu {
                     ForEach(commentaries) { mod in
                         Button {
@@ -328,12 +364,16 @@ struct AuxiliaryPanelView: View {
                 }
             }
             if let mod = resolvedCommentary {
-                commentaryContent(for: mod)
+                if commentaryHasEntries || commentaryLoading {
+                    commentaryContent(for: mod)
+                } else {
+                    emptyCommentary("No commentary entries for this chapter in \(mod.shortLabel).")
+                }
             } else {
                 VStack(spacing: 8) {
                     Text("No commentary installed yet.")
                         .foregroundStyle(.secondary)
-                    Button("Download a Commentary…") { showingRepository = true }
+                    Button("Download a Commentary…") { showingCommentaryDownload = true }
                     Spacer()
                 }
                 .padding(.top, 12)
@@ -601,6 +641,45 @@ struct AuxiliaryPanelView: View {
         strongsLoadedKey = strongsLoadKey
     }
 
+    // MARK: - Recents tab
+
+    /// The reading history (REQ-AP-11), moved here from the reader's
+    /// left drawer: the same HistoryView list — tap an entry to jump
+    /// back to it (switching version when that version is installed),
+    /// swipe to delete. HistoryView's own Clear toolbar button needs
+    /// a navigation bar, so the tab header carries Clear instead.
+    private var recentsTab: some View {
+        VStack(spacing: 0) {
+            if !personalData.historyLog.isEmpty {
+                HStack {
+                    Text("Reading history")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Clear", role: .destructive) {
+                        personalData.clearHistory()
+                    }
+                    .font(.subheadline)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 4)
+            }
+            HistoryView(onSelect: jumpToHistoryEntry)
+        }
+    }
+
+    /// Jumps the reader to a history entry, switching to the entry's
+    /// version first when it is still installed (the same behavior
+    /// the drawer's History button had).
+    private func jumpToHistoryEntry(_ entry: HistoryEntry) {
+        if let v = availableVersions.first(where: { $0.id == entry.moduleID }) {
+            history.version = v
+            history.testament = entry.testament
+            history.book = entry.book
+            history.chapter = entry.chapter
+        }
+    }
+
     // MARK: - Shared
 
     private func scopePicker(selection: Binding<PanelScope>) -> some View {
@@ -685,6 +764,7 @@ struct CommentaryModulePicker: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var commentaries: [CommentaryModule] = []
+    @State private var showingDownload = false
 
     var body: some View {
         List {
@@ -739,12 +819,22 @@ struct CommentaryModulePicker: View {
                     }
                 }
             } footer: {
-                Text("The Commentary tab of the panel below the reader shows this commentary's entries for the book, chapter, or verse being read. Download commentaries from the repository (Add Bible) — OSIS commentaries such as MHCC are supported.")
+                Text("The Commentary tab of the panel below the reader shows this commentary's entries for the book, chapter, or verse being read.")
+            }
+            Section {
+                Button("Download a Commentary…") { showingDownload = true }
+            } footer: {
+                Text("OSIS commentaries such as MHCC are supported; each commentary's license is shown before you download it.")
             }
         }
         .navigationTitle("Commentary")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { commentaries = CommentaryModule.allInstalled(in: store) }
+        .sheet(isPresented: $showingDownload, onDismiss: {
+            commentaries = CommentaryModule.allInstalled(in: store)
+        }) {
+            CommentaryRepositoryView()
+        }
     }
 
     private func delete(_ mod: CommentaryModule) {

@@ -17,9 +17,12 @@ struct ReaderView: View {
     @State private var loadError: String?
     @State private var showingSettings = false
     @State private var showingFullSettings = false
-    @State private var showingHistory = false
+
     @State private var showingBookChapterPicker = false
     @State private var showingBookmarks = false
+    /// The auxiliary panel starts collapsed (REQ-AP-1); its toggle is
+    /// the arrow button in the bottom bar.
+    @State private var panelCollapsed = true
     @State private var strongsKey: String?
     @State private var dwellTask: Task<Void, Never>?
     @State private var availableVersions: [BibleVersion] = []
@@ -77,11 +80,15 @@ struct ReaderView: View {
         VStack(spacing: 0) {
             readerContent
             // Auxiliary panel below the reading panel: Notes / Commentary /
-            // Strong's tabs (REQ-AP-1). It reads the same history and the
-            // verse selection; the reading text above is untouched.
+            // Strong's / Recents tabs (REQ-AP-1). It reads the same history
+            // and the verse selection; the reading text above is untouched.
+            // Collapsed (the default) it renders nothing — the toggle is
+            // the arrow button in the bottom bar, next to the chapter
+            // controls.
             AuxiliaryPanelView(history: history,
                                selectedVerses: selectedVerses,
-                               availableVersions: availableVersions)
+                               availableVersions: availableVersions,
+                               collapsed: $panelCollapsed)
         }
     }
 
@@ -201,11 +208,7 @@ struct ReaderView: View {
                 Color.black.opacity(0.25)
                     .ignoresSafeArea()
                     .onTapGesture { showingBookmarks = false }
-                BookmarksPanel(history: history, showing: $showingBookmarks,
-                               selectedVerses: selectedVerses,
-                               noteSeedText: selectedVerses.isEmpty
-                                   ? "\(history.bookTitle) \(history.chapter)\n"
-                                   : selectionClipboardString() + "\n")
+                BookmarksPanel(history: history, showing: $showingBookmarks)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
                     .transition(.move(edge: .trailing))
             }
@@ -296,6 +299,13 @@ struct ReaderView: View {
                         Label("Next", systemImage: "chevron.right")
                     }
                     .disabled(!canGo(toChapter: history.chapter + 1))
+                    // Auxiliary panel toggle, next to the chapter
+                    // controls (REQ-AP-1): an up arrow when the panel
+                    // is collapsed, a down arrow when it is open.
+                    Button { panelCollapsed.toggle() } label: {
+                        Label(panelCollapsed ? "Show Panel" : "Hide Panel",
+                              systemImage: panelCollapsed ? "chevron.up" : "chevron.down")
+                    }
                 }
             }
         }
@@ -332,20 +342,6 @@ struct ReaderView: View {
                 }
                 showingFullSettings = false
             })
-        }
-        .sheet(isPresented: $showingHistory) {
-            NavigationStack {
-                HistoryView(onSelect: { entry in
-                    if let v = availableVersions.first(where: { $0.id == entry.moduleID }) {
-                        history.version = v
-                        history.testament = entry.testament
-                        history.book = entry.book
-                        history.chapter = entry.chapter
-                    }
-                    showingHistory = false
-                })
-            }
-            .environmentObject(personalData)
         }
         .sheet(isPresented: $showingBookChapterPicker) {
             BookChapterPickerSheet(history: history) { t, b, c in
@@ -420,10 +416,6 @@ struct ReaderView: View {
                 }
                 ReadingSettingsView(showStrongsOption: history.version.supportsStrongs)
                 Spacer()
-                Button("History") {
-                    showingSettings = false
-                    showingHistory = true
-                }
                 Button("More Settings…") {
                     showingSettings = false
                     showingFullSettings = true

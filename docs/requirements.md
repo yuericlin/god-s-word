@@ -163,26 +163,17 @@ Multiple (KJV Gen 1:1-2):
 ## 4. Bookmarks panel
 
 ### Sections
-- **REQ-BP-1:** The panel has two sections: **Bookmarks** and **Notes**.
+- **REQ-BP-1:** The panel has one section: **Bookmarks**. (It previously
+  also listed notes; notes moved to the auxiliary panel below the
+  reader, REQ-AP-1.)
 - **REQ-BP-2:** The Bookmarks section shows ribbon bookmarks (horizontal row).
   Tapping a bookmark jumps to its chapter. (Hold-1-second for Assign/Edit/Delete
   — see bookmarks spec.)
-- **REQ-BP-3:** The Notes section lists every verse with a note, most
-  recently saved first (REQ-NT-13); notes without a recorded save order
-  follow in REVERSE (module, testament, book, chapter, verse) order —
-  the opposite of the original list order, latest passage on top.
-- **REQ-BP-4:** Each note row shows the reference (`"Book Chapter:Verse"`) and a
-  2-line preview of the note text.
-- **REQ-BP-5:** Tapping a note in the list opens the note editor for that note
-  (does NOT jump to the verse).
 
 ### Actions
 - **REQ-BP-6:** "Add Bookmark" button at the bottom opens the edit sheet on a
   new bookmark at the current chapter. The bookmark is stored only when the
   user taps Save (REQ-BM-9).
-- **REQ-BP-7:** "Add Note" button next to "Add Bookmark" opens the note editor.
-  The note is scoped to the selected verses if any are selected, otherwise to
-  the entire chapter (anchored at verse 1).
 
 ---
 
@@ -209,7 +200,7 @@ Multiple (KJV Gen 1:1-2):
 - Right edge swipe left = forward (versions → books → chapters → reader; at
   reader opens bookmarks panel).
 - Right edge swipe right = backward.
-- Left edge = settings/history drawer (reader only).
+- Left edge = settings drawer (reader only).
 - Middle swipes turn chapters.
 
 ---
@@ -390,8 +381,11 @@ Multiple (KJV Gen 1:1-2):
 
 - **REQ-AP-1:** Below the main reading panel sits an auxiliary panel
   (a real panel under the chapter text, not an overlay; the main text
-  rendering is untouched). It has three tabs — **Notes**, **Commentary**,
-  **Strong's** — and a chevron collapses it to its tab bar.
+  rendering is untouched). It has four tabs — **Notes**, **Commentary**,
+  **Strong's**, **Recents**. The panel starts collapsed; collapsed, it
+  renders nothing at all — the only trace is a toggle button in the
+  reader's bottom bar, next to the chapter controls: an up arrow when
+  collapsed (tap to expand), a down arrow when open (tap to collapse).
 - **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
   Each shows the scoped note for the book / chapter / selected verse
   being read (REQ-NT-14) with an Add/Edit action opening the note
@@ -438,3 +432,24 @@ Multiple (KJV Gen 1:1-2):
   field), and its About text (which carries the copyright notice).
   The Settings commentary picker also shows the license under each
   commentary's name when one is declared.
+- **REQ-AP-9:** The Book / Chapter / Verse sub-tab picker only appears
+  when the tab has at least one entry for the current location. For
+  Notes, an entry is a book or chapter note (including a legacy
+  verse-1 note) or any verse note in the current chapter; with no
+  entries the Notes tab falls back to the Verse scope (no picker) so
+  the first note can still be added. For Commentary, an entry is an
+  entry in the current chapter (or anywhere in the book while the
+  Book scope is selected); with none, the tab shows its empty state
+  without the picker.
+- **REQ-AP-10:** Commentaries are downloaded from a dedicated page
+  titled "Add Commentary" (`CommentaryRepositoryView`): the repository
+  browser listing only renderable commentaries, each with its declared
+  license. It is reached from the panel's Commentary empty state and
+  from Settings > Commentary. The "Add Bible" page is unchanged.
+- **REQ-AP-11:** The Recents tab is the reading history (REQ-HI-1),
+  moved here from the reader's left drawer (the drawer's History
+  button is gone; the Settings screen's History section, REQ-HI-5,
+  remains). It shows the same HistoryView list: most recent first,
+  tap an entry to jump back to it (switching to the entry's version
+  when still installed), swipe to delete; a Clear button in the tab
+  header clears the log.

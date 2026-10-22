@@ -154,75 +154,24 @@ struct BookmarkRibbonsRow: View {
 }
 
 /// Slide-in bookmarks panel, opened with a right-edge swipe on the reader.
+/// Bookmarks only — notes live in the auxiliary panel below the reader
+/// (its Notes tab, including the Recents sub-tab, REQ-AP-11).
 struct BookmarksPanel: View {
     let history: ReadingHistory
     @Binding var showing: Bool
-    /// Verses currently selected in the reader; "Add Note" anchors to these if non-empty.
-    let selectedVerses: Set<Int>
-    /// Pre-fill for a brand-new note from this panel: the selection in
-    /// the clipboard format, or book + chapter when nothing is selected.
-    let noteSeedText: String
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
 
     /// Single sheet for the panel (SwiftUI doesn't reliably handle two .sheet modifiers).
     private enum PanelSheet: Identifiable {
         case bookmark(Bookmark)
-        case note(key: String, reference: String)
-        case chapterNote(key: String, reference: String)
         var id: String {
             switch self {
             case .bookmark(let b): return "bookmark-\(b.id.uuidString)"
-            case .note(let key, _): return "note-\(key)"
-            case .chapterNote(let key, _): return "chapterNote-\(key)"
             }
         }
     }
     @State private var activeSheet: PanelSheet?
-
-    /// A verse note parsed from its storage key.
-    private struct NoteEntry {
-        let key: String
-        let moduleID: String
-        let testament: Int
-        let book: Int
-        let chapter: Int
-        let verse: Int
-        let text: String
-    }
-
-    /// Notes list order: most recently saved first (PersonalData's
-    /// verseNoteOrder); notes not in that list (e.g. created before
-    /// order tracking) follow in REVERSE canonical order — the
-    /// opposite of the original list order, latest passage on top.
-    private var noteEntries: [NoteEntry] {
-        let order = personalData.verseNoteOrder
-        return personalData.verseNotes.compactMap { key, text -> NoteEntry? in
-            let parts = key.split(separator: ":")
-            guard parts.count == 5,
-                  let testament = Int(parts[1]),
-                  let book = Int(parts[2]),
-                  let chapter = Int(parts[3]),
-                  let verse = Int(parts[4]) else { return nil }
-            return NoteEntry(key: key, moduleID: String(parts[0]),
-                             testament: testament, book: book,
-                             chapter: chapter, verse: verse, text: text)
-        }
-        .sorted {
-            let ia = order.firstIndex(of: $0.key) ?? .max
-            let ib = order.firstIndex(of: $1.key) ?? .max
-            if ia != ib { return ia < ib }
-            return ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) >
-                   ($1.moduleID, $1.testament, $1.book, $1.chapter, $1.verse)
-        }
-    }
-
-    private func noteReference(_ entry: NoteEntry) -> String {
-        let overall = entry.testament == 1 ? entry.book - 1 : 39 + entry.book - 1
-        let bookName = history.bookName(overall: overall)
-        let ref = "\(bookName) \(entry.chapter):\(entry.verse)"
-        return entry.moduleID == history.version.id ? ref : "\(entry.moduleID) \(ref)"
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -252,53 +201,11 @@ struct BookmarksPanel: View {
                     .padding(.vertical, 8)
             }
 
-            // Notes section: every verse with a note, tap to jump there.
-            Text("Notes").font(.headline)
-                .padding(.horizontal)
-                .padding(.top, 12)
-            if noteEntries.isEmpty {
-                Text("No notes yet.")
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-            } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(noteEntries, id: \.key) { entry in
-                            Button { editNote(entry) } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(noteReference(entry))
-                                        .font(.subheadline)
-                                    Text(entry.text)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 6)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button("Edit") { editNote(entry) }
-                                Button("Delete", role: .destructive) {
-                                    personalData.setVerseNote(nil,
-                                                              forKey: entry.key)
-                                }
-                            }
-                            Divider()
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .frame(maxHeight: 300)
-            }
-
             Spacer()
 
             HStack {
                 Button("Add Bookmark") { addBookmark() }
                 Spacer()
-                Button("Add Note") { addNote() }
             }
             .padding()
         }
@@ -315,16 +222,6 @@ struct BookmarksPanel: View {
             switch sheet {
             case .bookmark(let bookmark):
                 BookmarkEditView(bookmark: bookmark, history: history)
-            case .note(let key, let reference):
-                VerseNoteEditor(reference: reference, noteKey: key,
-                                initialText: personalData.verseNote(forKey: key) ?? "",
-                                seedText: noteSeedText)
-                    .environmentObject(personalData)
-            case .chapterNote(let key, let reference):
-                ScopedNoteEditor(reference: reference,
-                                 initialText: personalData.chapterNote(forKey: key) ?? "") { text in
-                    personalData.setChapterNote(text, forKey: key)
-                }
             }
         }
     }
@@ -338,35 +235,6 @@ struct BookmarksPanel: View {
             book: history.book,
             chapter: history.chapter)
         activeSheet = .bookmark(draft)
-    }
-
-    /// Opens the note editor: a verse note scoped to the selected verses
-    /// if any are selected, otherwise the chapter-level note for the
-    /// chapter being read (REQ-NT-14).
-    private func addNote() {
-        if let verse = selectedVerses.min() {
-            let key = personalData.verseNoteKey(
-                moduleID: history.version.id,
-                testament: history.testament,
-                book: history.book,
-                chapter: history.chapter,
-                verse: verse)
-            activeSheet = .note(key: key,
-                                reference: "\(history.bookTitle) \(history.chapter):\(verse)")
-        } else {
-            let key = personalData.chapterNoteKey(
-                moduleID: history.version.id,
-                testament: history.testament,
-                book: history.book,
-                chapter: history.chapter)
-            activeSheet = .chapterNote(key: key,
-                                       reference: "\(history.bookTitle) \(history.chapter)")
-        }
-    }
-
-    /// Opens the note editor for an existing note from the Notes list.
-    private func editNote(_ entry: NoteEntry) {
-        activeSheet = .note(key: entry.key, reference: noteReference(entry))
     }
 
     private func jump(to bookmark: Bookmark) {
