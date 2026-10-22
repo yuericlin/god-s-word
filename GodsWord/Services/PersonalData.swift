@@ -18,27 +18,9 @@ public struct ReadingPosition: Codable, Sendable {
     }
 }
 
-/// One entry in the full reading history log.
-public struct HistoryEntry: Codable, Identifiable, Sendable {
-    public let id: UUID
-    public let moduleID: String
-    public let bookName: String
-    public let testament: Int
-    public let book: Int
-    public let chapter: Int
-    public let timestamp: Date
-
-    public init(id: UUID = UUID(), moduleID: String, bookName: String,
-                testament: Int, book: Int, chapter: Int, timestamp: Date = Date()) {
-        self.id = id
-        self.moduleID = moduleID
-        self.bookName = bookName
-        self.testament = testament
-        self.book = book
-        self.chapter = chapter
-        self.timestamp = timestamp
-    }
-}
+/// One entry in the reading history: a chapter with every visit (within
+/// 24 hours of the first) and every version read. See ReadingHistoryLog.
+public typealias HistoryEntry = ReadingHistoryEntry
 
 /// Everything synced to Google Drive. Module *contents* are not included;
 /// the backup records which module IDs were installed so they can be
@@ -142,7 +124,7 @@ public final class PersonalData: ObservableObject {
         let log: [HistoryEntry]
         if let data = defaults.data(forKey: "gw.historyLog.v1"),
            let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
-            log = decoded
+            log = ReadingHistoryLog.combined(decoded)
         } else {
             log = []
         }
@@ -377,21 +359,15 @@ public final class PersonalData: ObservableObject {
         }
     }
 
-    /// Records a visited chapter. Moves an existing entry for the same
-    /// location to the front instead of duplicating it.
+    /// Records a visited chapter. A revisit within 24 hours of an entry's
+    /// first visit joins that entry (another timestamp, and the version if
+    /// new) and moves it to the front; otherwise a new entry is added.
     public func recordHistory(moduleID: String, bookName: String,
                               testament: Int, book: Int, chapter: Int) {
-        var log = historyLog.filter {
-            !($0.moduleID == moduleID && $0.testament == testament &&
-              $0.book == book && $0.chapter == chapter)
-        }
-        log.insert(HistoryEntry(moduleID: moduleID, bookName: bookName,
-                                testament: testament, book: book, chapter: chapter),
-                   at: 0)
-        if log.count > maxHistoryEntries {
-            log = Array(log.prefix(maxHistoryEntries))
-        }
-        historyLog = log
+        historyLog = ReadingHistoryLog.recording(
+            moduleID: moduleID, bookName: bookName, testament: testament,
+            book: book, chapter: chapter, into: historyLog,
+            limit: maxHistoryEntries)
     }
 
     public func deleteHistory(at offsets: IndexSet) {
@@ -593,7 +569,7 @@ public final class PersonalData: ObservableObject {
         }
         if let h: [HistoryEntry] = try? iCloudSync.shared.load(
             [HistoryEntry].self, as: .history), !h.isEmpty {
-            historyLog = h
+            historyLog = ReadingHistoryLog.combined(h)
         }
     }
 
@@ -677,7 +653,7 @@ public final class PersonalData: ObservableObject {
             case "history":
                 let h = try JSONDecoder().decode([HistoryEntry].self,
                                                  from: json)
-                if !h.isEmpty { historyLog = h }
+                if !h.isEmpty { historyLog = ReadingHistoryLog.combined(h) }
             case "settings":
                 let s = try JSONDecoder().decode(iCloudSettings.self,
                                                  from: json)

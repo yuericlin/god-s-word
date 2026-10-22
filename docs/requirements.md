@@ -210,13 +210,26 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-HI-1:** Every visited chapter is logged to `PersonalData.historyLog`
   (`gw.historyLog.v1`).
 - **REQ-HI-2:** The log is capped at 100 entries; oldest entries are dropped.
-- **REQ-HI-3:** Revisiting a chapter dedupes it to the front (no duplicates).
+- **REQ-HI-3:** Revisiting a chapter moves its entry to the front (no
+  duplicates within the combine window, REQ-HI-7).
 - **REQ-HI-4:** The app restores the last reading position on launch.
 - **REQ-HI-5:** The Settings screen has a History section with jump-to-entry.
 - **REQ-HI-6:** Bookmark jumps do NOT record history immediately. A 60-second
   dwell timer starts on arrival; the chapter is recorded only if the user is
   still there when it fires. Turning chapters restarts the timer. Normal
   immediate recording resumes after a dwell completes.
+- **REQ-HI-7:** Visits to the same chapter combine into one entry when they
+  fall within 24 hours of the entry's earliest visit. The entry keeps every
+  timestamp and every version read (most recent version last; `moduleID` is
+  that one). A visit 24 hours or more after the earliest starts a new entry.
+  A reload within 60 seconds adds no timestamp. History saved before this
+  rule (one version and timestamp per entry) still loads, and is combined
+  when loaded or imported.
+- **REQ-HI-8:** Each history row shows the chapter, all its versions, and the
+  entry's earliest timestamp as a date and time (with the year only when not
+  the current year), not a time-ago.
+- **REQ-HI-9:** The history list shows the latest 20 entries, followed by a
+  "…" row when there are more. The log itself still keeps up to 100 (REQ-HI-2).
 
 ---
 
