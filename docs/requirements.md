@@ -474,3 +474,41 @@ Multiple (KJV Gen 1:1-2):
   total) fails with an error instead of spinning forever. The
   downloaded package installs off the main thread, so the page stays
   responsive throughout.
+
+## 16. Module sources
+
+- **REQ-SRC-1:** The app ships built-in public repository sources:
+  the complete SWORD master repository list as far as it is
+  reachable over https — CrossWire (the default), CrossWire Beta,
+  Bible.org, CrossWire Attic, CrossWire Wycliffe, eBible.org,
+  Deutsche Bibelgesellschaft, and the Lockman Foundation (NASB
+  1995 / NASB 2020, LBLA, NBLA). (Xiphos is on the master list too
+  but is http-only.) Each was verified live in the app's repository
+  format (`mods.d.tar.gz` catalog + `packages/<id>.zip`). They
+  appear in the source picker on the "Add Bible" and "Add
+  Commentary" pages; with more than two repository sources the
+  picker is a menu instead of a segmented control. Custom sources
+  (repository URLs and local folders) work as before.
+- **REQ-SRC-2:** Settings has a Sources section opening a Sources
+  page. It lists every source, lets the user pick the default
+  download source (persisted; the download pages open with it, and
+  changing the source there updates the default), and manages custom
+  sources with the same editor as the Library.
+- **REQ-SRC-3:** The Sources page has an "Update Public Sources"
+  button that downloads `public-sources.json` from the project
+  repository and replaces the public preset list by id, showing when
+  the list was last updated. The bundled list is the fallback before
+  the first update and stays in place if an update fails (the error
+  is shown). Custom sources are never touched; modules whose source
+  an update removed are listed under CrossWire, and a removed
+  default falls back to CrossWire.
+- **REQ-SRC-4:** Three .conf quirks must not hide otherwise
+  eligible modules: a module that declares no Versification uses
+  the SWORD default, KJV (it counts as renderable and the reader
+  opens it with the KJV versification); an empty `CipherKey=` line
+  means not enciphered; and conf values match case-insensitively,
+  as in SWORD (the NET Bible writes `BlockType=Book`). Most
+  modules in the Lockman, Bible.org, and Wycliffe repositories
+  omit the Versification line, and the NET Bible and NA28 carry
+  the empty cipher line, so without this they would never appear
+  or open at all.

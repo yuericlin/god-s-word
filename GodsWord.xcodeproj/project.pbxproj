@@ -30,6 +30,7 @@
 		67FAF9C86F125E808C6566CE /* ReadingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9598E044090F5CFABC15E5C3 /* ReadingSettingsView.swift */; };
 		663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */; };
 		7F23B8F9606053179A73E8B7 /* SourceEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 383A8A4ADFC55FCF8D479BD8 /* SourceEditView.swift */; };
+		9E315E2662D157C2ACAF66E1 /* SourcesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A675DF1F5B2657FD82566C3D /* SourcesSettingsView.swift */; };
 		6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42447FBBBA5658DCA177927D /* SettingsView.swift */; };
 		3FF739BDF124505187186EE4 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B51AED15DE0158D2A28E85FB /* HistoryView.swift */; };
 		1E5E24DF8E0C52C58C51E8B0 /* EdgeNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 921F397B4AB15F01B8F5CEF9 /* EdgeNavigation.swift */; };
@@ -69,6 +70,7 @@
 		9598E044090F5CFABC15E5C3 /* ReadingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ReadingSettingsView.swift"; sourceTree = "<group>"; };
 		EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RepositoryView.swift"; sourceTree = "<group>"; };
 		383A8A4ADFC55FCF8D479BD8 /* SourceEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SourceEditView.swift"; sourceTree = "<group>"; };
+		A675DF1F5B2657FD82566C3D /* SourcesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SourcesSettingsView.swift"; sourceTree = "<group>"; };
 		42447FBBBA5658DCA177927D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SettingsView.swift"; sourceTree = "<group>"; };
 		B51AED15DE0158D2A28E85FB /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HistoryView.swift"; sourceTree = "<group>"; };
 		921F397B4AB15F01B8F5CEF9 /* EdgeNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "EdgeNavigation.swift"; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 				9598E044090F5CFABC15E5C3 /* ReadingSettingsView.swift */,
 				EBE7D9E6555B5454B9C47750 /* RepositoryView.swift */,
 				383A8A4ADFC55FCF8D479BD8 /* SourceEditView.swift */,
+				A675DF1F5B2657FD82566C3D /* SourcesSettingsView.swift */,
 				42447FBBBA5658DCA177927D /* SettingsView.swift */,
 				B51AED15DE0158D2A28E85FB /* HistoryView.swift */,
 				921F397B4AB15F01B8F5CEF9 /* EdgeNavigation.swift */,
@@ -257,6 +260,7 @@
 				67FAF9C86F125E808C6566CE /* ReadingSettingsView.swift in Sources */,
 				663172D6B33D542CAEEAF8F2 /* RepositoryView.swift in Sources */,
 				7F23B8F9606053179A73E8B7 /* SourceEditView.swift in Sources */,
+				9E315E2662D157C2ACAF66E1 /* SourcesSettingsView.swift in Sources */,
 				6109C3427DF551F09981A7C3 /* SettingsView.swift in Sources */,
 				3FF739BDF124505187186EE4 /* HistoryView.swift in Sources */,
 				1E5E24DF8E0C52C58C51E8B0 /* EdgeNavigation.swift in Sources */,

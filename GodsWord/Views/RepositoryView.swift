@@ -14,7 +14,12 @@ struct RepositoryView: View {
     @State private var progress: [String: Double] = [:]
     @State private var tasks: [String: Task<Void, Never>] = [:]
     @State private var installedIDs: Set<String> = []
-    @State private var selectedSourceID = BibleSource.crossWire.id
+    @State private var selectedSourceID: String
+
+    init() {
+        // Open with the default source from Settings (REQ-SRC-2).
+        _selectedSourceID = State(initialValue: BibleSourceStore.shared.defaultSourceID)
+    }
 
     /// All remote (repository) sources the user can download from.
     private var repositorySources: [BibleSource] {
@@ -28,6 +33,29 @@ struct RepositoryView: View {
     private var repository: SwordRepository {
         let url = selectedSource.repositoryURL ?? BibleSource.crossWire.repositoryURL!
         return SwordRepository(name: selectedSource.name, baseURL: url)
+    }
+
+    /// Source picker: segmented for two sources, a menu once the
+    /// public presets make the list longer (REQ-SRC-1).
+    @ViewBuilder
+    private var sourcePicker: some View {
+        if repositorySources.count > 2 {
+            Picker("Source", selection: $selectedSourceID) {
+                ForEach(repositorySources) { source in
+                    Text(source.name).tag(source.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding()
+        } else {
+            Picker("Source", selection: $selectedSourceID) {
+                ForEach(repositorySources) { source in
+                    Text(source.name).tag(source.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+        }
     }
 
     private var filtered: [ModuleInfo] {
@@ -52,13 +80,7 @@ struct RepositoryView: View {
                 } else {
                     VStack(spacing: 0) {
                         if repositorySources.count > 1 {
-                            Picker("Source", selection: $selectedSourceID) {
-                                ForEach(repositorySources) { source in
-                                    Text(source.name).tag(source.id)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .padding()
+                            sourcePicker
                         }
                         List(filtered, id: \.id) { mod in
                             HStack {
@@ -86,7 +108,11 @@ struct RepositoryView: View {
             }
         }
         .task { await load() }
-        .onChange(of: selectedSourceID) { Task { await load() } }
+        .onChange(of: selectedSourceID) {
+            // The download pages and Settings share one default (REQ-SRC-2).
+            BibleSourceStore.shared.defaultSourceID = selectedSourceID
+            Task { await load() }
+        }
         .onAppear { installedIDs = Set(store.installedModules().map { $0.id }) }
     }
 
@@ -180,7 +206,12 @@ struct CommentaryRepositoryView: View {
     @State private var progress: [String: Double] = [:]
     @State private var tasks: [String: Task<Void, Never>] = [:]
     @State private var installedIDs: Set<String> = []
-    @State private var selectedSourceID = BibleSource.crossWire.id
+    @State private var selectedSourceID: String
+
+    init() {
+        // Open with the default source from Settings (REQ-SRC-2).
+        _selectedSourceID = State(initialValue: BibleSourceStore.shared.defaultSourceID)
+    }
 
     /// All remote (repository) sources the user can download from.
     private var repositorySources: [BibleSource] {
@@ -194,6 +225,29 @@ struct CommentaryRepositoryView: View {
     private var repository: SwordRepository {
         let url = selectedSource.repositoryURL ?? BibleSource.crossWire.repositoryURL!
         return SwordRepository(name: selectedSource.name, baseURL: url)
+    }
+
+    /// Source picker: segmented for two sources, a menu once the
+    /// public presets make the list longer (REQ-SRC-1).
+    @ViewBuilder
+    private var sourcePicker: some View {
+        if repositorySources.count > 2 {
+            Picker("Source", selection: $selectedSourceID) {
+                ForEach(repositorySources) { source in
+                    Text(source.name).tag(source.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding()
+        } else {
+            Picker("Source", selection: $selectedSourceID) {
+                ForEach(repositorySources) { source in
+                    Text(source.name).tag(source.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+        }
     }
 
     private var filtered: [ModuleInfo] {
@@ -217,13 +271,7 @@ struct CommentaryRepositoryView: View {
                 } else {
                     VStack(spacing: 0) {
                         if repositorySources.count > 1 {
-                            Picker("Source", selection: $selectedSourceID) {
-                                ForEach(repositorySources) { source in
-                                    Text(source.name).tag(source.id)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .padding()
+                            sourcePicker
                         }
                         List(filtered, id: \.id) { mod in
                             HStack {
@@ -253,7 +301,11 @@ struct CommentaryRepositoryView: View {
             }
         }
         .task { await load() }
-        .onChange(of: selectedSourceID) { Task { await load() } }
+        .onChange(of: selectedSourceID) {
+            // The download pages and Settings share one default (REQ-SRC-2).
+            BibleSourceStore.shared.defaultSourceID = selectedSourceID
+            Task { await load() }
+        }
         .onAppear { installedIDs = Set(store.installedModules().map { $0.id }) }
     }
 

@@ -41,6 +41,7 @@ sources = [
     "GodsWord/Views/ReadingSettingsView.swift",
     "GodsWord/Views/RepositoryView.swift",
     "GodsWord/Views/SourceEditView.swift",
+    "GodsWord/Views/SourcesSettingsView.swift",
     "GodsWord/Views/SettingsView.swift",
     "GodsWord/Views/HistoryView.swift",
     "GodsWord/Views/EdgeNavigation.swift",

@@ -47,7 +47,14 @@ public struct SwordConf: Sendable {
     public var blockType: String? { self["BlockType"] }
     public var versification: String? { self["Versification"] }
     public var language: String? { self["Lang"] }
-    public var cipherKey: String? { self["CipherKey"] }
+    /// The module's unlock key, when it is actually locked. Some confs
+    /// carry an empty `CipherKey=` line (e.g. the NET Bible, NA28);
+    /// in SWORD semantics that means not enciphered.
+    public var cipherKey: String? {
+        guard let key = self["CipherKey"]?.trimmingCharacters(in: .whitespaces),
+              !key.isEmpty else { return nil }
+        return key
+    }
 
     public var displayName: String {
         values["Description"]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? moduleID
