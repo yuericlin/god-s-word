@@ -57,12 +57,22 @@ public struct ModuleInfo: Sendable {
         ["ZTEXT4", "ZCOM4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? "")
     }
 
+    /// Whether this module uses a raw (uncompressed) driver —
+    /// RawText / RawCom store each testament as a plain data file
+    /// (ot / nt) plus a .vss index of 6-byte records (32-bit
+    /// offset, 16-bit size) over the same heading-slot ordinals
+    /// the compressed drivers use (REQ-AP-17). The reader opens
+    /// the module accordingly.
+    public var usesRawStorage: Bool {
+        ["RAWTEXT", "RAWCOM"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? "")
+    }
+
     /// Whether this module is a commentary: its catalog category says so,
     /// or it uses a zCom driver. Commentaries are not Bible versions and
     /// never appear in the version lists.
     public var isCommentary: Bool {
         category.lowercased() == "commentaries"
-            || ["ZCOM", "ZCOM4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? "")
+            || ["ZCOM", "ZCOM4", "RAWCOM"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? "")
     }
 
     /// True when the auxiliary panel can read this commentary: zCom
@@ -77,14 +87,25 @@ public struct ModuleInfo: Sendable {
     /// against TSK, REQ-AP-14); CHAPTER-block modules (e.g.
     /// NETnotes) are still excluded — their storage differs
     /// (.czv/.czs/.czz files).
+    ///
+    /// RawCom modules qualify on the same terms, minus the
+    /// compression terms (raw drivers store uncompressed entries
+    /// and declare no CompressType / BlockType), and GBF joins
+    /// OSIS / ThML as a source type: its tags pass through the
+    /// same plain-text conversion (verified against DTN,
+    /// REQ-AP-17).
     public var isCommentaryRenderable: Bool {
-        guard isCommentary,
-              ["ZCOM", "ZCOM4"].contains(conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""),
-              conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
-              conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
-              ["OSIS", "THML"].contains(conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""),
-              conf.cipherKey == nil
-        else { return false }
+        guard isCommentary, conf.cipherKey == nil else { return false }
+        let driver = conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+        let source = conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+        if ["ZCOM", "ZCOM4"].contains(driver) {
+            guard conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
+                  conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
+                  ["OSIS", "THML"].contains(source)
+            else { return false }
+        } else if driver == "RAWCOM" {
+            guard ["OSIS", "THML", "GBF"].contains(source) else { return false }
+        } else { return false }
         let enc = conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
         guard enc.isEmpty || enc == "UTF-8" else { return false }
         let v = conf.versification?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""

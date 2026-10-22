@@ -19,9 +19,15 @@ public enum SwordModuleError: Error, Equatable {
 /// .bzv entry is 12 bytes with a 32-bit verse size instead of
 /// 10 bytes with a 16-bit size (REQ-AP-16). Everything else
 /// (.bzs block index, .bzz compressed blocks) is identical.
+/// The raw drivers (RawText / RawCom) store no compressed
+/// blocks at all: per testament an uncompressed data file
+/// (ot / nt) plus a .vss index of 6-byte records (32-bit
+/// offset, 16-bit size) over the same heading-slot ordinals
+/// (REQ-AP-17).
 public enum SwordStorageFormat: Sendable {
     case zVerse
     case zVerse4
+    case raw
 }
 
 /// One verse-index entry: which compressed block holds the verse, and the
@@ -35,6 +41,13 @@ private struct VerseIndexEntry {
 private struct BlockIndexEntry {
     let compOffset: UInt32
     let compSize: UInt32
+}
+
+/// One raw verse-index entry (.vss): the byte range of the
+/// verse's entry in the testament's uncompressed data file.
+private struct RawIndexEntry {
+    let start: UInt32
+    let size: UInt32
 }
 
 private func readU16LE(_ d: [UInt8], _ o: Int) -> UInt16 {
@@ -51,12 +64,19 @@ private func readU32LE(_ d: [UInt8], _ o: Int) -> UInt32 {
 /// after init except `blockCache`, whose access is serialized by `cacheLock`.
 public final class SwordModule: @unchecked Sendable {
     public let versification: Versification
+    private let format: SwordStorageFormat
     private let otVerseIndex: [VerseIndexEntry]
     private let ntVerseIndex: [VerseIndexEntry]
     private let otBlockIndex: [BlockIndexEntry]
     private let ntBlockIndex: [BlockIndexEntry]
     private let otData: [UInt8]
     private let ntData: [UInt8]
+    /// Raw-format storage (.vss index + uncompressed text per
+    /// testament); empty unless the format is .raw.
+    private let otRawIndex: [RawIndexEntry]
+    private let ntRawIndex: [RawIndexEntry]
+    private let otRawText: [UInt8]
+    private let ntRawText: [UInt8]
     /// Cache of decompressed blocks, keyed by testament * 1_000_000 + block.
     /// Guarded by cacheLock: readers may hop across actors (ModuleLoader is an
     /// actor; call sites are main-actor), so unsynchronized mutation is a data race.
@@ -70,6 +90,7 @@ public final class SwordModule: @unchecked Sendable {
     public init(moduleDir: URL, versification: Versification,
                 format: SwordStorageFormat = .zVerse) throws {
         self.versification = versification
+        self.format = format
         func read(_ name: String) throws -> [UInt8] {
             let url = moduleDir.appendingPathComponent(name)
             guard let d = try? Data(contentsOf: url) else {
@@ -121,17 +142,67 @@ public final class SwordModule: @unchecked Sendable {
                     try parseBlockIndex(read("\(prefix).bzs"), "\(prefix).bzs"),
                     try read("\(prefix).bzz"))
         }
-        let ot = try loadTestament("ot")
-        let nt = try loadTestament("nt")
-        guard ot != nil || nt != nil else {
-            throw SwordModuleError.missingFile("ot.bzv")
+        if format == .raw {
+            // Raw drivers (REQ-AP-17): per testament a .vss
+            // index + an uncompressed data file. The same
+            // one-testament rule as the compressed drivers
+            // applies (REQ-AP-15): an absent testament reads
+            // as empty; a half-present one (index without
+            // data or vice versa) is corruption and throws.
+            func loadRawTestament(_ prefix: String) throws
+                -> (index: [RawIndexEntry], text: [UInt8])?
+            {
+                let hasIndex = FileManager.default.fileExists(
+                    atPath: moduleDir.appendingPathComponent("\(prefix).vss").path)
+                let hasText = FileManager.default.fileExists(
+                    atPath: moduleDir.appendingPathComponent(prefix).path)
+                guard hasIndex || hasText else { return nil }
+                let vss = try read("\(prefix).vss")
+                guard vss.count % 6 == 0 else {
+                    throw SwordModuleError.corruptIndex("\(prefix).vss")
+                }
+                var idx = [RawIndexEntry]()
+                idx.reserveCapacity(vss.count / 6)
+                var o = 0
+                while o < vss.count {
+                    idx.append(RawIndexEntry(start: readU32LE(vss, o),
+                                             size: UInt32(readU16LE(vss, o + 4))))
+                    o += 6
+                }
+                return (idx, try read(prefix))
+            }
+            let otR = try loadRawTestament("ot")
+            let ntR = try loadRawTestament("nt")
+            guard otR != nil || ntR != nil else {
+                throw SwordModuleError.missingFile("ot")
+            }
+            otRawIndex = otR?.index ?? []
+            otRawText = otR?.text ?? []
+            ntRawIndex = ntR?.index ?? []
+            ntRawText = ntR?.text ?? []
+            otVerseIndex = []
+            otBlockIndex = []
+            otData = []
+            ntVerseIndex = []
+            ntBlockIndex = []
+            ntData = []
+        } else {
+            let ot = try loadTestament("ot")
+            let nt = try loadTestament("nt")
+            guard ot != nil || nt != nil else {
+                throw SwordModuleError.missingFile("ot.bzv")
+            }
+            otVerseIndex = ot?.verse ?? []
+            otBlockIndex = ot?.block ?? []
+            otData = ot?.data ?? []
+            ntVerseIndex = nt?.verse ?? []
+            ntBlockIndex = nt?.block ?? []
+            ntData = nt?.data ?? []
+            otRawIndex = []
+            otRawText = []
+            ntRawIndex = []
+            ntRawText = []
         }
-        otVerseIndex = ot?.verse ?? []
-        otBlockIndex = ot?.block ?? []
-        otData = ot?.data ?? []
-        ntVerseIndex = nt?.verse ?? []
-        ntBlockIndex = nt?.block ?? []
-        ntData = nt?.data ?? []
     }
 
     private func decompressedBlock(testament: Int, block: UInt32) throws -> [UInt8] {
@@ -161,6 +232,9 @@ public final class SwordModule: @unchecked Sendable {
     /// Raw (still OSIS-marked-up) verse text, or nil when the module has no
     /// entry for the verse (mirrors zText::hasEntry).
     public func rawVerse(testament: Int, book: Int, chapter: Int, verse: Int) -> String? {
+        if format == .raw {
+            return rawRawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
+        }
         guard let ti = versification.testamentIndex(testament: testament, book: book,
                                                     chapter: chapter, verse: verse) else { return nil }
         let index = testament == 1 ? otVerseIndex : ntVerseIndex
@@ -171,6 +245,21 @@ public final class SwordModule: @unchecked Sendable {
         let start = Int(entry.start), end = start + Int(entry.size)
         guard start >= 0 && end <= block.count else { return nil }
         return String(bytes: block[start ..< end], encoding: .utf8)
+    }
+
+    /// One entry of a raw-format module: the verse's slice of
+    /// the testament's uncompressed data file, per its .vss
+    /// record (REQ-AP-17).
+    private func rawRawVerse(testament: Int, book: Int, chapter: Int, verse: Int) -> String? {
+        guard let ti = versification.testamentIndex(testament: testament, book: book,
+                                                    chapter: chapter, verse: verse) else { return nil }
+        let (index, text) = testament == 1 ? (otRawIndex, otRawText) : (ntRawIndex, ntRawText)
+        guard ti >= 0 && ti < index.count else { return nil }
+        let entry = index[ti]
+        guard entry.size > 0 else { return nil }
+        let start = Int(entry.start), end = start + Int(entry.size)
+        guard start >= 0 && end <= text.count else { return nil }
+        return String(bytes: text[start ..< end], encoding: .utf8)
     }
 
     /// Plain-text verse for display. A section heading the entry
