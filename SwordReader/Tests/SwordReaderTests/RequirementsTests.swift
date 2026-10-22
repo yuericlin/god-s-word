@@ -619,15 +619,35 @@ final class CombinedHistoryRequirementsTests: XCTestCase {
         XCTAssertEqual(log[0].moduleIDs, ["KJV", "ChiUns"])
     }
 
-    // REQ-HI-2: the cap still applies to entries.
-    func testCapKeepsNewestEntries() {
+    // REQ-HI-2: history older than 30 days is dropped, however many entries
+    // remain; there is no entry-count cap.
+    func testRecordingDropsEntriesOlderThanThirtyDays() {
+        let old = record([], "KJV", chapter: 1, at: t0)
+        let log = record(old, "KJV", chapter: 2, at: hours(24 * 31))
+        XCTAssertEqual(log.map { $0.chapter }, [2])
+        let kept = record(old, "KJV", chapter: 2, at: hours(24 * 29))
+        XCTAssertEqual(kept.map { $0.chapter }, [2, 1])
+    }
+
+    func testNoEntryCountCap() {
         var log: [ReadingHistoryEntry] = []
-        for ch in 1...5 {
-            log = ReadingHistoryLog.recording(
-                moduleID: "KJV", bookName: "B", testament: 1, book: 1, chapter: ch,
-                at: hours(Double(ch)), into: log, limit: 3)
+        for ch in 1...250 {
+            log = record(log, "KJV", chapter: ch, at: hours(Double(ch) / 20))
         }
-        XCTAssertEqual(log.map { $0.chapter }, [5, 4, 3])
+        XCTAssertEqual(log.count, 250)
+    }
+
+    func testLoadedCombinesThenPrunes() {
+        let now = hours(24 * 40)
+        func e(_ ch: Int, _ days: Double) -> ReadingHistoryEntry {
+            ReadingHistoryEntry(bookName: "B", testament: 1, book: 1, chapter: ch,
+                                moduleIDs: ["KJV"],
+                                timestamps: [now.addingTimeInterval(-days * 86400)])
+        }
+        let loaded = ReadingHistoryLog.loaded([e(1, 1), e(1, 1.1), e(2, 29), e(3, 45)],
+                                              now: now)
+        XCTAssertEqual(loaded.map { $0.chapter }.sorted(), [1, 2])
+        XCTAssertEqual(loaded.first { $0.chapter == 1 }?.timestamps.count, 2)
     }
 
     // Entries written before combining existed (one moduleID + timestamp)
@@ -710,28 +730,5 @@ final class CombinedHistoryRequirementsTests: XCTestCase {
         XCTAssertEqual(sections[1].day, cal.startOfDay(for: noon) - 86400)
         XCTAssertEqual(sections[1].entries.map { $0.chapter }, [4, 3])
         XCTAssertTrue(ReadingHistoryLog.sections([], calendar: cal).isEmpty)
-    }
-
-    // REQ-HI-9: two days at first, two more each time the end is reached.
-    func testVisibleSectionsRevealsByDays() {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "UTC")!
-        let log = (0..<5).map { d in
-            ReadingHistoryEntry(bookName: "B", testament: 1, book: 1, chapter: d + 1,
-                                moduleIDs: ["KJV"],
-                                timestamps: [t0.addingTimeInterval(-Double(d) * 86400)])
-        }
-        let all = ReadingHistoryLog.sections(log, calendar: cal)
-        XCTAssertEqual(all.count, 5)
-        let first = ReadingHistoryLog.visibleSections(all, days: ReadingHistoryLog.dayPage)
-        XCTAssertEqual(first.sections.count, 2)
-        XCTAssertTrue(first.hasMore)
-        let second = ReadingHistoryLog.visibleSections(all, days: 4)
-        XCTAssertEqual(second.sections.count, 4)
-        XCTAssertTrue(second.hasMore)
-        let third = ReadingHistoryLog.visibleSections(all, days: 6)
-        XCTAssertEqual(third.sections.count, 5)
-        XCTAssertFalse(third.hasMore)
-        XCTAssertFalse(ReadingHistoryLog.visibleSections([], days: 2).hasMore)
     }
 }

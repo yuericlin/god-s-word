@@ -1,5 +1,5 @@
 // ReadingHistoryLog.swift
-// Pure, testable reading-history logic (REQ-HI-3, REQ-HI-7..9).
+// Pure, testable reading-history logic (REQ-HI-2, REQ-HI-3, REQ-HI-7..9).
 //
 // One entry is one chapter. Reading it again within 24 hours of the entry's
 // earliest visit joins that entry (a new timestamp, and the version if it is
@@ -115,20 +115,17 @@ public enum ReadingHistoryLog {
     public static let mergeWindow: TimeInterval = 24 * 60 * 60
     /// A reload this soon after the last visit adds no timestamp.
     public static let visitGap: TimeInterval = 60
-    /// Entries kept (REQ-HI-2).
-    public static let limit = 100
-    /// Days of history revealed at first, and again each time the list is
-    /// scrolled to its end (REQ-HI-9).
-    public static let dayPage = 2
+    /// History older than this many days is dropped (REQ-HI-2).
+    public static let retentionDays = 30
 
     /// Records a visit. Joins the most recent entry for the same chapter
     /// that started within `mergeWindow` of `now` (moving it to the front);
-    /// otherwise adds a new entry at the front. Capped at `limit`.
+    /// otherwise adds a new entry at the front. Entries older than
+    /// `retentionDays` are dropped.
     public static func recording(moduleID: String, bookName: String,
                                  testament: Int, book: Int, chapter: Int,
                                  at now: Date = Date(),
-                                 into log: [ReadingHistoryEntry],
-                                 limit: Int = ReadingHistoryLog.limit)
+                                 into log: [ReadingHistoryEntry])
         -> [ReadingHistoryEntry]
     {
         var out = log
@@ -146,8 +143,23 @@ public enum ReadingHistoryLog {
                                            moduleIDs: [moduleID], timestamps: [now]),
                        at: 0)
         }
-        if out.count > limit { out = Array(out.prefix(limit)) }
-        return out
+        return pruned(out, now: now)
+    }
+
+    /// Drops entries whose latest visit is more than `retentionDays` before
+    /// `now` (REQ-HI-2).
+    public static func pruned(_ log: [ReadingHistoryEntry], now: Date = Date(),
+                              calendar: Calendar = .current) -> [ReadingHistoryEntry] {
+        guard let cutoff = calendar.date(byAdding: .day, value: -retentionDays,
+                                         to: now) else { return log }
+        return log.filter { $0.lastVisit >= cutoff }
+    }
+
+    /// What to keep when history is loaded or imported: older one-visit
+    /// entries combined (REQ-HI-7), then the retention window applied.
+    public static func loaded(_ log: [ReadingHistoryEntry], now: Date = Date())
+        -> [ReadingHistoryEntry] {
+        pruned(combined(log), now: now)
     }
 
     /// Merges entries recorded before combining existed: for each chapter,
@@ -186,14 +198,5 @@ public enum ReadingHistoryLog {
             DaySection(day: day,
                        entries: byDay[day]!.sorted { $0.lastVisit > $1.lastVisit })
         }
-    }
-
-    /// The first `days` days of `sections`, and whether older ones remain to
-    /// be loaded by scrolling (REQ-HI-9).
-    public static func visibleSections(_ sections: [DaySection], days: Int)
-        -> (sections: [DaySection], hasMore: Bool)
-    {
-        let n = max(days, 0)
-        return (Array(sections.prefix(n)), sections.count > n)
     }
 }

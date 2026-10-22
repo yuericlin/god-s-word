@@ -113,7 +113,6 @@ public final class PersonalData: ObservableObject {
     private let chapterNotesKey = "gw.chapterNotes.v1"
     private let commentaryModuleKey = "gw.commentaryModule.v1"
     private let strongsFallbackKey = "gw.strongsFallbackVersion.v1"
-    private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -124,7 +123,7 @@ public final class PersonalData: ObservableObject {
         let log: [HistoryEntry]
         if let data = defaults.data(forKey: "gw.historyLog.v1"),
            let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
-            log = ReadingHistoryLog.combined(decoded)
+            log = ReadingHistoryLog.loaded(decoded)
         } else {
             log = []
         }
@@ -366,8 +365,7 @@ public final class PersonalData: ObservableObject {
                               testament: Int, book: Int, chapter: Int) {
         historyLog = ReadingHistoryLog.recording(
             moduleID: moduleID, bookName: bookName, testament: testament,
-            book: book, chapter: chapter, into: historyLog,
-            limit: maxHistoryEntries)
+            book: book, chapter: chapter, into: historyLog)
     }
 
     /// Deletes entries by id (the list is split into days, so row offsets
@@ -571,7 +569,7 @@ public final class PersonalData: ObservableObject {
         }
         if let h: [HistoryEntry] = try? iCloudSync.shared.load(
             [HistoryEntry].self, as: .history), !h.isEmpty {
-            historyLog = ReadingHistoryLog.combined(h)
+            historyLog = ReadingHistoryLog.loaded(h)
         }
     }
 
@@ -655,7 +653,7 @@ public final class PersonalData: ObservableObject {
             case "history":
                 let h = try JSONDecoder().decode([HistoryEntry].self,
                                                  from: json)
-                if !h.isEmpty { historyLog = ReadingHistoryLog.combined(h) }
+                if !h.isEmpty { historyLog = ReadingHistoryLog.loaded(h) }
             case "settings":
                 let s = try JSONDecoder().decode(iCloudSettings.self,
                                                  from: json)

@@ -209,7 +209,9 @@ Multiple (KJV Gen 1:1-2):
 
 - **REQ-HI-1:** Every visited chapter is logged to `PersonalData.historyLog`
   (`gw.historyLog.v1`).
-- **REQ-HI-2:** The log is capped at 100 entries; oldest entries are dropped.
+- **REQ-HI-2:** The log keeps the last 30 days: an entry whose latest visit is
+  more than 30 days old is dropped (when recording and when loading). There is
+  no limit on the number of entries.
 - **REQ-HI-3:** Revisiting a chapter moves its entry to the front (no
   duplicates within the combine window, REQ-HI-7).
 - **REQ-HI-4:** The app restores the last reading position on launch.
@@ -231,9 +233,8 @@ Multiple (KJV Gen 1:1-2):
   A row shows the chapter, all its versions, and the time of that earliest
   visit (not a time-ago). Every entry can still be deleted individually (swipe, or long-press Delete),
   whichever day it is under.
-- **REQ-HI-9:** The list loads incrementally: the latest 2 days at first, and
-  2 more each time the end is scrolled to. The log itself still keeps up to
-  100 entries (REQ-HI-2).
+- **REQ-HI-9:** The list loads every entry in the log at once (all of the last
+  30 days), in day sections. There is no paging or infinite scrolling.
 
 ---
 
