@@ -407,9 +407,10 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
         XCTAssertFalse(info.isRenderable)
     }
 
-    // REQ-AP-4: a ThML commentary (TSK's conf shape) is a commentary but
-    // not renderable yet.
-    func testThMLCommentaryIsNotRenderable() {
+    // REQ-AP-4 originally excluded ThML commentaries; REQ-AP-14
+    // supersedes that: a ThML commentary (TSK's conf shape) IS
+    // renderable — see LegacyConfRequirementsTests for the details.
+    func testThMLCommentaryIsRenderable() {
         let info = conf("""
             [TSK]
             DataPath=./modules/comments/zcom/tsk/
@@ -420,7 +421,7 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
             Lang=en
             """)
         XCTAssertTrue(info.isCommentary)
-        XCTAssertFalse(info.isCommentaryRenderable)
+        XCTAssertTrue(info.isCommentaryRenderable)
     }
 
     // REQ-AP-4: a Bible is not a commentary.
@@ -832,5 +833,107 @@ final class DictionaryAndLanguageRequirementsTests: XCTestCase {
             """)
         XCTAssertFalse(noLang.isInLanguages(["en"]))
         XCTAssertTrue(noLang.isInLanguages([]))
+    }
+}
+
+// REQ-AP-14: legacy-encoded confs decode tolerantly, and ThML
+// commentaries are renderable.
+final class LegacyConfRequirementsTests: XCTestCase {
+    private func conf(_ text: String) -> ModuleInfo {
+        ModuleInfo(conf: SwordConf(text: text))
+    }
+
+    // A conf carrying Windows-1252 bytes (0xAE = ®, 0x93/0x94 =
+    // smart quotes — NETnotes' actual conf bytes) decodes with the
+    // right characters and parses normally, instead of being
+    // rejected as invalid UTF-8.
+    func testWindows1252ConfDecodes() {
+        var bytes = [UInt8]("[NETnotes]\nDescription=NET Bible Footnotes\nAbout=The NET Bible".utf8)
+        bytes.append(0xAE)
+        bytes.append(contentsOf: [UInt8](", ".utf8))
+        bytes.append(0x93)
+        bytes.append(contentsOf: [UInt8]("quoted".utf8))
+        bytes.append(0x94)
+        let parsed = SwordConf(text: SwordConf.decodeText(bytes))
+        XCTAssertEqual(parsed.moduleID, "NETnotes")
+        XCTAssertEqual(parsed["About"], "The NET Bible®, \u{201C}quoted\u{201D}")
+    }
+
+    // Valid UTF-8 still decodes as UTF-8 (the 2-byte ® must not
+    // come back as the cp1252 mojibake "Â®").
+    func testUTF8ConfDecodesAsUTF8() {
+        let text = SwordConf.decodeText([UInt8]("[X]\nAbout=Bible®".utf8))
+        XCTAssertEqual(SwordConf(text: text)["About"], "Bible®")
+    }
+
+    // REQ-AP-14: a ThML commentary with the zCom storage the reader
+    // handles (ZIP, whole-book blocks) is renderable — TSK's actual
+    // conf shape, which also declares no Encoding line at all.
+    func testThMLCommentaryRenderable() {
+        let tsk = conf("""
+            [TSK]
+            DataPath=./modules/comments/zcom/tsk/
+            ModDrv=zCom
+            SourceType=ThML
+            CompressType=ZIP
+            BlockType=BOOK
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertTrue(tsk.isCommentaryRenderable)
+    }
+
+    // REQ-AP-15: a module with only NT files opens; the OT reads
+    // as empty. (Zero-size verse entries need no compressed
+    // blocks, so the fixture is just the index files.)
+    func testNTOnlyModuleOpens() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("nt-only-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        // One zero-size verse entry; no blocks at all.
+        try Data([UInt8](repeating: 0, count: 10)).write(to: dir.appendingPathComponent("nt.bzv"))
+        try Data().write(to: dir.appendingPathComponent("nt.bzs"))
+        try Data().write(to: dir.appendingPathComponent("nt.bzz"))
+        let module = try SwordModule(moduleDir: dir, versification: .kjv)
+        XCTAssertEqual(module.chapter(testament: 1, book: 1, chapter: 1).count, 0)
+        XCTAssertEqual(module.chapter(testament: 2, book: 1, chapter: 1).count, 0)
+        XCTAssertNil(module.verse(testament: 2, book: 1, chapter: 1, verse: 1))
+    }
+
+    // REQ-AP-15: a directory with no testament data at all still
+    // fails, and a partial file set (index without its data
+    // files) still fails as corrupt/missing.
+    func testEmptyAndPartialModulesStillFail() throws {
+        let fm = FileManager.default
+        let empty = fm.temporaryDirectory
+            .appendingPathComponent("empty-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: empty, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: empty) }
+        XCTAssertThrowsError(try SwordModule(moduleDir: empty, versification: .kjv))
+
+        let partial = fm.temporaryDirectory
+            .appendingPathComponent("partial-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: partial, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: partial) }
+        try Data([UInt8](repeating: 0, count: 10)).write(to: partial.appendingPathComponent("nt.bzv"))
+        XCTAssertThrowsError(try SwordModule(moduleDir: partial, versification: .kjv))
+    }
+
+    // REQ-AP-14: ThML alone isn't enough — a CHAPTER-block module
+    // (NETnotes' shape, .cz* storage) stays excluded.
+    func testChapterBlockThMLStillExcluded() {
+        let netnotes = conf("""
+            [NETnotes]
+            DataPath=./modules/comments/zcom/netnotes/
+            ModDrv=zCom
+            SourceType=ThML
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=CHAPTER
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertFalse(netnotes.isCommentaryRenderable)
     }
 }

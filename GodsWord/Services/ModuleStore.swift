@@ -39,7 +39,7 @@ public final class ModuleStore: Sendable {
             var isDir: ObjCBool = false
             guard fm.fileExists(atPath: dir.path, isDirectory: &isDir), isDir.boolValue else { continue }
             guard let confURL = findConf(in: dir),
-                  let text = try? String(contentsOf: confURL, encoding: .utf8)
+                  let text = confText(at: confURL)
             else { continue }
             let conf = SwordConf(text: text)
             let info = ModuleInfo(conf: conf)
@@ -67,7 +67,7 @@ public final class ModuleStore: Sendable {
             try Data(try reader.data(for: entry)).write(to: dest)
         }
         guard let confURL = findConf(in: tmp),
-              let text = try? String(contentsOf: confURL, encoding: .utf8)
+              let text = confText(at: confURL)
         else { throw ModuleStoreError.noConfFound }
         let conf = SwordConf(text: text)
         guard conf.moduleID == moduleID else { throw ModuleStoreError.idMismatch }
@@ -76,7 +76,7 @@ public final class ModuleStore: Sendable {
         try fm.moveItem(at: tmp, to: dest)
         // findConf again under the final location for the module dir
         guard let finalConf = findConf(in: dest),
-              let finalText = try? String(contentsOf: finalConf, encoding: .utf8)
+              let finalText = confText(at: finalConf)
         else { throw ModuleStoreError.noConfFound }
         let info = ModuleInfo(conf: SwordConf(text: finalText))
         return InstalledModule(id: info.id, info: info,
@@ -88,6 +88,14 @@ public final class ModuleStore: Sendable {
         if FileManager.default.fileExists(atPath: dir.path) {
             try FileManager.default.removeItem(at: dir)
         }
+    }
+
+    /// Reads a .conf file tolerantly (REQ-AP-14): strict UTF-8
+    /// rejected older packages whose confs carry Windows-1252
+    /// bytes, misreported as "no conf found" at install time.
+    private func confText(at url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        return SwordConf.decodeText([UInt8](data))
     }
 
     private func findConf(in dir: URL) -> URL? {

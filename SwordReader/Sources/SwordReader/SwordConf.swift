@@ -39,6 +39,21 @@ public struct SwordConf: Sendable {
 
     public subscript(key: String) -> String? { values[key] }
 
+    /// Decodes raw .conf bytes to text. Confs are supposed to be
+    /// UTF-8, but older packages — Bible.org's above all — carry
+    /// Windows-1252 bytes (® © “ ” ’) in fields like About and
+    /// Copyright. Strict UTF-8 decoding rejected those confs
+    /// outright, which made their modules fail to install
+    /// ("no conf found") or vanish from repository catalogs
+    /// (REQ-AP-14). Decode as UTF-8 when valid, else Windows-1252
+    /// (which also covers Latin-1), else Latin-1 so it never fails.
+    public static func decodeText(_ bytes: [UInt8]) -> String {
+        String(bytes: bytes, encoding: .utf8)
+            ?? String(bytes: bytes, encoding: .windowsCP1252)
+            ?? String(bytes: bytes, encoding: .isoLatin1)
+            ?? ""
+    }
+
     public var dataPath: String? { self["DataPath"] }
     public var driver: String? { self["ModDrv"] }
     public var sourceType: String? { self["SourceType"] }

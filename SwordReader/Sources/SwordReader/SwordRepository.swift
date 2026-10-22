@@ -58,20 +58,25 @@ public struct ModuleInfo: Sendable {
     }
 
     /// True when the auxiliary panel can read this commentary: zCom
-    /// driver, ZIP compression, whole-book blocks, OSIS source, UTF-8
-    /// encoding, KJV/NRSV versification, not enciphered. A zCom module
-    /// has the same .bzv/.bzs/.bzz file layout as zText, so the existing
-    /// SwordModule reader reads it unmodified (verified against MHCC).
-    /// ThML commentaries (e.g. TSK) are not renderable yet.
+    /// driver, ZIP compression, whole-book blocks, OSIS or ThML
+    /// source, UTF-8 text (an absent Encoding counts — TSK declares
+    /// none and is UTF-8 text), KJV/NRSV versification, not
+    /// enciphered. A zCom module has the same .bzv/.bzs/.bzz file
+    /// layout as zText, so the existing SwordModule reader reads it
+    /// unmodified (verified against MHCC). ThML entries pass through
+    /// the same plain-text conversion as OSIS ones (verified against
+    /// TSK, REQ-AP-14); CHAPTER-block modules (e.g. NETnotes) are
+    /// still excluded — their storage differs (.czv/.czs/.czz files).
     public var isCommentaryRenderable: Bool {
         guard isCommentary,
               conf.driver?.trimmingCharacters(in: .whitespaces).uppercased() == "ZCOM",
               conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP",
               conf.blockType?.trimmingCharacters(in: .whitespaces).uppercased() == "BOOK",
-              conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() == "OSIS",
-              conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() == "UTF-8",
+              ["OSIS", "THML"].contains(conf.sourceType?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""),
               conf.cipherKey == nil
         else { return false }
+        let enc = conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+        guard enc.isEmpty || enc == "UTF-8" else { return false }
         let v = conf.versification?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
         return v.isEmpty || v == "KJV" || v == "NRSV"
     }
@@ -209,8 +214,9 @@ public struct SwordRepository: Sendable {
         }
         var modules = [ModuleInfo]()
         for entry in entries where entry.name.hasSuffix(".conf") {
-            guard let text = String(bytes: entry.bytes, encoding: .utf8) else { continue }
-            let conf = SwordConf(text: text)
+            // Tolerant decoding (REQ-AP-14): a conf with legacy
+            // Windows-1252 bytes must not vanish from the catalog.
+            let conf = SwordConf(text: SwordConf.decodeText(entry.bytes))
             guard !conf.moduleID.isEmpty else { continue }
             modules.append(ModuleInfo(conf: conf))
         }
