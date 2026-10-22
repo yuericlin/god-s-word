@@ -18,6 +18,10 @@ struct SettingsView: View {
     /// Called when the user taps a history entry; the presenter navigates.
     var onSelectHistoryEntry: ((HistoryEntry) -> Void)?
 
+    /// The Google Drive backup section is hidden for now (the
+    /// feature and its code stay in place). Flip to show it again.
+    private static let showGoogleDriveBackup = false
+
     var body: some View {
         NavigationStack {
             List {
@@ -172,6 +176,7 @@ struct SettingsView: View {
                     Text("Export saves JSON files to On My iPhone > GodsWord > god-s-word-export/. Share them via AirDrop or Files. Import restores from selected JSON files.")
                 }
 
+                if Self.showGoogleDriveBackup {
                 Section {
                     if !GoogleDriveBackup.isConfigured {
                         Text("Google sign-in isn't configured in this build yet. " +
@@ -202,6 +207,7 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Google Drive backup")
+                }
                 }
 
                 Section("About") {
