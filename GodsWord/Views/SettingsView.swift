@@ -18,6 +18,14 @@ struct SettingsView: View {
     /// Called when the user taps a history entry; the presenter navigates.
     var onSelectHistoryEntry: ((HistoryEntry) -> Void)?
 
+    /// The Google Drive backup section is hidden for now (the
+    /// feature and its code stay in place). Flip to show it again.
+    private static let showGoogleDriveBackup = false
+
+    /// The iCloud section is hidden for now, the same way; only
+    /// Manual backup (export/import) shows. Flip to show it again.
+    private static let showICloudSync = false
+
     var body: some View {
         NavigationStack {
             List {
@@ -99,6 +107,44 @@ struct SettingsView: View {
                     Text("Public repositories you can download Bibles and commentaries from. Pick the default, add your own, or update the public list.")
                 }
 
+                Section {
+                    NavigationLink {
+                        LanguagesSettingsView()
+                    } label: {
+                        HStack {
+                            Text("Languages")
+                            Spacer()
+                            Text(personalData.interestedLanguages.isEmpty
+                                 ? "All languages"
+                                 : personalData.interestedLanguages
+                                    .map { languageDisplayName(forPrimaryCode: $0) }
+                                    .joined(separator: ", "))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Languages")
+                } footer: {
+                    Text("When languages are chosen here, the download lists for Bibles, commentaries, and dictionaries show only modules in those languages.")
+                }
+
+                Section {
+                    NavigationLink {
+                        DictionarySettingsView()
+                    } label: {
+                        HStack {
+                            Text("Dictionary")
+                            Spacer()
+                            Text(dictionarySummary)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Dictionary")
+                } footer: {
+                    Text("The dictionaries Strong's definitions come from, one for Hebrew and one for Greek. More dictionaries download from the same repositories as Bibles.")
+                }
+
                 Section("History") {
                     NavigationLink {
                         HistoryView(onSelect: { entry in
@@ -117,6 +163,7 @@ struct SettingsView: View {
                     }
                 }
 
+                if Self.showICloudSync {
                 Section {
                     Toggle("iCloud Sync", isOn: Binding(
                         get: { iCloudSync.shared.isEnabled },
@@ -148,6 +195,7 @@ struct SettingsView: View {
                 } header: {
                     Text("iCloud")
                 }
+                }
 
                 Section {
                     Button("Export Data") {
@@ -172,6 +220,7 @@ struct SettingsView: View {
                     Text("Export saves JSON files to On My iPhone > GodsWord > god-s-word-export/. Share them via AirDrop or Files. Import restores from selected JSON files.")
                 }
 
+                if Self.showGoogleDriveBackup {
                 Section {
                     if !GoogleDriveBackup.isConfigured {
                         Text("Google sign-in isn't configured in this build yet. " +
@@ -202,6 +251,7 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text("Google Drive backup")
+                }
                 }
 
                 Section("About") {
@@ -255,6 +305,15 @@ struct SettingsView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    /// The Dictionary row's value: "Automatic" when neither lexicon
+    /// is chosen, otherwise the chosen module IDs.
+    private var dictionarySummary: String {
+        let hebrew = personalData.dictionaryHebrewID
+        let greek = personalData.dictionaryGreekID
+        if hebrew.isEmpty && greek.isEmpty { return "Automatic" }
+        return [hebrew, greek].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
     private func doSignIn() async {

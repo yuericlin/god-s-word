@@ -704,3 +704,133 @@ final class NotesSubTabRequirementsTests: XCTestCase {
         }
     }
 }
+
+// REQ-LG-1 / REQ-DC-1: dictionary detection + renderability from real
+// catalog conf shapes, and the download-list language filter.
+final class DictionaryAndLanguageRequirementsTests: XCTestCase {
+    private func conf(_ text: String) -> ModuleInfo {
+        ModuleInfo(conf: SwordConf(text: text))
+    }
+
+    private var strongsGreek: ModuleInfo {
+        conf("""
+            [StrongsGreek]
+            DataPath=./modules/lexdict/zld/strongsgreek/strongsgreek
+            ModDrv=zLD
+            SourceType=TEI
+            Encoding=UTF-8
+            CompressType=ZIP
+            Lang=en
+            """)
+    }
+
+    // REQ-DC-1: the canonical Strong's pair is dictionary-renderable —
+    // StrongsGreek (zLD/ZIP) and StrongsHebrew (RawLD, which declares
+    // no SourceType, Encoding, or CompressType at all).
+    func testStrongsPairIsDictionaryRenderable() {
+        XCTAssertTrue(strongsGreek.isDictionary)
+        XCTAssertTrue(strongsGreek.isDictionaryRenderable)
+        let hebrew = conf("""
+            [StrongsHebrew]
+            DataPath=./modules/lexdict/rawld/strongshebrew/strongshebrew
+            ModDrv=RawLD
+            Lang=en
+            """)
+        XCTAssertTrue(hebrew.isDictionary)
+        XCTAssertTrue(hebrew.isDictionaryRenderable)
+    }
+
+    // REQ-DC-1: glossaries and daily devotionals use the LD drivers
+    // too but are not dictionaries; Bibles are not either.
+    func testNonDictionariesExcluded() {
+        let devotional = conf("""
+            [DBD]
+            DataPath=./modules/lexdict/zld/dbd/dbd
+            ModDrv=zLD
+            Category=Daily Devotional
+            CompressType=ZIP
+            Lang=en
+            """)
+        XCTAssertFalse(devotional.isDictionary)
+        let glossary = conf("""
+            [BR_EN]
+            DataPath=./modules/lexdict/rawld/br_en/br_en
+            ModDrv=RawLD
+            Category=Glossaries
+            Lang=br
+            """)
+        XCTAssertFalse(glossary.isDictionary)
+        let bible = conf("""
+            [KJV]
+            DataPath=./modules/texts/ztext/kjv/
+            ModDrv=zText
+            CompressType=ZIP
+            BlockType=BOOK
+            SourceType=OSIS
+            Encoding=UTF-8
+            Lang=en
+            """)
+        XCTAssertFalse(bible.isDictionary)
+    }
+
+    // REQ-DC-1: a zLD with no ZIP compression (or a cipher key) can't
+    // be read, so it isn't renderable even though it is a dictionary.
+    func testUncompressedOrLockedLDNotRenderable() {
+        let noComp = conf("""
+            [RusCarsaDict]
+            DataPath=./modules/lexdict/zld/ruscarsadict/ruscarsadict
+            ModDrv=zLD
+            SourceType=TEI
+            Encoding=UTF-8
+            Lang=ru
+            """)
+        XCTAssertTrue(noComp.isDictionary)
+        XCTAssertFalse(noComp.isDictionaryRenderable)
+        let locked = conf("""
+            [LockedDict]
+            DataPath=./modules/lexdict/zld/lockeddict/lockeddict
+            ModDrv=zLD
+            CompressType=ZIP
+            Encoding=UTF-8
+            CipherKey=secret
+            Lang=en
+            """)
+        XCTAssertFalse(locked.isDictionaryRenderable)
+    }
+
+    // REQ-LG-1: an empty selection passes everything.
+    func testEmptyLanguageSelectionPassesAll() {
+        XCTAssertTrue(strongsGreek.isInLanguages([]))
+    }
+
+    // REQ-LG-1: matching is by primary subtag, case-insensitive:
+    // "zh" covers zh-Hans and zh-Hant modules; a zh-Hans selection
+    // covers a plain "zh" module.
+    func testLanguageMatchByPrimarySubtag() {
+        let hans = conf("""
+            [ChiSstrongsGreek]
+            DataPath=./modules/lexdict/zld/chisstrongsgreek/chisstrongsgreek
+            ModDrv=zLD
+            CompressType=ZIP
+            Encoding=UTF-8
+            Lang=zh-Hans
+            """)
+        XCTAssertTrue(hans.isInLanguages(["zh"]))
+        XCTAssertTrue(hans.isInLanguages(["ZH", "en"]))
+        XCTAssertFalse(hans.isInLanguages(["en", "fr"]))
+        XCTAssertFalse(strongsGreek.isInLanguages(["zh"]))
+        XCTAssertTrue(strongsGreek.isInLanguages(["en"]))
+    }
+
+    // REQ-LG-1: a module with no declared language passes only an
+    // empty filter.
+    func testLanguagelessModuleFilteredOut() {
+        let noLang = conf("""
+            [NoLang]
+            DataPath=./modules/lexdict/rawld/nolang/nolang
+            ModDrv=RawLD
+            """)
+        XCTAssertFalse(noLang.isInLanguages(["en"]))
+        XCTAssertTrue(noLang.isInLanguages([]))
+    }
+}

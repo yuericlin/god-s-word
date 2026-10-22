@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 8
+    public var version: Int = 9
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -62,6 +62,13 @@ public struct BackupPayload: Codable, Sendable {
     public var commentaryModuleID: String
     /// Fallback Strong's version for the panel (REQ-AP-7); "" = automatic.
     public var strongsFallbackVersionID: String
+    /// Primary language codes the download lists are filtered to
+    /// (REQ-LG-1); empty = no filtering.
+    public var interestedLanguages: [String]
+    /// Dictionaries for Strong's lookups (REQ-DC-2); "" = automatic
+    /// (StrongsHebrew / StrongsGreek).
+    public var dictionaryHebrewID: String
+    public var dictionaryGreekID: String
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
@@ -76,6 +83,9 @@ public struct BackupPayload: Codable, Sendable {
                 chapterNoteTimes: [String: NoteTimes] = [:],
                 commentaryModuleID: String = "",
                 strongsFallbackVersionID: String = "",
+                interestedLanguages: [String] = [],
+                dictionaryHebrewID: String = "",
+                dictionaryGreekID: String = "",
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -93,6 +103,9 @@ public struct BackupPayload: Codable, Sendable {
         self.chapterNoteTimes = chapterNoteTimes
         self.commentaryModuleID = commentaryModuleID
         self.strongsFallbackVersionID = strongsFallbackVersionID
+        self.interestedLanguages = interestedLanguages
+        self.dictionaryHebrewID = dictionaryHebrewID
+        self.dictionaryGreekID = dictionaryGreekID
         self.backedUpAt = backedUpAt
     }
 
@@ -117,6 +130,9 @@ public struct BackupPayload: Codable, Sendable {
         chapterNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .chapterNoteTimes) ?? [:]
         commentaryModuleID = try c.decodeIfPresent(String.self, forKey: .commentaryModuleID) ?? ""
         strongsFallbackVersionID = try c.decodeIfPresent(String.self, forKey: .strongsFallbackVersionID) ?? ""
+        interestedLanguages = try c.decodeIfPresent([String].self, forKey: .interestedLanguages) ?? []
+        dictionaryHebrewID = try c.decodeIfPresent(String.self, forKey: .dictionaryHebrewID) ?? ""
+        dictionaryGreekID = try c.decodeIfPresent(String.self, forKey: .dictionaryGreekID) ?? ""
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -141,6 +157,9 @@ public final class PersonalData: ObservableObject {
     private let chapterNoteTimesKey = "gw.chapterNoteTimes.v1"
     private let commentaryModuleKey = "gw.commentaryModule.v1"
     private let strongsFallbackKey = "gw.strongsFallbackVersion.v1"
+    private let interestedLanguagesKey = "gw.interestedLanguages.v1"
+    private let dictionaryHebrewKey = "gw.dictionaryHebrew.v1"
+    private let dictionaryGreekKey = "gw.dictionaryGreek.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -177,6 +196,9 @@ public final class PersonalData: ObservableObject {
         self.chapterNoteTimes = Self.decodeNoteTimes(defaults, chapterNoteTimesKey)
         self.commentaryModuleID = defaults.string(forKey: commentaryModuleKey) ?? ""
         self.strongsFallbackVersionID = defaults.string(forKey: strongsFallbackKey) ?? ""
+        self.interestedLanguages = defaults.stringArray(forKey: interestedLanguagesKey) ?? []
+        self.dictionaryHebrewID = defaults.string(forKey: dictionaryHebrewKey) ?? ""
+        self.dictionaryGreekID = defaults.string(forKey: dictionaryGreekKey) ?? ""
     }
 
     @Published public var fontSize: Double {
@@ -335,6 +357,25 @@ public final class PersonalData: ObservableObject {
     /// Persisted in UserDefaults.
     @Published public var strongsFallbackVersionID: String {
         didSet { defaults.set(strongsFallbackVersionID, forKey: strongsFallbackKey) }
+    }
+
+    /// Primary language codes the download lists are filtered to
+    /// (REQ-LG-1), e.g. ["en", "zh"]. Empty means no filtering.
+    /// Persisted in UserDefaults.
+    @Published public var interestedLanguages: [String] {
+        didSet { defaults.set(interestedLanguages, forKey: interestedLanguagesKey) }
+    }
+
+    /// Dictionaries used for Strong's lookups (REQ-DC-2): the module
+    /// IDs serving Hebrew ("H") and Greek ("G") keys. "" means
+    /// automatic — StrongsHebrew / StrongsGreek. Persisted in
+    /// UserDefaults.
+    @Published public var dictionaryHebrewID: String {
+        didSet { defaults.set(dictionaryHebrewID, forKey: dictionaryHebrewKey) }
+    }
+
+    @Published public var dictionaryGreekID: String {
+        didSet { defaults.set(dictionaryGreekID, forKey: dictionaryGreekKey) }
     }
 
     /// Builds the storage key for a book-level note.
@@ -549,6 +590,9 @@ public final class PersonalData: ObservableObject {
                       chapterNoteTimes: chapterNoteTimes,
                       commentaryModuleID: commentaryModuleID,
                       strongsFallbackVersionID: strongsFallbackVersionID,
+                      interestedLanguages: interestedLanguages,
+                      dictionaryHebrewID: dictionaryHebrewID,
+                      dictionaryGreekID: dictionaryGreekID,
                       backedUpAt: Date())
     }
 
@@ -598,6 +642,17 @@ public final class PersonalData: ObservableObject {
         if !payload.strongsFallbackVersionID.isEmpty {
             strongsFallbackVersionID = payload.strongsFallbackVersionID
         }
+        // Download languages + dictionaries (payload v9+; older
+        // payloads decode to empty and leave current values alone).
+        if !payload.interestedLanguages.isEmpty {
+            interestedLanguages = payload.interestedLanguages
+        }
+        if !payload.dictionaryHebrewID.isEmpty {
+            dictionaryHebrewID = payload.dictionaryHebrewID
+        }
+        if !payload.dictionaryGreekID.isEmpty {
+            dictionaryGreekID = payload.dictionaryGreekID
+        }
     }
 
     // MARK: - iCloud sync
@@ -617,6 +672,11 @@ public final class PersonalData: ObservableObject {
         /// (nil = leave the current setting alone).
         public var commentaryModuleID: String?
         public var strongsFallbackVersionID: String?
+        /// Download-list languages + Strong's dictionaries (REQ-LG-1,
+        /// REQ-DC-2); optional for the same reason.
+        public var interestedLanguages: [String]?
+        public var dictionaryHebrewID: String?
+        public var dictionaryGreekID: String?
     }
 
     private func syncBookmarksToiCloud() {
@@ -688,7 +748,10 @@ public final class PersonalData: ObservableObject {
             installedModuleIDs: installedModuleIDs,
             compareVersionIDs: compareVersionIDs,
             commentaryModuleID: commentaryModuleID,
-            strongsFallbackVersionID: strongsFallbackVersionID)
+            strongsFallbackVersionID: strongsFallbackVersionID,
+            interestedLanguages: interestedLanguages,
+            dictionaryHebrewID: dictionaryHebrewID,
+            dictionaryGreekID: dictionaryGreekID)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -769,7 +832,10 @@ public final class PersonalData: ObservableObject {
             installedModuleIDs: [],
             compareVersionIDs: compareVersionIDs,
             commentaryModuleID: commentaryModuleID,
-            strongsFallbackVersionID: strongsFallbackVersionID)
+            strongsFallbackVersionID: strongsFallbackVersionID,
+            interestedLanguages: interestedLanguages,
+            dictionaryHebrewID: dictionaryHebrewID,
+            dictionaryGreekID: dictionaryGreekID)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -841,6 +907,15 @@ public final class PersonalData: ObservableObject {
                 }
                 if let fid = s.strongsFallbackVersionID, !fid.isEmpty {
                     strongsFallbackVersionID = fid
+                }
+                if let langs = s.interestedLanguages, !langs.isEmpty {
+                    interestedLanguages = langs
+                }
+                if let hid = s.dictionaryHebrewID, !hid.isEmpty {
+                    dictionaryHebrewID = hid
+                }
+                if let gid = s.dictionaryGreekID, !gid.isEmpty {
+                    dictionaryGreekID = gid
                 }
             default:
                 continue

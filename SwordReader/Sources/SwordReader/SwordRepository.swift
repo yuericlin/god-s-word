@@ -76,6 +76,56 @@ public struct ModuleInfo: Sendable {
         return v.isEmpty || v == "KJV" || v == "NRSV"
     }
 
+    /// Whether this module is a dictionary / lexicon: an LD (lexicon
+    /// data) driver module that isn't a glossary or daily devotional
+    /// (those use the LD drivers too but aren't dictionaries). Most
+    /// dictionary confs declare no Category, so the driver is the
+    /// discriminator.
+    public var isDictionary: Bool {
+        let driver = conf.driver?.trimmingCharacters(in: .whitespaces).uppercased()
+        guard driver == "ZLD" || driver == "RAWLD" else { return false }
+        let cat = category.lowercased()
+        return cat != "glossaries" && cat != "daily devotional"
+    }
+
+    /// True when the app can download and read this dictionary: zLD
+    /// with ZIP compression or uncompressed RawLD, not enciphered,
+    /// UTF-8 text (an absent Encoding means the SWORD default —
+    /// StrongsHebrew declares none and is UTF-8). Read positionally
+    /// by StrongsLexicon for Strong's-keyed lexicons; other
+    /// dictionaries download and install the same way.
+    public var isDictionaryRenderable: Bool {
+        guard isDictionary, conf.cipherKey == nil else { return false }
+        let driver = conf.driver?.trimmingCharacters(in: .whitespaces).uppercased()
+        if driver == "ZLD" {
+            guard conf.compressType?.trimmingCharacters(in: .whitespaces).uppercased() == "ZIP"
+            else { return false }
+        }
+        let enc = conf.encoding?.trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+        return enc.isEmpty || enc == "UTF-8"
+    }
+
+    /// The language's primary subtag, lowercased: "zh-Hans" -> "zh",
+    /// "EN" -> "en". Language filtering compares primary subtags, so
+    /// a "zh" selection also covers zh-Hans / zh-Hant modules.
+    public static func primaryLanguage(of code: String) -> String {
+        code.trimmingCharacters(in: .whitespaces)
+            .lowercased()
+            .split(whereSeparator: { $0 == "-" || $0 == "_" })
+            .first.map(String.init) ?? ""
+    }
+
+    /// Whether this module passes a download-list language filter
+    /// (REQ-LG-1): an empty selection passes everything; otherwise
+    /// the module's primary language subtag must be selected. A
+    /// module with no declared language passes only an empty filter.
+    public func isInLanguages(_ selected: [String]) -> Bool {
+        guard !selected.isEmpty else { return true }
+        let mine = Self.primaryLanguage(of: language)
+        guard !mine.isEmpty else { return false }
+        return selected.contains { Self.primaryLanguage(of: $0) == mine }
+    }
+
     /// The module's distribution license as declared in its .conf
     /// (DistributionLicense — e.g. "Public Domain", "Copyrighted"), or
     /// "" when the conf doesn't declare one. Shown in the panel's

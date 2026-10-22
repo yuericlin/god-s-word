@@ -6,6 +6,7 @@ import SwordReader
 struct RepositoryView: View {
     @Environment(\.moduleStore) private var store
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var personalData: PersonalData
     @State private var modules: [ModuleInfo] = []
     @State private var query = ""
     @State private var loading = true
@@ -60,8 +61,12 @@ struct RepositoryView: View {
 
     private var filtered: [ModuleInfo] {
         // Bibles the reader can open, plus commentaries the auxiliary
-        // panel can read (REQ-AP-4).
-        let base = modules.filter { $0.isRenderable || $0.isCommentaryRenderable }
+        // panel can read (REQ-AP-4), narrowed to the languages of
+        // interest when any are chosen (REQ-LG-1).
+        let base = modules.filter {
+            ($0.isRenderable || $0.isCommentaryRenderable)
+                && $0.isInLanguages(personalData.interestedLanguages)
+        }
         guard !query.isEmpty else { return base }
         let q = query.lowercased()
         return base.filter {
@@ -82,6 +87,14 @@ struct RepositoryView: View {
                         if repositorySources.count > 1 {
                             sourcePicker
                         }
+                        if !personalData.interestedLanguages.isEmpty {
+                            LanguageFilterNote(languages: personalData.interestedLanguages)
+                        }
+                        if filtered.isEmpty {
+                            ContentUnavailableView("Nothing to show", systemImage: "book.closed",
+                                                   description: Text(personalData.interestedLanguages.isEmpty ? "This source has no versions the app can open." : "No versions in your languages from this source."))
+                                .frame(maxHeight: .infinity)
+                        } else {
                         List(filtered, id: \.id) { mod in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -96,6 +109,7 @@ struct RepositoryView: View {
                             }
                         }
                         .searchable(text: $query, prompt: "Search versions")
+                        }
                     }
                 }
             }
@@ -198,6 +212,7 @@ struct RepositoryView: View {
 struct CommentaryRepositoryView: View {
     @Environment(\.moduleStore) private var store
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var personalData: PersonalData
     @State private var modules: [ModuleInfo] = []
     @State private var query = ""
     @State private var loading = true
@@ -251,8 +266,12 @@ struct CommentaryRepositoryView: View {
     }
 
     private var filtered: [ModuleInfo] {
-        // Only commentaries the panel can read (REQ-AP-4).
-        let base = modules.filter { $0.isCommentaryRenderable }
+        // Only commentaries the panel can read (REQ-AP-4), narrowed
+        // to the languages of interest when any are chosen (REQ-LG-1).
+        let base = modules.filter {
+            $0.isCommentaryRenderable
+                && $0.isInLanguages(personalData.interestedLanguages)
+        }
         guard !query.isEmpty else { return base }
         let q = query.lowercased()
         return base.filter {
@@ -273,6 +292,14 @@ struct CommentaryRepositoryView: View {
                         if repositorySources.count > 1 {
                             sourcePicker
                         }
+                        if !personalData.interestedLanguages.isEmpty {
+                            LanguageFilterNote(languages: personalData.interestedLanguages)
+                        }
+                        if filtered.isEmpty {
+                            ContentUnavailableView("Nothing to show", systemImage: "book.closed",
+                                                   description: Text(personalData.interestedLanguages.isEmpty ? "This source has no commentaries the app can open." : "No commentaries in your languages from this source."))
+                                .frame(maxHeight: .infinity)
+                        } else {
                         List(filtered, id: \.id) { mod in
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -289,6 +316,7 @@ struct CommentaryRepositoryView: View {
                             }
                         }
                         .searchable(text: $query, prompt: "Search commentaries")
+                        }
                     }
                 }
             }
@@ -380,6 +408,228 @@ struct CommentaryRepositoryView: View {
         } catch {
             errorMessage = "Download failed: \(error.localizedDescription)"
         }
+    }
+}
+
+/// The dictionary counterpart of RepositoryView (REQ-DC-1): the
+/// same repository browser, listing only dictionaries the app can
+/// read, under an "Add Dictionary" title, with each dictionary's
+/// declared license shown under its name (dictionaries such as ISBE
+/// are copyrighted, like commentaries).
+struct DictionaryRepositoryView: View {
+    @Environment(\.moduleStore) private var store
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var personalData: PersonalData
+    @State private var modules: [ModuleInfo] = []
+    @State private var query = ""
+    @State private var loading = true
+    @State private var errorMessage: String?
+    @State private var downloading: Set<String> = []
+    @State private var progress: [String: Double] = [:]
+    @State private var tasks: [String: Task<Void, Never>] = [:]
+    @State private var installedIDs: Set<String> = []
+    @State private var selectedSourceID: String
+
+    init() {
+        // Open with the default source from Settings (REQ-SRC-2).
+        _selectedSourceID = State(initialValue: BibleSourceStore.shared.defaultSourceID)
+    }
+
+    /// All remote (repository) sources the user can download from.
+    private var repositorySources: [BibleSource] {
+        BibleSourceStore.shared.allSources.filter { $0.repositoryURL != nil }
+    }
+
+    private var selectedSource: BibleSource {
+        repositorySources.first { $0.id == selectedSourceID } ?? BibleSource.crossWire
+    }
+
+    private var repository: SwordRepository {
+        let url = selectedSource.repositoryURL ?? BibleSource.crossWire.repositoryURL!
+        return SwordRepository(name: selectedSource.name, baseURL: url)
+    }
+
+    /// Source picker: segmented for two sources, a menu once the
+    /// public presets make the list longer (REQ-SRC-1).
+    @ViewBuilder
+    private var sourcePicker: some View {
+        if repositorySources.count > 2 {
+            Picker("Source", selection: $selectedSourceID) {
+                ForEach(repositorySources) { source in
+                    Text(source.name).tag(source.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding()
+        } else {
+            Picker("Source", selection: $selectedSourceID) {
+                ForEach(repositorySources) { source in
+                    Text(source.name).tag(source.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
+        }
+    }
+
+    private var filtered: [ModuleInfo] {
+        // Only dictionaries the app can read (REQ-DC-1), narrowed
+        // to the languages of interest when any are chosen (REQ-LG-1).
+        let base = modules.filter {
+            $0.isDictionaryRenderable
+                && $0.isInLanguages(personalData.interestedLanguages)
+        }
+        guard !query.isEmpty else { return base }
+        let q = query.lowercased()
+        return base.filter {
+            $0.id.lowercased().contains(q) || $0.description.lowercased().contains(q)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if loading {
+                    ProgressView("Loading repository…")
+                } else if let errorMessage {
+                    ContentUnavailableView("Couldn't load", systemImage: "wifi.exclamationmark",
+                                            description: Text(errorMessage))
+                } else {
+                    VStack(spacing: 0) {
+                        if repositorySources.count > 1 {
+                            sourcePicker
+                        }
+                        if !personalData.interestedLanguages.isEmpty {
+                            LanguageFilterNote(languages: personalData.interestedLanguages)
+                        }
+                        if filtered.isEmpty {
+                            ContentUnavailableView("Nothing to show", systemImage: "book.closed",
+                                                   description: Text(personalData.interestedLanguages.isEmpty ? "This source has no dictionaries the app can open." : "No dictionaries in your languages from this source."))
+                                .frame(maxHeight: .infinity)
+                        } else {
+                        List(filtered, id: \.id) { mod in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(mod.description).font(.headline)
+                                    Text("\(mod.id) · \(mod.language) · Dictionary")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                    if !mod.distributionLicense.isEmpty {
+                                        Text(mod.distributionLicense)
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                statusView(for: mod)
+                            }
+                        }
+                        .searchable(text: $query, prompt: "Search dictionaries")
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add Dictionary")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .task { await load() }
+        .onChange(of: selectedSourceID) {
+            // The download pages and Settings share one default (REQ-SRC-2).
+            BibleSourceStore.shared.defaultSourceID = selectedSourceID
+            Task { await load() }
+        }
+        .onAppear { installedIDs = Set(store.installedModules().map { $0.id }) }
+    }
+
+    @ViewBuilder
+    private func statusView(for mod: ModuleInfo) -> some View {
+        if installedIDs.contains(mod.id) {
+            Text("Installed").font(.caption).foregroundStyle(.secondary)
+        } else if downloading.contains(mod.id) {
+            HStack(spacing: 6) {
+                if let fraction = progress[mod.id] {
+                    ProgressView(value: fraction).frame(width: 60)
+                    Text("\(Int(fraction * 100))%")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .monospacedDigit()
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+                Button {
+                    tasks[mod.id]?.cancel()
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Cancel download")
+            }
+        } else {
+            Button("Get") { tasks[mod.id] = Task { await download(mod) } }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
+    }
+
+    private func load() async {
+        loading = true
+        errorMessage = nil
+        do {
+            let (data, _) = try await URLSession.shared.data(from: repository.catalogURL)
+            modules = try SwordRepository.parseCatalog([UInt8](data))
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func download(_ mod: ModuleInfo) async {
+        let id = mod.id
+        downloading.insert(id)
+        defer {
+            downloading.remove(id)
+            progress[id] = nil
+            tasks[id] = nil
+        }
+        do {
+            let data = try await PackageDownloader.fetch(
+                from: repository.packageURL(for: id)
+            ) { fraction in
+                progress[id] = fraction
+            }
+            // Install off the main thread: unpacking a package must never
+            // freeze the page.
+            let store = self.store
+            _ = try await Task.detached(priority: .userInitiated) {
+                try store.install(packageData: data, moduleID: id)
+            }.value
+            // Tag the module with the source it was downloaded from.
+            BibleSourceStore.shared.setSourceID(selectedSourceID, forModule: mod.id)
+            installedIDs.insert(mod.id)
+        } catch is CancellationError {
+            // Cancelled by the user — not an error.
+        } catch let error as URLError where error.code == .cancelled {
+            // Cancelled by the user — not an error.
+        } catch {
+            errorMessage = "Download failed: \(error.localizedDescription)"
+        }
+    }
+}
+
+/// Shown above a download list while the language filter is active
+/// (REQ-LG-1), so a short or empty list is never a mystery.
+struct LanguageFilterNote: View {
+    let languages: [String]
+
+    var body: some View {
+        Text("Showing only: \(languages.map { languageDisplayName(forPrimaryCode: $0) }.joined(separator: ", ")). Change in Settings › Languages.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.vertical, 4)
     }
 }
 

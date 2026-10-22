@@ -1,8 +1,9 @@
 // SourcesSettingsView.swift — Settings > Sources (REQ-SRC-2/3): pick the
 // default download source, manage sources, and update the public source
-// list on demand.
+// list on demand. Also Settings > Languages (REQ-LG-1/2).
 
 import SwiftUI
+import SwordReader
 
 struct SourcesSettingsView: View {
     @State private var sources: [BibleSource] = []
@@ -147,5 +148,153 @@ struct SourcesSettingsView: View {
         } catch {
             updateMessage = "Couldn't update: \(error.localizedDescription)"
         }
+    }
+}
+
+/// Display name for a primary language code: "中文" for zh (matching
+/// the library's grouping), the system's localized name otherwise,
+/// and the code itself when the system has no name for it ("grc").
+func languageDisplayName(forPrimaryCode code: String) -> String {
+    if code == "zh" { return "中文" }
+    return Locale.current.localizedString(forLanguageCode: code) ?? code
+}
+
+/// Settings > Languages (REQ-LG-1/2): the languages the user is
+/// interested in. When the list is non-empty, the download lists
+/// (Bibles, commentaries, dictionaries) show only modules in those
+/// languages. The choices come from the catalogs of all repository
+/// sources, counted by primary language subtag (a "zh" choice
+/// covers zh, zh-Hans, and zh-Hant modules alike).
+struct LanguagesSettingsView: View {
+    @EnvironmentObject private var personalData: PersonalData
+    @State private var counts: [String: Int] = [:]
+    @State private var loading = true
+    @State private var loadFailed = false
+    @State private var partialFailure = false
+
+    private struct LanguageRow: Identifiable {
+        let code: String
+        let count: Int?
+        var id: String { code }
+        var name: String { languageDisplayName(forPrimaryCode: code) }
+    }
+
+    /// Catalog languages plus any selected language no catalog
+    /// currently offers (kept so it can be removed), sorted by name.
+    private var rows: [LanguageRow] {
+        var codes = Set(counts.keys)
+        codes.formUnion(personalData.interestedLanguages)
+        return codes
+            .map { LanguageRow(code: $0, count: counts[$0]) }
+            .sorted { $0.name < $1.name }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                if loading {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text("Loading languages from your sources…")
+                            .foregroundStyle(.secondary)
+                    }
+                } else if rows.isEmpty {
+                    Text("No languages found. Check your connection and try again.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(rows) { row in
+                        Button {
+                            toggle(row.code)
+                        } label: {
+                            HStack {
+                                Text(row.name).foregroundStyle(.primary)
+                                Spacer()
+                                if let count = row.count {
+                                    Text("\(count)")
+                                        .foregroundStyle(.secondary)
+                                }
+                                if personalData.interestedLanguages.contains(row.code) {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
+                }
+                if loadFailed && !loading {
+                    Button("Try Again") { Task { await load() } }
+                }
+            } header: {
+                Text("Languages of interest")
+            } footer: {
+                Text("When at least one language is chosen, the download lists for Bibles, commentaries, and dictionaries show only modules in those languages. With none chosen, everything shows. The number is how many downloadable modules that language has across your sources.")
+            }
+            if partialFailure && !loading {
+                Section {
+                    Text("Some sources couldn't be reached, so their languages aren't listed.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Languages")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+    }
+
+    private func toggle(_ code: String) {
+        var selected = personalData.interestedLanguages
+        if let i = selected.firstIndex(of: code) {
+            selected.remove(at: i)
+        } else {
+            selected.append(code)
+            selected.sort {
+                languageDisplayName(forPrimaryCode: $0)
+                    < languageDisplayName(forPrimaryCode: $1)
+            }
+        }
+        personalData.interestedLanguages = selected
+    }
+
+    /// Fetches every repository source's catalog and counts the
+    /// downloadable modules (Bibles, commentaries, dictionaries) per
+    /// primary language, de-duplicated by module ID across sources.
+    private func load() async {
+        loading = true
+        loadFailed = false
+        partialFailure = false
+        defer { loading = false }
+        let sources = BibleSourceStore.shared.allSources
+            .filter { $0.repositoryURL != nil }
+        var idsByLanguage: [String: Set<String>] = [:]
+        var failures = 0
+        await withTaskGroup(of: (String, [ModuleInfo]?).self) { group in
+            for source in sources {
+                guard let url = source.repositoryURL else { continue }
+                let repo = SwordRepository(name: source.name, baseURL: url)
+                group.addTask {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(
+                            from: repo.catalogURL)
+                        return (source.id, try SwordRepository.parseCatalog([UInt8](data)))
+                    } catch {
+                        return (source.id, nil)
+                    }
+                }
+            }
+            for await (_, modules) in group {
+                guard let modules else { failures += 1; continue }
+                for m in modules
+                where m.isRenderable || m.isCommentaryRenderable || m.isDictionaryRenderable {
+                    let primary = ModuleInfo.primaryLanguage(of: m.language)
+                    if !primary.isEmpty {
+                        idsByLanguage[primary, default: []].insert(m.id)
+                    }
+                }
+            }
+        }
+        counts = idsByLanguage.mapValues(\.count)
+        if counts.isEmpty { loadFailed = true }
+        partialFailure = failures > 0 && !counts.isEmpty
     }
 }
