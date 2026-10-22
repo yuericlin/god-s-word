@@ -13,6 +13,12 @@
 //       "chapters": [ ["v1 text", "v2 text"], ["ch2 v1"] ] }
 //   ]
 // }
+//
+// A verse string may open with a section heading ("subtitle")
+// wrapped in pilcrows — "¶The Seventy Sent Out¶ After these
+// things…" (the NKJV+ convention). The heading is the verse's
+// REQ-RS-5 heading: it renders above the verse and never appears
+// inline in the verse text.
 
 import Foundation
 
@@ -36,6 +42,21 @@ public struct PrivateBible: Codable, Sendable {
         let c = b.chapters[chapter - 1]
         guard verse >= 1, verse <= c.count else { return nil }
         return c[verse - 1]
+    }
+
+    /// Splits a verse string into its section heading (if it opens
+    /// with "¶…¶") and the remaining verse text. Strings without
+    /// the marker pair return (nil, the string unchanged).
+    public static func splitHeading(_ text: String) -> (heading: String?, text: String) {
+        guard text.hasPrefix("¶"),
+              let close = text.dropFirst().firstIndex(of: "¶")
+        else { return (nil, text) }
+        let heading = text[text.index(after: text.startIndex) ..< close]
+            .trimmingCharacters(in: .whitespaces)
+        let rest = text[text.index(after: close)...]
+            .trimmingCharacters(in: .whitespaces)
+        guard !heading.isEmpty, !rest.isEmpty else { return (nil, text) }
+        return (heading, rest)
     }
 
     /// All verse texts for a chapter (1-based). Nil if out of range.

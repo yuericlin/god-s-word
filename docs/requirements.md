@@ -339,7 +339,9 @@ Multiple (KJV Gen 1:1-2):
   renderings. The heading no longer appears inline in the verse
   text. Canonical psalm titles are scripture text and stay in the
   verse. Versions whose modules carry no such titles are
-  unaffected.
+  unaffected. Private JSON versions carry a heading as a "¶…¶"
+  prefix on the verse string (the NKJV+ convention) and are
+  treated exactly the same way; the pilcrow markers never render.
 
 ---
 
