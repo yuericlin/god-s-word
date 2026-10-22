@@ -14,11 +14,16 @@ enum BibleVersion: Identifiable, Equatable {
     }
 
     /// All versions known to the library (downloaded + private imports).
-    /// Commentary modules are not Bible versions and never appear here;
-    /// the auxiliary panel reaches them via CommentaryModule.
+    /// Commentary and dictionary modules are not Bible versions and
+    /// never appear here (REQ-DC-1); the auxiliary panel reaches
+    /// commentaries via CommentaryModule, and dictionaries serve the
+    /// Strong's tab via StrongsService. (The reader's version picker
+    /// reads this list — a lexicon left in it, e.g. StrongsGreek,
+    /// could be picked as a "version" and then fail to open, since a
+    /// dictionary has no testament files.)
     static func allInstalled(in store: ModuleStore) -> [BibleVersion] {
         store.installedModules()
-            .filter { !$0.info.isCommentary }
+            .filter { !$0.info.isCommentary && !$0.info.isDictionary }
             .map(BibleVersion.sword)
             + PrivateBibleStore.loadAll().map(BibleVersion.private)
     }
