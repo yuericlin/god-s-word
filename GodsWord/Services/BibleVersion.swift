@@ -162,4 +162,15 @@ enum BibleVersion: Identifiable, Equatable {
         guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [] }
         return mod.chapterTokens(testament: testament, book: book, chapter: chapter)
     }
+
+    /// Section headings ("subtitles") for one chapter, keyed by
+    /// verse number (REQ-RS-5). SWORD versions read the preverse
+    /// section titles out of the module; private versions carry
+    /// none for now.
+    func loadHeadings(testament: Int, book: Int, chapter: Int) async -> [Int: String] {
+        guard case .sword(let m) = self,
+              let mod = try? await ModuleLoader.shared.module(for: m)
+        else { return [:] }
+        return mod.chapterHeadings(testament: testament, book: book, chapter: chapter)
+    }
 }

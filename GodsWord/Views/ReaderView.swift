@@ -14,6 +14,8 @@ struct ReaderView: View {
     @EnvironmentObject private var personalData: PersonalData
     @State private var verses: [(verse: Int, text: String)] = []
     @State private var verseTokens: [(verse: Int, tokens: [WordToken])] = []
+    /// Section headings ("subtitles") by verse number (REQ-RS-5).
+    @State private var headings: [Int: String] = [:]
     @State private var loadError: String?
     @State private var showingSettings = false
     @State private var showingFullSettings = false
@@ -106,21 +108,31 @@ struct ReaderView: View {
                                 if personalData.verseByVerse {
                                     if useStrongs {
                                         ForEach(verseTokens, id: \.verse) { v in
-                                            Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
-                                                .font(.system(size: personalData.fontSize, design: .serif))
-                                                .lineSpacing(6)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                // Swallow long-press so the empty-area
-                                                // menu doesn't fire on text.
-                                                .onLongPressGesture { }
+                                            Group {
+                                                if let heading = headings[v.verse] {
+                                                    headingRow(heading)
+                                                }
+                                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                                    .lineSpacing(6)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    // Swallow long-press so the empty-area
+                                                    // menu doesn't fire on text.
+                                                    .onLongPressGesture { }
+                                            }
                                         }
                                     } else {
                                         ForEach(verses, id: \.verse) { v in
-                                            Text(attributedVerse(number: v.verse, text: v.text))
-                                                .font(.system(size: personalData.fontSize, design: .serif))
-                                                .lineSpacing(6)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .onLongPressGesture { }
+                                            Group {
+                                                if let heading = headings[v.verse] {
+                                                    headingRow(heading)
+                                                }
+                                                Text(attributedVerse(number: v.verse, text: v.text))
+                                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                                    .lineSpacing(6)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .onLongPressGesture { }
+                                            }
                                         }
                                     }
                                 } else {
@@ -483,12 +495,33 @@ struct ReaderView: View {
         return out
     }
 
+    /// A section heading ("subtitle", REQ-RS-5) as its own row in
+    /// verse-by-verse mode: the reading serif, semibold.
+    private func headingRow(_ heading: String) -> some View {
+        Text(heading)
+            .font(.system(size: personalData.fontSize, design: .serif).weight(.semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A section heading as a semibold run in paragraph mode.
+    private func attributedHeading(_ heading: String) -> AttributedString {
+        var run = AttributedString(heading)
+        run.font = .system(size: personalData.fontSize, design: .serif).weight(.semibold)
+        return run
+    }
+
     /// Whole chapter as one flowing paragraph (paragraph mode). Verse numbers
-    /// stay inline; verses are joined with spaces.
+    /// stay inline; verses are joined with spaces. A verse with a section
+    /// heading starts a new line block: heading on its own line, then
+    /// the verse (REQ-RS-5).
     private func attributedParagraph() -> AttributedString {
         var out = AttributedString("")
         for (i, v) in verses.enumerated() {
-            if i > 0 { out += AttributedString(" ") }
+            if let heading = headings[v.verse] {
+                if i > 0 { out += AttributedString("\n\n") }
+                out += attributedHeading(heading)
+                out += AttributedString("\n")
+            } else if i > 0 { out += AttributedString(" ") }
             out += attributedVerse(number: v.verse, text: v.text)
         }
         return out
@@ -532,10 +565,16 @@ struct ReaderView: View {
     }
 
     /// Whole chapter as one flowing paragraph from word tokens.
+    /// Section headings break the flow exactly as in
+    /// `attributedParagraph()` (REQ-RS-5).
     private func attributedParagraphTokens() -> AttributedString {
         var out = AttributedString("")
         for (i, v) in verseTokens.enumerated() {
-            if i > 0 { out += AttributedString(" ") }
+            if let heading = headings[v.verse] {
+                if i > 0 { out += AttributedString("\n\n") }
+                out += attributedHeading(heading)
+                out += AttributedString("\n")
+            } else if i > 0 { out += AttributedString(" ") }
             out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
         }
         return out
@@ -700,6 +739,9 @@ struct ReaderView: View {
             }
             verses = rendered
             verseTokens = await history.version.loadTokens(
+                testament: history.testament, book: history.book,
+                chapter: history.chapter)
+            headings = await history.version.loadHeadings(
                 testament: history.testament, book: history.book,
                 chapter: history.chapter)
             personalData.savePosition(ReadingPosition(testament: history.testament,

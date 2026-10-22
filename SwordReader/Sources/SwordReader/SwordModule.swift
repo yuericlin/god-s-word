@@ -173,10 +173,33 @@ public final class SwordModule: @unchecked Sendable {
         return String(bytes: block[start ..< end], encoding: .utf8)
     }
 
-    /// Plain-text verse for display.
+    /// Plain-text verse for display. A section heading the entry
+    /// carries (REQ-RS-5) is not part of the verse text — read it
+    /// via `heading(...)` / `chapterHeadings(...)`.
     public func verse(testament: Int, book: Int, chapter: Int, verse: Int) -> String? {
         rawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
-            .map { OsisPlain.plainText(from: $0) }
+            .map { OsisPlain.plainText(from: OsisPlain.removingSectionTitles($0)) }
+    }
+
+    /// The section heading ("subtitle") printed before this verse,
+    /// if the module carries one there — e.g. NASB's "The Seventy
+    /// Sent Out" at Luke 10:1 (REQ-RS-5).
+    public func heading(testament: Int, book: Int, chapter: Int, verse: Int) -> String? {
+        rawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
+            .flatMap { OsisPlain.sectionTitle(from: $0) }
+    }
+
+    /// All section headings of a chapter, keyed by verse number.
+    public func chapterHeadings(testament: Int, book: Int, chapter: Int) -> [Int: String] {
+        guard let count = versification.verseCount(testament: testament, book: book, chapter: chapter)
+        else { return [:] }
+        var out = [Int: String]()
+        for v in 1 ... count {
+            if let h = heading(testament: testament, book: book, chapter: chapter, verse: v) {
+                out[v] = h
+            }
+        }
+        return out
     }
 
     /// All verses of a chapter as (verseNumber, plainText), skipping empty entries.
@@ -194,10 +217,11 @@ public final class SwordModule: @unchecked Sendable {
     }
 
     /// Word tokens with Strong's numbers for one verse, or nil when the
-    /// module has no entry for the verse.
+    /// module has no entry for the verse. Section headings are excluded
+    /// from the tokens, as in `verse(...)` (REQ-RS-5).
     public func verseTokens(testament: Int, book: Int, chapter: Int, verse: Int) -> [WordToken]? {
         rawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
-            .map { OsisTokens.tokensWithStrongs(from: $0) }
+            .map { OsisTokens.tokensWithStrongs(from: OsisPlain.removingSectionTitles($0)) }
     }
 
     /// All verses of a chapter as (verseNumber, word tokens), skipping empty entries.
