@@ -641,3 +641,66 @@ final class ModuleSourceRequirementsTests: XCTestCase {
         XCTAssertNil(info.versification)
     }
 }
+
+// MARK: - REQ-NT-18: Notes sub-tabs
+
+final class NotesSubTabRequirementsTests: XCTestCase {
+    private func availability(_ recents: Bool, _ book: Bool,
+                              _ chapter: Bool, _ verse: Bool)
+        -> NotesTabLogic.Availability
+    {
+        NotesTabLogic.Availability(recents: recents, book: book,
+                                   chapter: chapter, verse: verse)
+    }
+
+    // Only sub-tabs with notes are visible, in bar order.
+    func testVisibleTabsFilterAndOrder() {
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(true, true, true, true)),
+                       [.recents, .book, .chapter, .verse])
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(true, false, true, false)),
+                       [.recents, .chapter])
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(false, false, false, true)),
+                       [.verse])
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(false, false, false, false)),
+                       [])
+    }
+
+    // A visible selection resolves to itself.
+    func testResolvedKeepsVisibleSelection() {
+        let a = availability(true, false, true, false)
+        XCTAssertEqual(NotesTabLogic.resolved(selected: .recents, availability: a), .recents)
+        XCTAssertEqual(NotesTabLogic.resolved(selected: .chapter, availability: a), .chapter)
+    }
+
+    // A hidden selection falls back to the nearest visible sub-tab.
+    func testResolvedFallsBackToNearest() {
+        // Verse selected, only the chapter has notes besides recents:
+        // chapter (distance 1) beats book (2) and recents (3).
+        XCTAssertEqual(NotesTabLogic.resolved(
+            selected: .verse, availability: availability(true, true, true, false)), .chapter)
+        // Verse selected, verse and chapter empty: book wins over recents.
+        XCTAssertEqual(NotesTabLogic.resolved(
+            selected: .verse, availability: availability(true, true, false, false)), .book)
+        // Book selected, the whole book is empty: recents remains.
+        XCTAssertEqual(NotesTabLogic.resolved(
+            selected: .book, availability: availability(true, false, false, false)), .recents)
+        // Chapter selected, chapter and verse empty: book (distance 1).
+        XCTAssertEqual(NotesTabLogic.resolved(
+            selected: .chapter, availability: availability(true, true, false, false)), .book)
+    }
+
+    // Equidistant fallbacks go to the earlier sub-tab in the bar.
+    func testResolvedTieGoesToEarlierTab() {
+        // Chapter selected; book and verse visible (both distance 1).
+        XCTAssertEqual(NotesTabLogic.resolved(
+            selected: .chapter, availability: availability(false, true, false, true)), .book)
+    }
+
+    // No notes at all: nothing is visible and nothing resolves.
+    func testResolvedNilWhenNoNotes() {
+        let a = availability(false, false, false, false)
+        for tab in NotesSubTab.allCases {
+            XCTAssertNil(NotesTabLogic.resolved(selected: tab, availability: a))
+        }
+    }
+}

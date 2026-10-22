@@ -1,9 +1,9 @@
 // AuxiliaryPanelView.swift — the panel below the reading panel.
 // Four tabs: Notes, Commentary, the selected verse rendered with
-// Strong's numbers, and Recents (the reading history). Notes and
-// Commentary both have Book / Chapter / Verse sub-tabs (REQ-AP-1..11):
-// notes are scoped notes at those three levels (REQ-NT-14); commentary
-// shows the entries at those scopes.
+// Strong's numbers, and Recents (the reading history). The Notes tab
+// has Recents / Book / Chapter / Verse sub-tabs (REQ-NT-18) over the
+// scoped notes (REQ-NT-14); Commentary has Book / Chapter / Verse
+// sub-tabs (REQ-AP-1..11) showing the entries at those scopes.
 //
 // The panel never alters the main reading text; it only reads the
 // shared ReadingHistory, the verse selection, and PersonalData.
@@ -27,7 +27,7 @@ struct AuxiliaryPanelView: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var tab: PanelTab = .notes
-    @State private var notesScope: PanelScope = .verse
+    @State private var notesSubTab: NotesSubTab = .recents
     @State private var commentaryScope: PanelScope = .verse
     @State private var editorItem: EditorItem?
     @State private var commentaries: [CommentaryModule] = []
@@ -43,6 +43,7 @@ struct AuxiliaryPanelView: View {
         var id: Int { chapter }
     }
     @State private var commentaryLoading = false
+    @State private var commentaryError: String?
     @State private var expandedBookChapters: Set<Int> = []
     @State private var strongsTokens: [WordToken] = []
     @State private var strongsLoadedKey = ""
@@ -155,41 +156,286 @@ struct AuxiliaryPanelView: View {
 
     // MARK: - Notes tab
 
-    /// Whether the Notes tab has any note for the current location —
-    /// a book or chapter note, a legacy verse-1 note, or any verse note
-    /// in this chapter. The scope sub-tabs only appear when there is
-    /// at least one entry (REQ-AP-9); with none, the tab falls back to
-    /// the Verse scope so the first note can still be added.
-    private var notesHasEntries: Bool {
-        if personalData.bookNote(forKey: bookNoteKey) != nil { return true }
-        if personalData.chapterNote(forKey: chapterNoteKey) != nil { return true }
-        if personalData.verseNote(forKey: verse1NoteKey) != nil { return true }
-        let prefix = "\(history.version.id):\(history.testament):\(history.book):\(history.chapter):"
-        return personalData.verseNotes.keys.contains { $0.hasPrefix(prefix) }
+    /// Whether each Notes sub-tab has notes in the current version
+    /// (REQ-NT-18): Recents = any note in the version; Book = any
+    /// note in the active book; Chapter = any note in the active
+    /// chapter; Verse = a note on the anchor verse (the first
+    /// selected verse when several are selected).
+    private var notesAvailability: NotesTabLogic.Availability {
+        let id = history.version.id
+        let bookPrefix = "\(id):\(history.testament):\(history.book):"
+        let chapterPrefix = "\(bookPrefix)\(history.chapter):"
+        return NotesTabLogic.Availability(
+            recents: personalData.bookNotes.keys.contains { $0.hasPrefix("\(id):") }
+                || personalData.chapterNotes.keys.contains { $0.hasPrefix("\(id):") }
+                || personalData.verseNotes.keys.contains { $0.hasPrefix("\(id):") },
+            book: personalData.bookNote(forKey: bookNoteKey) != nil
+                || personalData.chapterNotes.keys.contains { $0.hasPrefix(bookPrefix) }
+                || personalData.verseNotes.keys.contains { $0.hasPrefix(bookPrefix) },
+            chapter: personalData.chapterNote(forKey: chapterNoteKey) != nil
+                || personalData.verseNotes.keys.contains { $0.hasPrefix(chapterPrefix) },
+            verse: personalData.verseNote(forKey: verseNoteKey) != nil)
+    }
+
+    private var visibleNotesTabs: [NotesSubTab] {
+        NotesTabLogic.visibleTabs(notesAvailability)
+    }
+
+    /// The sub-tab actually shown: the user's selection when it is
+    /// visible, otherwise the nearest visible one (REQ-NT-18). Nil
+    /// when there are no notes at all — the bar hides and the empty
+    /// state shows instead.
+    private var effectiveNotesTab: NotesSubTab? {
+        NotesTabLogic.resolved(selected: notesSubTab,
+                               availability: notesAvailability)
+    }
+
+    private var notesTabSelection: Binding<NotesSubTab> {
+        Binding(get: { effectiveNotesTab ?? .recents },
+                set: { notesSubTab = $0 })
+    }
+
+    /// One note in a sub-tab list: everything its row shows, and the
+    /// editor it opens on tap.
+    private struct NoteRow: Identifiable {
+        enum Kind { case book, chapter, verse }
+        let kind: Kind
+        let key: String
+        let reference: String
+        let text: String
+        let updated: Date?
+        var id: String { key }
+    }
+
+    private func bookName(testament: Int, book: Int) -> String {
+        let overall = testament == 1 ? book - 1 : 39 + book - 1
+        return history.version.bookNameIfPresent(overall: overall) ?? "Book \(book)"
+    }
+
+    private func bookNoteRow(key: String, parsed: BookNoteKey.Parsed) -> NoteRow {
+        NoteRow(kind: .book, key: key,
+                reference: "\(bookName(testament: parsed.testament, book: parsed.book)) — Book note",
+                text: personalData.bookNotes[key] ?? "",
+                updated: personalData.bookNoteTimes[key]?.updatedAt)
+    }
+
+    private func chapterNoteRow(key: String, parsed: ChapterNoteKey.Parsed) -> NoteRow {
+        NoteRow(kind: .chapter, key: key,
+                reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter) — Chapter note",
+                text: personalData.chapterNotes[key] ?? "",
+                updated: personalData.chapterNoteTimes[key]?.updatedAt)
+    }
+
+    private func verseNoteRow(key: String, parsed: NoteKey.Parsed) -> NoteRow {
+        NoteRow(kind: .verse, key: key,
+                reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)",
+                text: personalData.verseNotes[key] ?? "",
+                updated: personalData.verseNoteTimes[key]?.updatedAt)
+    }
+
+    /// Every note in the active book, in reading order: the book
+    /// note first, then each chapter's chapter note (as verse 0) and
+    /// verse notes.
+    private var bookNoteRows: [NoteRow] {
+        var rows: [NoteRow] = []
+        if personalData.bookNote(forKey: bookNoteKey) != nil,
+           let parsed = BookNoteKey.parse(bookNoteKey) {
+            rows.append(bookNoteRow(key: bookNoteKey, parsed: parsed))
+        }
+        var located: [(chapter: Int, verse: Int, row: NoteRow)] = []
+        for key in personalData.chapterNotes.keys {
+            guard let p = ChapterNoteKey.parse(key),
+                  p.moduleID == history.version.id,
+                  p.testament == history.testament, p.book == history.book
+            else { continue }
+            located.append((p.chapter, 0, chapterNoteRow(key: key, parsed: p)))
+        }
+        for key in personalData.verseNotes.keys {
+            guard let p = NoteKey.parse(key),
+                  p.moduleID == history.version.id,
+                  p.testament == history.testament, p.book == history.book
+            else { continue }
+            located.append((p.chapter, p.verse, verseNoteRow(key: key, parsed: p)))
+        }
+        rows += located
+            .sorted { ($0.chapter, $0.verse) < ($1.chapter, $1.verse) }
+            .map(\.row)
+        return rows
+    }
+
+    /// Every note in the active chapter, in reading order: the
+    /// chapter note, then verse notes by verse. While the legacy
+    /// verse-1 note is presented as the chapter note (REQ-NT-16) it
+    /// is not repeated as a verse row.
+    private var chapterNoteRows: [NoteRow] {
+        var rows: [NoteRow] = []
+        if personalData.chapterNote(forKey: chapterNoteKey) != nil,
+           let parsed = ChapterNoteKey.parse(chapterNoteKey) {
+            rows.append(chapterNoteRow(key: chapterNoteKey, parsed: parsed))
+        }
+        let legacyShown = personalData.chapterNote(forKey: chapterNoteKey) == nil
+            && personalData.verseNote(forKey: verse1NoteKey) != nil
+        let verseRows = personalData.verseNotes.keys
+            .compactMap { key -> (Int, NoteRow)? in
+                guard let p = NoteKey.parse(key),
+                      p.moduleID == history.version.id,
+                      p.testament == history.testament, p.book == history.book,
+                      p.chapter == history.chapter,
+                      !(legacyShown && key == verse1NoteKey)
+                else { return nil }
+                return (p.verse, verseNoteRow(key: key, parsed: p))
+            }
+            .sorted { $0.0 < $1.0 }
+            .map(\.1)
+        return rows + verseRows
+    }
+
+    /// Every note in the current version, most recently updated
+    /// first (REQ-NT-17 times; notes without times fall back to the
+    /// verse-note order, then key order so the sort is stable).
+    private var recentNoteRows: [NoteRow] {
+        var rows: [NoteRow] = []
+        for key in personalData.bookNotes.keys {
+            guard let p = BookNoteKey.parse(key),
+                  p.moduleID == history.version.id else { continue }
+            rows.append(bookNoteRow(key: key, parsed: p))
+        }
+        for key in personalData.chapterNotes.keys {
+            guard let p = ChapterNoteKey.parse(key),
+                  p.moduleID == history.version.id else { continue }
+            rows.append(chapterNoteRow(key: key, parsed: p))
+        }
+        for key in personalData.verseNotes.keys {
+            guard let p = NoteKey.parse(key),
+                  p.moduleID == history.version.id else { continue }
+            rows.append(verseNoteRow(key: key, parsed: p))
+        }
+        let rank = Dictionary(uniqueKeysWithValues:
+            personalData.verseNoteOrder.enumerated().map { ($0.element, $0.offset) })
+        return rows.sorted { a, b in
+            let ta = a.updated ?? .distantPast
+            let tb = b.updated ?? .distantPast
+            if ta != tb { return ta > tb }
+            let ra = rank[a.key] ?? .max
+            let rb = rank[b.key] ?? .max
+            if ra != rb { return ra < rb }
+            return a.key < b.key
+        }
+    }
+
+    private func noteRowView(_ row: NoteRow) -> some View {
+        Button {
+            switch row.kind {
+            case .book: editorItem = .book(key: row.key, reference: row.reference)
+            case .chapter: editorItem = .chapter(key: row.key, reference: row.reference)
+            case .verse: editorItem = .verse(key: row.key, reference: row.reference)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(row.reference)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(row.text)
+                    .font(.system(size: personalData.fontSize, design: .serif))
+                    .foregroundStyle(.primary)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let updated = row.updated {
+                    Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func noteList(_ rows: [NoteRow]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(rows) { row in
+                    noteRowView(row)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
+    }
+
+    /// The Book sub-tab: an add-book-note entry when the book has no
+    /// book note yet, then every note in the book.
+    private var bookNotesContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if personalData.bookNote(forKey: bookNoteKey) == nil {
+                    Button {
+                        editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
+                    } label: {
+                        Label("Add Book Note", systemImage: "plus.circle")
+                            .font(.subheadline)
+                    }
+                }
+                ForEach(bookNoteRows) { row in
+                    noteRowView(row)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
     }
 
     private var notesTab: some View {
         VStack(spacing: 0) {
-            if notesHasEntries {
-                scopePicker(selection: $notesScope)
-            }
-            switch notesHasEntries ? notesScope : .verse {
-            case .book:
-                scopedNote(reference: history.bookTitle,
-                           text: personalData.bookNote(forKey: bookNoteKey),
-                           emptyText: "No note for this book yet.",
-                           updated: personalData.bookNoteTimes[bookNoteKey]?.updatedAt) {
-                    editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
+            HStack(spacing: 8) {
+                if !visibleNotesTabs.isEmpty {
+                    Picker("Notes", selection: notesTabSelection) {
+                        ForEach(visibleNotesTabs, id: \.self) { t in
+                            Text(t.label).tag(t)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
-            case .chapter:
-                chapterNoteView
-            case .verse:
-                scopedNote(reference: verseReference,
-                           text: personalData.verseNote(forKey: verseNoteKey),
-                           emptyText: "No note for this verse yet.",
-                           updated: personalData.verseNoteTimes[verseNoteKey]?.updatedAt) {
+                Spacer()
+                // The add-note entry point: always available, even
+                // when the Verse sub-tab is hidden or there are no
+                // notes at all (REQ-NT-18). It edits the anchor
+                // verse's note — adding one when there is none.
+                Button {
                     editorItem = .verse(key: verseNoteKey, reference: verseReference)
+                } label: {
+                    Label(personalData.verseNote(forKey: verseNoteKey) == nil
+                          ? "Add Note" : "Edit Note",
+                          systemImage: "square.and.pencil")
+                        .font(.subheadline)
                 }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
+            if let effectiveNotesTab {
+                switch effectiveNotesTab {
+                case .recents:
+                    noteList(recentNoteRows)
+                case .book:
+                    bookNotesContent
+                case .chapter:
+                    chapterNotesContent
+                case .verse:
+                    scopedNote(reference: verseReference,
+                               text: personalData.verseNote(forKey: verseNoteKey),
+                               emptyText: "No note for this verse yet.",
+                               updated: personalData.verseNoteTimes[verseNoteKey]?.updatedAt) {
+                        editorItem = .verse(key: verseNoteKey, reference: verseReference)
+                    }
+                }
+            } else {
+                VStack {
+                    Text("No notes yet.")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal)
             }
         }
     }
@@ -264,57 +510,67 @@ struct AuxiliaryPanelView: View {
                                   verse: 1)
     }
 
-    /// The Chapter scope of the Notes tab. When no chapter note exists
-    /// yet but the chapter has a note on verse 1, that note is shown
-    /// as a legacy note (REQ-NT-16): before scoped notes, the reader's
-    /// "Take Notes" stored chapter notes as verse-1 notes, and the two
-    /// are indistinguishable, so nothing migrates automatically — the
-    /// user moves it with one tap instead.
-    @ViewBuilder
-    private var chapterNoteView: some View {
-        let reference = "\(history.bookTitle) \(history.chapter)"
-        if let text = personalData.chapterNote(forKey: chapterNoteKey) {
-            scopedNote(reference: reference, text: text, emptyText: "",
-                       updated: personalData.chapterNoteTimes[chapterNoteKey]?.updatedAt) {
-                editorItem = .chapter(key: chapterNoteKey, reference: reference)
-            }
-        } else if let legacy = personalData.verseNote(forKey: verse1NoteKey) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(reference).font(.subheadline).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Edit") {
-                        editorItem = .chapter(key: chapterNoteKey, reference: reference)
+    /// The Chapter sub-tab: the legacy verse-1 presentation when it
+    /// applies (REQ-NT-16), an add-chapter-note entry when the
+    /// chapter has no chapter note, and the chapter's notes in
+    /// reading order.
+    private var chapterNotesContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if personalData.chapterNote(forKey: chapterNoteKey) == nil,
+                   let legacy = personalData.verseNote(forKey: verse1NoteKey) {
+                    legacyChapterNote(legacy)
+                } else if personalData.chapterNote(forKey: chapterNoteKey) == nil {
+                    Button {
+                        editorItem = .chapter(
+                            key: chapterNoteKey,
+                            reference: "\(history.bookTitle) \(history.chapter)")
+                    } label: {
+                        Label("Add Chapter Note", systemImage: "plus.circle")
+                            .font(.subheadline)
                     }
-                    .font(.subheadline)
                 }
-                Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored.")
+                ForEach(chapterNoteRows) { row in
+                    noteRowView(row)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        }
+    }
+
+    /// The legacy verse-1 note shown in the Chapter sub-tab
+    /// (REQ-NT-16): before scoped notes, the reader's "Take Notes"
+    /// stored chapter notes as verse-1 notes, and the two are
+    /// indistinguishable, so nothing migrates automatically — the
+    /// user moves it with one tap instead.
+    private func legacyChapterNote(_ legacy: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if let updated = personalData.verseNoteTimes[verse1NoteKey]?.updatedAt {
+                Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                if let updated = personalData.verseNoteTimes[verse1NoteKey]?.updatedAt {
-                    Text("Updated \(updated.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                ScrollView {
-                    Text(legacy)
-                        .font(.system(size: personalData.fontSize, design: .serif))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
+            }
+            Text(legacy)
+                .font(.system(size: personalData.fontSize, design: .serif))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+            HStack {
                 Button("Move to Chapter Note") {
                     personalData.setChapterNote(legacy, forKey: chapterNoteKey)
                     personalData.setVerseNote(nil, forKey: verse1NoteKey)
                 }
-                .font(.subheadline)
+                Spacer()
+                Button("Edit") {
+                    editorItem = .chapter(
+                        key: chapterNoteKey,
+                        reference: "\(history.bookTitle) \(history.chapter)")
+                }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-        } else {
-            scopedNote(reference: reference, text: nil,
-                       emptyText: "No note for this chapter yet.") {
-                editorItem = .chapter(key: chapterNoteKey, reference: reference)
-            }
+            .font(.subheadline)
         }
     }
 
@@ -380,7 +636,22 @@ struct AuxiliaryPanelView: View {
                 }
             }
             if let mod = resolvedCommentary {
-                if commentaryHasEntries || commentaryLoading {
+                if let commentaryError {
+                    // A module that failed to open is an error
+                    // state, never an empty chapter (REQ-AP-13).
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Commentary couldn't be loaded",
+                              systemImage: "exclamationmark.triangle")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text(commentaryError)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                } else if commentaryHasEntries || commentaryLoading {
                     commentaryContent(for: mod)
                 } else {
                     emptyCommentary("No commentary entries for this chapter in \(mod.shortLabel).")
@@ -508,28 +779,40 @@ struct AuxiliaryPanelView: View {
         guard tab == .commentary, let mod = resolvedCommentary else { return }
         commentaryLoading = true
         defer { commentaryLoading = false }
-        switch commentaryScope {
-        case .verse, .chapter:
-            let rows = await mod.loadChapter(testament: history.testament,
-                                             book: history.book,
-                                             chapter: history.chapter)
-            commentaryChapter = CommentaryGrouping.group(rows)
-        case .book:
-            let count = mod.chapterCount(testament: history.testament,
-                                          book: history.book)
-            let chapters = count > 0 ? count : history.chapterCount
-            var sections: [BookSection] = []
-            if chapters > 0 {
-                for c in 1 ... chapters {
-                    let rows = await mod.loadChapter(testament: history.testament,
+        do {
+            switch commentaryScope {
+            case .verse, .chapter:
+                let rows = try await mod.loadChapter(testament: history.testament,
                                                      book: history.book,
-                                                     chapter: c)
-                    sections.append(BookSection(
-                        chapter: c,
-                        entries: CommentaryGrouping.group(rows)))
+                                                     chapter: history.chapter)
+                commentaryChapter = CommentaryGrouping.group(rows)
+            case .book:
+                let count = mod.chapterCount(testament: history.testament,
+                                              book: history.book)
+                let chapters = count > 0 ? count : history.chapterCount
+                var sections: [BookSection] = []
+                if chapters > 0 {
+                    for c in 1 ... chapters {
+                        let rows = try await mod.loadChapter(testament: history.testament,
+                                                             book: history.book,
+                                                             chapter: c)
+                        sections.append(BookSection(
+                            chapter: c,
+                            entries: CommentaryGrouping.group(rows)))
+                    }
                 }
+                commentaryBook = sections
             }
-            commentaryBook = sections
+            commentaryError = nil
+        } catch {
+            // A module that can't be opened (damaged, missing,
+            // unsupported) is an error state, not an empty chapter
+            // (REQ-AP-13).
+            commentaryChapter = []
+            commentaryBook = []
+            commentaryError = "The \(mod.shortLabel) module couldn't be opened. "
+                + "It may be damaged or missing — re-downloading it from the "
+                + "repository usually fixes this. (\(error.localizedDescription))"
         }
     }
 
