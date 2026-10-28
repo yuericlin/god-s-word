@@ -72,9 +72,11 @@ just explains the setup.
 3. Copy the generated **Client ID** (`….apps.googleusercontent.com`).
 4. Copy `GodsWord/GoogleOAuth.plist.template` to `GodsWord/GoogleOAuth.plist`
    (git-ignored) and paste your client ID as `ClientID`.
-5. In `GodsWord/Info.plist`, replace the `CFBundleURLSchemes` placeholder with
+5. In `GodsWord/Info.plist`, add a `CFBundleURLTypes` entry whose
+   `CFBundleURLSchemes` contains
    `com.googleusercontent.apps.<YOUR_CLIENT_ID>` (the numeric part before
-   `.apps.googleusercontent.com`).
+   `.apps.googleusercontent.com`). It is intentionally absent until now:
+   a placeholder scheme fails App Store upload validation.
 6. Rebuild. Settings → Google Drive backup → Sign in with Google.
 
 The app requests only the `drive.appdata` scope: it can see nothing in your
