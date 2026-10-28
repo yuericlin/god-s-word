@@ -94,9 +94,21 @@ public enum PrivateBibleStore: Sendable {
         guard let files = try? fm.contentsOfDirectory(
             at: dir, includingPropertiesForKeys: nil,
             options: .skipsHiddenFiles) else { return [] }
+        // Newest file first, and at most one Bible per id: if a folder ever
+        // holds two copies of the same version (e.g. a `.json` re-import
+        // next to an older `.json.gz`), the most recently modified one is
+        // the one the app reads — never a stale shadow copy.
+        let newestFirst = files.sorted { a, b in
+            let da = (try? fm.attributesOfItem(atPath: a.path))?[.modificationDate] as? Date ?? .distantPast
+            let db = (try? fm.attributesOfItem(atPath: b.path))?[.modificationDate] as? Date ?? .distantPast
+            return da > db
+        }
+        var seen = Set<String>()
         var out: [PrivateBible] = []
-        for url in files {
-            if let bible = load(from: url) { out.append(bible) }
+        for url in newestFirst {
+            if let bible = load(from: url), seen.insert(bible.id).inserted {
+                out.append(bible)
+            }
         }
         return out.sorted { $0.name < $1.name }
     }

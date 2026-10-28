@@ -228,6 +228,14 @@ struct LibraryView: View {
     }
 
     private func refresh() {
+        // Sync first: an iCloud download may replace a private Bible's file
+        // on disk, and the groups below must be built from the post-sync
+        // contents — otherwise the library (and the reader) lag one refresh
+        // behind the files.
+        iCloudSync.shared.ensureFoldersOnLaunchIfEnabled()
+        if iCloudSync.shared.isEnabled {
+            iCloudSync.shared.syncPrivateModulesToLocal()
+        }
         let store = BibleSourceStore.shared
         let installed = self.store.installedModules()
         var newGroups: [SourceGroup] = []
@@ -245,12 +253,15 @@ struct LibraryView: View {
             newGroups.append(makeGroup(source: source, versions: versions))
         }
         groups = newGroups
-        restoreLastReading()
-        // Ensure iCloud folders exist (if enabled) and sync private Bibles.
-        iCloudSync.shared.ensureFoldersOnLaunchIfEnabled()
-        if iCloudSync.shared.isEnabled {
-            iCloudSync.shared.syncPrivateModulesToLocal()
+        // Adopt the freshly loaded instance for the version being read, so
+        // a re-import (or an iCloud download) takes effect in the reader
+        // without an app restart: `history` is shared with the reader,
+        // which renders whatever instance it holds.
+        if let current = history,
+           let fresh = allVersions().first(where: { $0.id == current.version.id }) {
+            current.version = fresh
         }
+        restoreLastReading()
     }
 
     /// Private Bibles in a local source's folder (security-scoped when

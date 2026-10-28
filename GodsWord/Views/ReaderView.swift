@@ -342,7 +342,10 @@ struct ReaderView: View {
         .onChange(of: history.testament) { selectedVerses = [] }
         .onChange(of: history.book) { selectedVerses = [] }
         .onChange(of: history.chapter) { selectedVerses = [] }
-        .onAppear { availableVersions = allLibraryVersions() }
+        .onAppear {
+            availableVersions = allLibraryVersions()
+            adoptReimportedVersion()
+        }
         .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
             SettingsView()
@@ -455,6 +458,31 @@ struct ReaderView: View {
     /// All versions known to the library (downloaded + private imports).
     private func allLibraryVersions() -> [BibleVersion] {
         BibleVersion.allInstalled(in: store)
+    }
+
+    /// A re-import replaces a private Bible's file on disk, but this reader
+    /// renders the instance captured in `history` — without rebinding, the
+    /// old text would stay on screen indefinitely (the chapter key does not
+    /// change when only the file's contents do). On appear, adopt the
+    /// freshly loaded instance for the current version id; if the displayed
+    /// chapter's text changed, reload it. SWORD modules are immutable
+    /// installs, so only private versions need this.
+    private func adoptReimportedVersion() {
+        guard let fresh = availableVersions.first(where: { $0.id == history.version.id }),
+              fresh.isPrivate else { return }
+        history.version = fresh
+        // On first appear `verses` is still empty and the chapter task below
+        // loads from the rebound instance; only an already-rendered chapter
+        // needs the explicit comparison (and reload when it changed).
+        guard !verses.isEmpty else { return }
+        Task {
+            let newVerses = (try? await fresh.loadChapter(
+                testament: history.testament, book: history.book,
+                chapter: history.chapter)) ?? []
+            if newVerses.map({ $0.text }) != verses.map({ $0.text }) {
+                await load()
+            }
+        }
     }
 
     private func canGo(toChapter c: Int) -> Bool {
