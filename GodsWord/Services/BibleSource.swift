@@ -65,14 +65,25 @@ struct BibleSource: Identifiable, Codable, Equatable {
         kind: .repository(URL(string: "https://crosswire.org/ftpmirror/pub/sword/lockmanraw")!),
         isBuiltIn: true)
 
+    /// The first-party Converted Library (REQ-SRC-5): public-domain
+    /// works converted from other module formats (e.g. e-Sword)
+    /// into standard SWORD packages, served from the `library/`
+    /// folder of the project repository.
+    static let convertedLibrary = BibleSource(
+        id: "converted-library", name: "Converted Library",
+        kind: .repository(URL(string: "https://raw.githubusercontent.com/yuericlin/god-s-word/main/library")!),
+        isBuiltIn: true)
+
     /// The public repository sources bundled with the app, in the
     /// SWORD master list's order, CrossWire first. Together they are
     /// every repository on that list reachable over https (Xiphos is
-    /// http-only). "Update Public Sources" (REQ-SRC-3) can replace this
-    /// list with a newer one downloaded from the project repository.
+    /// http-only). The Converted Library, a first-party source,
+    /// comes last. "Update Public Sources" (REQ-SRC-3) can replace
+    /// this list with a newer one downloaded from the project
+    /// repository.
     static let bundledPublicSources: [BibleSource] =
         [crossWire, crossWireBeta, bibleOrg, crossWireAttic,
-         crossWireWycliffe, eBible, dbg, lockman]
+         crossWireWycliffe, eBible, dbg, lockman, convertedLibrary]
 
     /// The repository URL for URL sources; nil for local sources.
     var repositoryURL: URL? {
