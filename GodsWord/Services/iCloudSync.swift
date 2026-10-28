@@ -194,9 +194,18 @@ public final class iCloudSync: ObservableObject {
             // Skip if already downloaded and same size (avoid redundant copies).
             if fm.fileExists(atPath: dest.path),
                let rAttr = try? fm.attributesOfItem(atPath: url.path),
-               let dAttr = try? fm.attributesOfItem(atPath: dest.path),
-               (rAttr[.size] as? Int) == (dAttr[.size] as? Int) {
-                continue
+               let dAttr = try? fm.attributesOfItem(atPath: dest.path) {
+                if (rAttr[.size] as? Int) == (dAttr[.size] as? Int) {
+                    continue
+                }
+                // Never overwrite a newer local file with an older iCloud
+                // copy: a just-completed re-import must not be silently
+                // reverted by the next sync.
+                if let remoteDate = rAttr[.modificationDate] as? Date,
+                   let localDate = dAttr[.modificationDate] as? Date,
+                   localDate >= remoteDate {
+                    continue
+                }
             }
             var copyError: Error?
             coordinator.coordinate(readingItemAt: url, options: [],
