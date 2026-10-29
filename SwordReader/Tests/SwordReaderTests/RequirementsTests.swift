@@ -68,17 +68,16 @@ final class CopyFormatRequirementsTests: XCTestCase {
 // MARK: - REQ-NT: Notes
 
 final class NoteRequirementsTests: XCTestCase {
-    // REQ-NT-11: key format.
+    // REQ-NT-11: key format (version-less since REQ-NT-19).
     func testNoteKeyFormat() {
-        let key = NoteKey.make(moduleID: "KJV", testament: 1, book: 1,
+        let key = NoteKey.make(testament: 1, book: 1,
                                chapter: 1, verse: 1)
-        XCTAssertEqual(key, "KJV:1:1:1:1")
+        XCTAssertEqual(key, "1:1:1:1")
     }
 
     func testNoteKeyParseRoundTrip() {
-        let key = "ChiUns:1:1:1:2"
+        let key = "1:1:1:2"
         let parsed = NoteKey.parse(key)
-        XCTAssertEqual(parsed?.moduleID, "ChiUns")
         XCTAssertEqual(parsed?.testament, 1)
         XCTAssertEqual(parsed?.book, 1)
         XCTAssertEqual(parsed?.chapter, 1)
@@ -87,9 +86,32 @@ final class NoteRequirementsTests: XCTestCase {
 
     func testNoteKeyParseInvalid() {
         XCTAssertNil(NoteKey.parse(""))
-        XCTAssertNil(NoteKey.parse("KJV:1:1:1"))
-        XCTAssertNil(NoteKey.parse("KJV:1:1:1:x"))
-        XCTAssertNil(NoteKey.parse("KJV:1:1:1:1:extra"))
+        XCTAssertNil(NoteKey.parse("1:1:1"))
+        XCTAssertNil(NoteKey.parse("1:1:1:x"))
+        XCTAssertNil(NoteKey.parse("1:1:1:1:extra"))
+        // Legacy per-version keys no longer parse as note keys.
+        XCTAssertNil(NoteKey.parse("KJV:1:1:1:1"))
+    }
+
+    // REQ-NT-19: legacy per-version keys split into module id + the
+    // version-less key; current keys and malformed keys do not split.
+    func testNoteKeyMigrationSplitLegacy() {
+        let verse = NoteKeyMigration.splitLegacy("NASB:1:40:3:5",
+                                                 newPartCount: 4)
+        XCTAssertEqual(verse?.moduleID, "NASB")
+        XCTAssertEqual(verse?.key, "1:40:3:5")
+        let book = NoteKeyMigration.splitLegacy("ChiUns:2:1",
+                                                newPartCount: 2)
+        XCTAssertEqual(book?.moduleID, "ChiUns")
+        XCTAssertEqual(book?.key, "2:1")
+        XCTAssertNil(NoteKeyMigration.splitLegacy("1:40:3:5",
+                                                  newPartCount: 4))
+        XCTAssertNil(NoteKeyMigration.splitLegacy("NASB:1:40:3",
+                                                  newPartCount: 4))
+        XCTAssertNil(NoteKeyMigration.splitLegacy("NASB:1:40:x:5",
+                                                  newPartCount: 4))
+        XCTAssertNil(NoteKeyMigration.splitLegacy(":1:40:3:5",
+                                                  newPartCount: 4))
     }
 
     // REQ-NT-1, NT-2: anchor at first selected verse.
@@ -107,29 +129,27 @@ final class NoteRequirementsTests: XCTestCase {
 // MARK: - REQ-BP: Bookmarks panel notes sorting
 
 final class BookmarksPanelRequirementsTests: XCTestCase {
-    // REQ-BP-3: notes sorted by (module, testament, book, chapter, verse).
+    // REQ-BP-3: notes sorted by (testament, book, chapter, verse).
     func testNoteSortOrder() {
         let keys = [
-            "KJV:1:2:1:1",   // Exodus
-            "KJV:1:1:2:1",   // Genesis ch 2
-            "KJV:1:1:1:3",   // Genesis ch 1 v 3
-            "KJV:1:1:1:1",   // Genesis ch 1 v 1
-            "ChiUns:1:1:1:1",
+            "1:2:1:1",   // Exodus
+            "1:1:2:1",   // Genesis ch 2
+            "1:1:1:3",   // Genesis ch 1 v 3
+            "1:1:1:1",   // Genesis ch 1 v 1
         ]
         let sorted = keys.compactMap { NoteKey.parse($0) }.sorted {
-            ($0.moduleID, $0.testament, $0.book, $0.chapter, $0.verse) <
-            ($1.moduleID, $1.testament, $1.book, $1.chapter, $1.verse)
+            ($0.testament, $0.book, $0.chapter, $0.verse) <
+            ($1.testament, $1.book, $1.chapter, $1.verse)
         }
         let result = sorted.map {
-            NoteKey.make(moduleID: $0.moduleID, testament: $0.testament,
+            NoteKey.make(testament: $0.testament,
                          book: $0.book, chapter: $0.chapter, verse: $0.verse)
         }
         XCTAssertEqual(result, [
-            "ChiUns:1:1:1:1",
-            "KJV:1:1:1:1",
-            "KJV:1:1:1:3",
-            "KJV:1:1:2:1",
-            "KJV:1:2:1:1",
+            "1:1:1:1",
+            "1:1:1:3",
+            "1:1:2:1",
+            "1:2:1:1",
         ])
     }
 }
@@ -468,23 +488,26 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
         XCTAssertNil(CommentaryGrouping.entry(in: grouped, covering: 4))
     }
 
-    // REQ-NT-14: book/chapter note keys round-trip and reject bad shapes.
+    // REQ-NT-14: book/chapter note keys round-trip and reject bad shapes
+    // (version-less since REQ-NT-19).
     func testScopedNoteKeys() {
-        let bookKey = BookNoteKey.make(moduleID: "KJV", testament: 1, book: 1)
-        XCTAssertEqual(bookKey, "KJV:1:1")
+        let bookKey = BookNoteKey.make(testament: 1, book: 1)
+        XCTAssertEqual(bookKey, "1:1")
         XCTAssertEqual(BookNoteKey.parse(bookKey),
-                       BookNoteKey.Parsed(moduleID: "KJV", testament: 1, book: 1))
-        XCTAssertNil(BookNoteKey.parse("KJV:1"))
-        XCTAssertNil(BookNoteKey.parse("KJV:1:1:1"))
+                       BookNoteKey.Parsed(testament: 1, book: 1))
+        XCTAssertNil(BookNoteKey.parse("1"))
+        XCTAssertNil(BookNoteKey.parse("1:1:1"))
+        XCTAssertNil(BookNoteKey.parse("KJV:1:1"))
 
-        let chapterKey = ChapterNoteKey.make(moduleID: "KJV", testament: 2,
+        let chapterKey = ChapterNoteKey.make(testament: 2,
                                              book: 1, chapter: 3)
-        XCTAssertEqual(chapterKey, "KJV:2:1:3")
+        XCTAssertEqual(chapterKey, "2:1:3")
         XCTAssertEqual(ChapterNoteKey.parse(chapterKey),
-                       ChapterNoteKey.Parsed(moduleID: "KJV", testament: 2,
+                       ChapterNoteKey.Parsed(testament: 2,
                                               book: 1, chapter: 3))
-        XCTAssertNil(ChapterNoteKey.parse("KJV:2:1"))
-        XCTAssertNil(ChapterNoteKey.parse("KJV:2:x:3"))
+        XCTAssertNil(ChapterNoteKey.parse("2:1"))
+        XCTAssertNil(ChapterNoteKey.parse("2:x:3"))
+        XCTAssertNil(ChapterNoteKey.parse("KJV:2:1:3"))
     }
 
     // REQ-AP-8: the module's DistributionLicense is exposed for the

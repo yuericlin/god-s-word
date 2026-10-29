@@ -107,15 +107,16 @@ public enum CompareVersions {
 }
 
 /// Note storage key handling per REQ-NT-11.
-/// Format: "{moduleID}:{testament}:{book}:{chapter}:{verse}"
+/// Format: "{testament}:{book}:{chapter}:{verse}". Notes belong to the
+/// verse, not to a version (REQ-NT-19): the key carries no module id,
+/// so a note written in one version shows in every version.
 public enum NoteKey {
-    public static func make(moduleID: String, testament: Int, book: Int,
+    public static func make(testament: Int, book: Int,
                             chapter: Int, verse: Int) -> String {
-        "\(moduleID):\(testament):\(book):\(chapter):\(verse)"
+        "\(testament):\(book):\(chapter):\(verse)"
     }
 
     public struct Parsed: Equatable {
-        public let moduleID: String
         public let testament: Int
         public let book: Int
         public let chapter: Int
@@ -124,49 +125,49 @@ public enum NoteKey {
 
     public static func parse(_ key: String) -> Parsed? {
         let parts = key.split(separator: ":")
-        guard parts.count == 5,
-              let testament = Int(parts[1]),
-              let book = Int(parts[2]),
-              let chapter = Int(parts[3]),
-              let verse = Int(parts[4]) else { return nil }
-        return Parsed(moduleID: String(parts[0]), testament: testament,
+        guard parts.count == 4,
+              let testament = Int(parts[0]),
+              let book = Int(parts[1]),
+              let chapter = Int(parts[2]),
+              let verse = Int(parts[3]) else { return nil }
+        return Parsed(testament: testament,
                       book: book, chapter: chapter, verse: verse)
     }
 }
 
 /// Book-level note storage keys (REQ-NT-14). Book notes live in their own
 /// store, so the format only needs to be unique within it:
-/// "{moduleID}:{testament}:{book}".
+/// "{testament}:{book}". Like verse notes, book notes are shared across
+/// versions (REQ-NT-19) and carry no module id.
 public enum BookNoteKey {
-    public static func make(moduleID: String, testament: Int, book: Int) -> String {
-        "\(moduleID):\(testament):\(book)"
+    public static func make(testament: Int, book: Int) -> String {
+        "\(testament):\(book)"
     }
 
     public struct Parsed: Equatable {
-        public let moduleID: String
         public let testament: Int
         public let book: Int
     }
 
     public static func parse(_ key: String) -> Parsed? {
         let parts = key.split(separator: ":")
-        guard parts.count == 3,
-              let testament = Int(parts[1]),
-              let book = Int(parts[2]) else { return nil }
-        return Parsed(moduleID: String(parts[0]), testament: testament, book: book)
+        guard parts.count == 2,
+              let testament = Int(parts[0]),
+              let book = Int(parts[1]) else { return nil }
+        return Parsed(testament: testament, book: book)
     }
 }
 
 /// Chapter-level note storage keys (REQ-NT-14). Chapter notes live in
-/// their own store: "{moduleID}:{testament}:{book}:{chapter}".
+/// their own store: "{testament}:{book}:{chapter}". Shared across
+/// versions like the other note scopes (REQ-NT-19).
 public enum ChapterNoteKey {
-    public static func make(moduleID: String, testament: Int, book: Int,
+    public static func make(testament: Int, book: Int,
                             chapter: Int) -> String {
-        "\(moduleID):\(testament):\(book):\(chapter)"
+        "\(testament):\(book):\(chapter)"
     }
 
     public struct Parsed: Equatable {
-        public let moduleID: String
         public let testament: Int
         public let book: Int
         public let chapter: Int
@@ -174,12 +175,35 @@ public enum ChapterNoteKey {
 
     public static func parse(_ key: String) -> Parsed? {
         let parts = key.split(separator: ":")
-        guard parts.count == 4,
-              let testament = Int(parts[1]),
-              let book = Int(parts[2]),
-              let chapter = Int(parts[3]) else { return nil }
-        return Parsed(moduleID: String(parts[0]), testament: testament,
+        guard parts.count == 3,
+              let testament = Int(parts[0]),
+              let book = Int(parts[1]),
+              let chapter = Int(parts[2]) else { return nil }
+        return Parsed(testament: testament,
                       book: book, chapter: chapter)
+    }
+}
+
+/// Splitting legacy note keys (REQ-NT-19 migration). Before REQ-NT-19,
+/// note keys were prefixed with the module id of the version the note
+/// was written in: "{moduleID}:{testament}:...". A key is legacy when
+/// its first component is not an integer (module ids are never purely
+/// numeric; a version-less key starts with the testament, 1 or 2).
+public enum NoteKeyMigration {
+    /// Splits a legacy key into its module id and its version-less
+    /// key. `newPartCount` is the component count of the version-less
+    /// key in the caller's store (2 book, 3 chapter, 4 verse). Returns
+    /// nil when the key is already version-less or malformed.
+    public static func splitLegacy(_ key: String,
+                                   newPartCount: Int)
+        -> (moduleID: String, key: String)? {
+        let parts = key.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == newPartCount + 1,
+              Int(parts[0]) == nil, !parts[0].isEmpty,
+              parts.dropFirst().allSatisfy({ Int($0) != nil })
+        else { return nil }
+        return (String(parts[0]),
+                parts.dropFirst().joined(separator: ":"))
     }
 }
 

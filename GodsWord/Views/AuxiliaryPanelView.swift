@@ -125,17 +125,20 @@ struct AuxiliaryPanelView: View {
             case .verse(let key, let reference):
                 VerseNoteEditor(reference: reference, noteKey: key,
                                 initialText: personalData.verseNote(forKey: key) ?? "",
-                                seedText: "\(history.bookTitle) \(history.chapter)\n")
+                                seedText: "\(history.bookTitle) \(history.chapter)\n",
+                                sourceModuleID: history.version.id)
                     .environmentObject(personalData)
             case .book(let key, let reference):
                 ScopedNoteEditor(reference: reference,
                                  initialText: personalData.bookNote(forKey: key) ?? "") { text in
-                    personalData.setBookNote(text, forKey: key)
+                    personalData.setBookNote(text, forKey: key,
+                                             source: history.version.id)
                 }
             case .chapter(let key, let reference):
                 ScopedNoteEditor(reference: reference,
                                  initialText: personalData.chapterNote(forKey: key) ?? "") { text in
-                    personalData.setChapterNote(text, forKey: key)
+                    personalData.setChapterNote(text, forKey: key,
+                                                source: history.version.id)
                 }
             }
         }
@@ -156,19 +159,19 @@ struct AuxiliaryPanelView: View {
 
     // MARK: - Notes tab
 
-    /// Whether each Notes sub-tab has notes in the current version
-    /// (REQ-NT-18): Recents = any note in the version; Book = any
-    /// note in the active book; Chapter = any note in the active
-    /// chapter; Verse = a note on the anchor verse (the first
-    /// selected verse when several are selected).
+    /// Whether each Notes sub-tab has notes (REQ-NT-18): Recents =
+    /// any note at all — notes are shared across versions, so no
+    /// sub-tab is scoped to the version being read (REQ-NT-19);
+    /// Book = any note in the active book; Chapter = any note in
+    /// the active chapter; Verse = a note on the anchor verse (the
+    /// first selected verse when several are selected).
     private var notesAvailability: NotesTabLogic.Availability {
-        let id = history.version.id
-        let bookPrefix = "\(id):\(history.testament):\(history.book):"
+        let bookPrefix = "\(history.testament):\(history.book):"
         let chapterPrefix = "\(bookPrefix)\(history.chapter):"
         return NotesTabLogic.Availability(
-            recents: personalData.bookNotes.keys.contains { $0.hasPrefix("\(id):") }
-                || personalData.chapterNotes.keys.contains { $0.hasPrefix("\(id):") }
-                || personalData.verseNotes.keys.contains { $0.hasPrefix("\(id):") },
+            recents: !personalData.bookNotes.isEmpty
+                || !personalData.chapterNotes.isEmpty
+                || !personalData.verseNotes.isEmpty,
             book: personalData.bookNote(forKey: bookNoteKey) != nil
                 || personalData.chapterNotes.keys.contains { $0.hasPrefix(bookPrefix) }
                 || personalData.verseNotes.keys.contains { $0.hasPrefix(bookPrefix) },
@@ -203,6 +206,8 @@ struct AuxiliaryPanelView: View {
         let key: String
         let reference: String
         let text: String
+        /// Version the note was first written in (REQ-NT-19).
+        let source: String?
         let updated: Date?
         var id: String { key }
     }
@@ -216,6 +221,7 @@ struct AuxiliaryPanelView: View {
         NoteRow(kind: .book, key: key,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) — Book note",
                 text: personalData.bookNotes[key] ?? "",
+                source: personalData.noteSources[key],
                 updated: personalData.bookNoteTimes[key]?.updatedAt)
     }
 
@@ -223,6 +229,7 @@ struct AuxiliaryPanelView: View {
         NoteRow(kind: .chapter, key: key,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter) — Chapter note",
                 text: personalData.chapterNotes[key] ?? "",
+                source: personalData.noteSources[key],
                 updated: personalData.chapterNoteTimes[key]?.updatedAt)
     }
 
@@ -230,6 +237,7 @@ struct AuxiliaryPanelView: View {
         NoteRow(kind: .verse, key: key,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)",
                 text: personalData.verseNotes[key] ?? "",
+                source: personalData.noteSources[key],
                 updated: personalData.verseNoteTimes[key]?.updatedAt)
     }
 
@@ -245,14 +253,12 @@ struct AuxiliaryPanelView: View {
         var located: [(chapter: Int, verse: Int, row: NoteRow)] = []
         for key in personalData.chapterNotes.keys {
             guard let p = ChapterNoteKey.parse(key),
-                  p.moduleID == history.version.id,
                   p.testament == history.testament, p.book == history.book
             else { continue }
             located.append((p.chapter, 0, chapterNoteRow(key: key, parsed: p)))
         }
         for key in personalData.verseNotes.keys {
             guard let p = NoteKey.parse(key),
-                  p.moduleID == history.version.id,
                   p.testament == history.testament, p.book == history.book
             else { continue }
             located.append((p.chapter, p.verse, verseNoteRow(key: key, parsed: p)))
@@ -278,7 +284,6 @@ struct AuxiliaryPanelView: View {
         let verseRows = personalData.verseNotes.keys
             .compactMap { key -> (Int, NoteRow)? in
                 guard let p = NoteKey.parse(key),
-                      p.moduleID == history.version.id,
                       p.testament == history.testament, p.book == history.book,
                       p.chapter == history.chapter,
                       !(legacyShown && key == verse1NoteKey)
@@ -290,24 +295,22 @@ struct AuxiliaryPanelView: View {
         return rows + verseRows
     }
 
-    /// Every note in the current version, most recently updated
-    /// first (REQ-NT-17 times; notes without times fall back to the
-    /// verse-note order, then key order so the sort is stable).
+    /// Every note, from every version (REQ-NT-19), most recently
+    /// updated first (REQ-NT-17 times; notes without times fall
+    /// back to the verse-note order, then key order so the sort is
+    /// stable).
     private var recentNoteRows: [NoteRow] {
         var rows: [NoteRow] = []
         for key in personalData.bookNotes.keys {
-            guard let p = BookNoteKey.parse(key),
-                  p.moduleID == history.version.id else { continue }
+            guard let p = BookNoteKey.parse(key) else { continue }
             rows.append(bookNoteRow(key: key, parsed: p))
         }
         for key in personalData.chapterNotes.keys {
-            guard let p = ChapterNoteKey.parse(key),
-                  p.moduleID == history.version.id else { continue }
+            guard let p = ChapterNoteKey.parse(key) else { continue }
             rows.append(chapterNoteRow(key: key, parsed: p))
         }
         for key in personalData.verseNotes.keys {
-            guard let p = NoteKey.parse(key),
-                  p.moduleID == history.version.id else { continue }
+            guard let p = NoteKey.parse(key) else { continue }
             rows.append(verseNoteRow(key: key, parsed: p))
         }
         let rank = Dictionary(uniqueKeysWithValues:
@@ -332,6 +335,14 @@ struct AuxiliaryPanelView: View {
         return " - \(updated.formatted(date: .abbreviated, time: .omitted))"
     }
 
+    /// " · NASB" — the version a note was first written in
+    /// (REQ-NT-19); "" when the source isn't known (e.g. a note
+    /// that predates source tracking and never carried a key).
+    private func sourceSuffix(_ source: String?) -> String {
+        guard let source, !source.isEmpty else { return "" }
+        return " · \(source)"
+    }
+
     private func noteRowView(_ row: NoteRow) -> some View {
         Button {
             switch row.kind {
@@ -341,7 +352,8 @@ struct AuxiliaryPanelView: View {
             }
         } label: {
             VStack(alignment: .leading, spacing: 3) {
-                Text(row.reference + noteDateSuffix(row.updated))
+                Text(row.reference + sourceSuffix(row.source)
+                     + noteDateSuffix(row.updated))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(row.text)
@@ -477,21 +489,18 @@ struct AuxiliaryPanelView: View {
     }
 
     private var bookNoteKey: String {
-        personalData.bookNoteKey(moduleID: history.version.id,
-                                 testament: history.testament,
+        personalData.bookNoteKey(testament: history.testament,
                                  book: history.book)
     }
 
     private var chapterNoteKey: String {
-        personalData.chapterNoteKey(moduleID: history.version.id,
-                                    testament: history.testament,
+        personalData.chapterNoteKey(testament: history.testament,
                                     book: history.book,
                                     chapter: history.chapter)
     }
 
     private var verseNoteKey: String {
-        personalData.verseNoteKey(moduleID: history.version.id,
-                                  testament: history.testament,
+        personalData.verseNoteKey(testament: history.testament,
                                   book: history.book,
                                   chapter: history.chapter,
                                   verse: anchorVerse)
@@ -500,8 +509,7 @@ struct AuxiliaryPanelView: View {
     /// The verse-1 note key for this chapter — where chapter notes
     /// were stored before scoped chapter notes (REQ-NT-16).
     private var verse1NoteKey: String {
-        personalData.verseNoteKey(moduleID: history.version.id,
-                                  testament: history.testament,
+        personalData.verseNoteKey(testament: history.testament,
                                   book: history.book,
                                   chapter: history.chapter,
                                   verse: 1)
@@ -553,7 +561,9 @@ struct AuxiliaryPanelView: View {
                 .textSelection(.enabled)
             HStack {
                 Button("Move to Chapter Note") {
-                    personalData.setChapterNote(legacy, forKey: chapterNoteKey)
+                    personalData.setChapterNote(
+                        legacy, forKey: chapterNoteKey,
+                        source: personalData.noteSources[verse1NoteKey])
                     personalData.setVerseNote(nil, forKey: verse1NoteKey)
                 }
                 Spacer()

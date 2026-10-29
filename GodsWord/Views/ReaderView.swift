@@ -394,7 +394,8 @@ struct ReaderView: View {
             VerseNoteEditor(reference: item.reference,
                             noteKey: item.id,
                             initialText: item.initialText,
-                            seedText: item.seedText)
+                            seedText: item.seedText,
+                            sourceModuleID: history.version.id)
                 .environmentObject(personalData)
         }
         .sheet(isPresented: $showingChapterNoteEditor) {
@@ -402,7 +403,8 @@ struct ReaderView: View {
                 reference: "\(history.bookTitle) \(history.chapter)",
                 initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? ""
             ) { text in
-                personalData.setChapterNote(text, forKey: currentChapterNoteKey)
+                personalData.setChapterNote(text, forKey: currentChapterNoteKey,
+                                            source: history.version.id)
             }
         }
     }
@@ -692,8 +694,7 @@ struct ReaderView: View {
     // MARK: - Verse notes
 
     private func noteKey(_ verse: Int) -> String {
-        personalData.verseNoteKey(moduleID: history.version.id,
-                                  testament: history.testament,
+        personalData.verseNoteKey(testament: history.testament,
                                   book: history.book,
                                   chapter: history.chapter,
                                   verse: verse)
@@ -734,8 +735,7 @@ struct ReaderView: View {
     /// The storage key of the current chapter's chapter-level note
     /// (REQ-NT-14).
     private var currentChapterNoteKey: String {
-        personalData.chapterNoteKey(moduleID: history.version.id,
-                                    testament: history.testament,
+        personalData.chapterNoteKey(testament: history.testament,
                                     book: history.book,
                                     chapter: history.chapter)
     }

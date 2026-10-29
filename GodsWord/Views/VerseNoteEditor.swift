@@ -9,6 +9,9 @@ import SwiftUI
 struct VerseNoteEditor: View {
     let reference: String
     let noteKey: String
+    /// The version being read when the editor opened; recorded as
+    /// the note's source (REQ-NT-19) when the note is first saved.
+    let sourceModuleID: String
     /// The note text when the editor opened; Save is disabled while unchanged.
     private let originalText: String
     @EnvironmentObject private var personalData: PersonalData
@@ -18,9 +21,10 @@ struct VerseNoteEditor: View {
     @State private var showingDeleteConfirm = false
 
     init(reference: String, noteKey: String, initialText: String,
-         seedText: String = "") {
+         seedText: String = "", sourceModuleID: String = "") {
         self.reference = reference
         self.noteKey = noteKey
+        self.sourceModuleID = sourceModuleID
         self.originalText = initialText
         // A brand-new note (no saved text) opens pre-filled with the seed
         // (the selected verses' text, or book + chapter); `originalText`
@@ -46,7 +50,10 @@ struct VerseNoteEditor: View {
                             }
                         }
                         Button("Save") {
-                            personalData.setVerseNote(text, forKey: noteKey)
+                            personalData.setVerseNote(
+                                text, forKey: noteKey,
+                                source: sourceModuleID.isEmpty
+                                    ? nil : sourceModuleID)
                             dismiss()
                         }
                         .disabled(text == originalText)
