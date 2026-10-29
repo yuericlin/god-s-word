@@ -120,7 +120,8 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-NT-9:** Notes persist in `UserDefaults` (`gw.verseNotes.v1`).
 - **REQ-NT-10:** Notes are included in Drive backup payloads (v5). Applying an
   old backup never wipes existing notes.
-- **REQ-NT-11:** Note storage key format: `"{moduleID}:{testament}:{book}:{chapter}:{verse}"`.
+- **REQ-NT-11:** Note storage key format: `"{testament}:{book}:{chapter}:{verse}"`
+  (version-less since REQ-NT-19; older builds prefixed the module id).
 - **REQ-NT-12:** A new note opens pre-filled (seeded): with verses selected,
   the selection in exactly the clipboard format (`"verse text" Book
   Chapter:Verses Version`; single verse unnumbered inside the quotes,
@@ -135,12 +136,12 @@ Multiple (KJV Gen 1:1-2):
 
 ### Scoped notes (book / chapter / verse levels)
 - **REQ-NT-14:** Notes exist at three scopes, mirroring commentary's
-  levels: a **book note** (one per book per version), a **chapter note**
+  levels: a **book note** (one per book), a **chapter note**
   (one per chapter), and **verse notes** (REQ-NT-9..13, unchanged). Book
   and chapter notes live in their own stores — `PersonalData.bookNotes`
-  (`gw.bookNotes.v1`, key `"{moduleID}:{testament}:{book}"`, see
+  (`gw.bookNotes.v1`, key `"{testament}:{book}"`, see
   `BookNoteKey`) and `PersonalData.chapterNotes` (`gw.chapterNotes.v1`,
-  key `"{moduleID}:{testament}:{book}:{chapter}"`, see
+  key `"{testament}:{book}:{chapter}"`, see
   `ChapterNoteKey`). An empty save deletes the note. They are included in
   Drive backups (payload v7), iCloud sync (`bookNotes.json` /
   `chapterNotes.json`), and manual export/import; applying older backups
@@ -170,16 +171,17 @@ Multiple (KJV Gen 1:1-2):
   travel with the notes: UserDefaults, payload v8, iCloud files, and
   manual export/import.
 - **REQ-NT-18:** The Notes tab has four sub-tabs, in this order:
-  **Recents** — every note in the current version, from any book,
-  most recently updated first (REQ-NT-17 times; notes without times
-  fall back to the verse-note order); **Book** — every note in the
-  active book (the book note, then chapter and verse notes in
-  reading order); **Chapter** — every note in the active chapter
-  (the chapter note, then verse notes by verse; the legacy verse-1
-  presentation of REQ-NT-16 still applies and is not repeated as a
-  verse row); **Verse** — the note on the selected verse (the first
-  selected verse for multi-verse selections). All sub-tab scopes
-  are within the current version. A sub-tab is shown only when it
+  **Recents** — every note, from any version (REQ-NT-19), from any
+  book, most recently updated first (REQ-NT-17 times; notes without
+  times fall back to the verse-note order); **Book** — every note
+  in the active book (the book note, then chapter and verse notes
+  in reading order); **Chapter** — every note in the active
+  chapter (the chapter note, then verse notes by verse; the legacy
+  verse-1 presentation of REQ-NT-16 still applies and is not
+  repeated as a verse row); **Verse** — the note on the selected
+  verse (the first selected verse for multi-verse selections). No
+  sub-tab is scoped to the version being read. A sub-tab is shown
+  only when it
   has notes; when the selected sub-tab becomes empty (e.g. after
   navigating), the nearest visible sub-tab takes its place (ties
   go to the earlier sub-tab; this logic is `NotesTabLogic` in
@@ -190,6 +192,27 @@ Multiple (KJV Gen 1:1-2):
   their own add entry when their scoped note is missing. Tapping a
   note row opens its editor in place. (Supersedes the Notes half
   of REQ-AP-9.)
+- **REQ-NT-19:** Notes belong to their book/chapter/verse, not to a
+  version: a note written while reading one version is visible —
+  and editable — in every version (the verse highlight, all Notes
+  sub-tabs, and the editors use the version-less keys of
+  REQ-NT-11/14). Each note remembers the version it was first
+  written in (`PersonalData.noteSources`, `gw.noteSources.v1`); the
+  Notes list shows it as a tag on the note's title line —
+  "Isaiah 53:4 · NASB - Oct 22, 2026" (before the REQ-NT-17 date).
+  Sources travel with the notes: payload v10 (REQ-BK-6), iCloud
+  (`noteSources.json`), and manual export/import; a "Move to
+  Chapter Note" (REQ-NT-16) carries the note's source with it.
+  Notes stored by older builds under per-version keys migrate on
+  launch, and again whenever a backup, iCloud load, or import
+  applies data: keys lose their module prefix, and notes that
+  collide on the same book/chapter/verse merge into one — distinct
+  texts joined newest-first with a blank line between (an already
+  version-less entry counts as newest; then the verse-note order,
+  then last-edit time; ties break by key), times keep the earliest
+  creation and the latest edit, and the source is the newest
+  merged note's version. The migration is idempotent: with no
+  per-version keys present it changes nothing.
 
 ---
 
@@ -307,6 +330,11 @@ Multiple (KJV Gen 1:1-2):
   the date). Bookmarks written before this carry no
   timestamps and show just the book and chapter until they are next
   saved or assigned.
+- **REQ-BM-11:** Bookmarks are version-independent: a bookmark names
+  a testament/book/chapter only (no version is stored with it), so
+  a bookmark set while reading one version shows — reader ribbons,
+  panel, and jumps — in every version. Same sharing rule as notes
+  (REQ-NT-19); bookmarks never carried a version.
 
 ## 9. Two-level book/chapter picker
 
@@ -376,6 +404,11 @@ Multiple (KJV Gen 1:1-2):
   code stay in place (payload, sync, and restore paths
   unchanged); only the settings UI is not shown. Re-enable by
   flipping the sections' visibility flags in Settings.
+- **REQ-BK-6:** Payload v10 adds the note-sources store
+  (REQ-NT-19). Payload v9 and older still load; a payload without
+  sources leaves existing sources alone, and the REQ-NT-19
+  migration derives sources from the payload's legacy per-version
+  keys when it carries them.
 
 ---
 
