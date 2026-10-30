@@ -31,6 +31,20 @@ public struct ModuleInfo: Sendable {
         return v.isEmpty || v == "KJV" || v == "NRSV"
     }
 
+    /// True when this module belongs in the "Add Bible" download
+    /// list (REQ-SRC-6): a Bible the reader can open (isRenderable)
+    /// that is neither a commentary nor a dictionary. All three
+    /// checks are required — commentaries the auxiliary panel can
+    /// read are downloadable through the commentary list, not this
+    /// one, and a module on a zText driver whose Category says
+    /// Commentaries satisfies isRenderable yet is still a
+    /// commentary. (Regression: the Add Bible list once admitted
+    /// every panel-renderable commentary; covered by the
+    /// `testAddBibleList*` tests in RequirementsTests.)
+    public var isDownloadableBible: Bool {
+        isRenderable && !isCommentary && !isDictionary
+    }
+
     public var versification: Versification? {
         let name = conf.versification?.trimmingCharacters(in: .whitespaces) ?? ""
         // An absent Versification line means the SWORD default, KJV

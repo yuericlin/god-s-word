@@ -462,6 +462,83 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
         XCTAssertTrue(info.isRenderable)
     }
 
+    // REQ-SRC-6 (regression, Oct 29, 2026): the "Add Bible" download
+    // list showed commentaries — its filter admitted every
+    // panel-renderable commentary alongside the Bibles. A Bible is
+    // admitted to the list...
+    func testAddBibleListAdmitsBible() {
+        let info = conf("""
+            [KJV]
+            DataPath=./modules/texts/ztext/kjv/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Category=Biblical Texts
+            Lang=en
+            """)
+        XCTAssertTrue(info.isDownloadableBible)
+    }
+
+    // ...a commentary the panel can read (MHCC's conf shape) is
+    // not, even though it is downloadable elsewhere...
+    func testAddBibleListExcludesPanelCommentary() {
+        let info = conf("""
+            [MHCC]
+            Description=Matthew Henry's Concise Commentary on the Whole Bible
+            DataPath=./modules/comments/zcom/mhcc/
+            ModDrv=zCom
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertTrue(info.isCommentaryRenderable)
+        XCTAssertFalse(info.isDownloadableBible)
+    }
+
+    // ...and neither is a commentary riding a zText driver: it
+    // satisfies isRenderable, but its Category gives it away, so
+    // the Bible checks alone are not enough.
+    func testAddBibleListExcludesZTextCommentary() {
+        let info = conf("""
+            [ZTextCom]
+            DataPath=./modules/comments/ztext/ztextcom/
+            ModDrv=zText
+            SourceType=OSIS
+            Encoding=UTF-8
+            CompressType=ZIP
+            BlockType=BOOK
+            Versification=KJV
+            Category=Commentaries
+            Lang=en
+            """)
+        XCTAssertTrue(info.isRenderable)
+        XCTAssertTrue(info.isCommentary)
+        XCTAssertFalse(info.isDownloadableBible)
+    }
+
+    // ...and a dictionary (StrongsGreek's conf shape) is excluded
+    // too; it has its own download list.
+    func testAddBibleListExcludesDictionary() {
+        let info = conf("""
+            [StrongsGreek]
+            DataPath=./modules/lexdict/zld/strongsgreek/strongsgreek
+            ModDrv=zLD
+            SourceType=TEI
+            Encoding=UTF-8
+            CompressType=ZIP
+            Lang=en
+            """)
+        XCTAssertTrue(info.isDictionary)
+        XCTAssertFalse(info.isDownloadableBible)
+    }
+
     // REQ-AP-5: consecutive verses sharing one entry collapse into a
     // range; a repeated text later starts a new entry; empties skip.
     func testCommentaryGrouping() {

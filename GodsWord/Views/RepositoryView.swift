@@ -60,11 +60,12 @@ struct RepositoryView: View {
     }
 
     private var filtered: [ModuleInfo] {
-        // Bibles the reader can open, plus commentaries the auxiliary
-        // panel can read (REQ-AP-4), narrowed to the languages of
+        // Bibles only (REQ-SRC-6): commentaries and dictionaries
+        // have their own download lists (CommentaryRepositoryView,
+        // DictionaryRepositoryView). Narrowed to the languages of
         // interest when any are chosen (REQ-LG-1).
         let base = modules.filter {
-            ($0.isRenderable || $0.isCommentaryRenderable)
+            $0.isDownloadableBible
                 && $0.isInLanguages(personalData.interestedLanguages)
         }
         guard !query.isEmpty else { return base }
@@ -99,9 +100,7 @@ struct RepositoryView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(mod.description).font(.headline)
-                                    Text(mod.isCommentary
-                                         ? "\(mod.id) · \(mod.language) · Commentary"
-                                         : "\(mod.id) · \(mod.language)")
+                                    Text("\(mod.id) · \(mod.language)")
                                         .font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
