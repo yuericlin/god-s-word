@@ -668,6 +668,16 @@ Multiple (KJV Gen 1:1-2):
   Darby's Synopsis of the Books of the Bible, chapter essays
   for all 1,189 chapters, converted from the public-domain
   text of the Synopsis (1857–62).
+- **REQ-SRC-6:** The "Add Bible" download list contains Bibles
+  only: modules that are reader-renderable and neither
+  commentaries nor dictionaries (`ModuleInfo.isDownloadableBible`).
+  Commentaries and dictionaries are downloaded from their own
+  lists ("Add Commentary", the dictionary list). Regression
+  (Oct 29, 2026): the list once admitted every panel-renderable
+  commentary; `isDownloadableBible` and its tests in
+  `AuxiliaryPanelRequirementsTests` pin the exclusion, including
+  a commentary on a zText driver, which satisfies the renderable
+  checks and is caught only by its Category.
 
 ## 17. Download languages and dictionaries
 
