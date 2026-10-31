@@ -539,6 +539,28 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
         XCTAssertFalse(info.isDownloadableBible)
     }
 
+    // REQ-AP-18: swipe-down-to-collapse fires only on a committed
+    // downward swipe — enough travel AND a predicted end well past
+    // it (a flick). Scroll drags inside the panel, slow drags, and
+    // upward swipes never collapse it.
+    func testPanelCollapseGesture() {
+        XCTAssertTrue(PanelCollapseGesture.shouldCollapse(
+            translation: 60, predictedEnd: 200))
+        XCTAssertTrue(PanelCollapseGesture.shouldCollapse(
+            translation: 50, predictedEnd: 110))
+        // Too little travel, however hard the flick.
+        XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
+            translation: 49, predictedEnd: 300))
+        // A long but slow drag (predicted end close to the travel).
+        XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
+            translation: 120, predictedEnd: 100))
+        // Upward swipes and taps never collapse.
+        XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
+            translation: -80, predictedEnd: -300))
+        XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
+            translation: 0, predictedEnd: 0))
+    }
+
     // REQ-AP-5: consecutive verses sharing one entry collapse into a
     // range; a repeated text later starts a new entry; empties skip.
     func testCommentaryGrouping() {

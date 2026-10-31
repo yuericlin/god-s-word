@@ -92,6 +92,21 @@ struct AuxiliaryPanelView: View {
         }
     }
 
+    /// Swipe down inside the panel to collapse it (REQ-AP-18).
+    /// Simultaneous, so the tabs' own scrolling and taps keep
+    /// working; whether a finished drag counts as a collapse swipe
+    /// is PanelCollapseGesture's call (unit-tested).
+    private var collapseGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onEnded { value in
+                if PanelCollapseGesture.shouldCollapse(
+                    translation: value.translation.height,
+                    predictedEnd: value.predictedEndTranslation.height) {
+                    collapsed = true
+                }
+            }
+    }
+
     /// The expanded panel: the tab bar plus the selected tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
@@ -116,6 +131,7 @@ struct AuxiliaryPanelView: View {
             .frame(height: 264)
         }
         .background(.regularMaterial)
+        .simultaneousGesture(collapseGesture)
         .onAppear {
             commentaries = CommentaryModule.allInstalled(in: store)
             expandedBookChapters = [history.chapter]

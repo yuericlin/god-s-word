@@ -620,6 +620,14 @@ Multiple (KJV Gen 1:1-2):
   commentaries (its tags pass the same plain-text conversion).
   This unlocks DTN (Darby Translation Notes) and The Fourfold
   Gospel on CrossWire. RawText Bibles are not listed yet.
+- **REQ-AP-18:** Swiping down inside the auxiliary panel collapses
+  it (the same state as the bottom-bar toggle, REQ-AP-1). The
+  gesture is simultaneous with the tabs' own scrolling and taps,
+  and it fires only on a committed swipe: at least 50 points of
+  downward travel with a predicted end of at least 110 points
+  (`PanelCollapseGesture` in SwordReader, unit-tested), so
+  scrolling a tab's content — including scrolling back up toward
+  its top — never collapses the panel by accident.
 
 ## 16. Module sources
 
