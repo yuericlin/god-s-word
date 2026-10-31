@@ -709,6 +709,19 @@ Multiple (KJV Gen 1:1-2):
   settings: UserDefaults, backup payload v9 (additive; v8 and
   older payloads still load), the iCloud/manual settings file,
   and manual export/import.
+- **REQ-LG-3:** Settings has a **Current version** option directly
+  under Languages (section "Bible version"), mirroring the
+  Commentary option (REQ-AP-6): its row shows the ID of the
+  version being read (else the saved last reading's), and its
+  page lists the installed versions (`BibleVersion.allInstalled`
+  — downloaded modules plus private imports) with the current
+  one checkmarked. Picking a version switches the reading to
+  it, keeping the place being read with the chapter clamped to
+  the new version's range (the reader's own version-picker
+  behavior); with no reading open, the pick is saved as the
+  last reading so the next book opened uses it. A **Download a
+  New Version…** button opens the Add Bible page
+  (`RepositoryView`), and the list refreshes when it closes.
 - **REQ-DC-1:** Dictionaries (lexicon modules) are a third
   downloadable module type, with an "Add Dictionary" page mirroring
   Add Commentary (source picker, search, license line, progress
