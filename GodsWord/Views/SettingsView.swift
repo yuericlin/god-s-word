@@ -5,6 +5,12 @@ import SwordReader
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
+    /// The live reading, when Settings is opened over the reader
+    /// or over the Library's current book; the Current version
+    /// option (REQ-LG-3) switches it in place. Nil on a fresh
+    /// launch, where the option works on the saved last reading.
+    var history: ReadingHistory? = nil
+
     @EnvironmentObject private var personalData: PersonalData
     @EnvironmentObject private var driveBackup: GoogleDriveBackup
     @Environment(\.moduleStore) private var store
@@ -53,6 +59,23 @@ struct SettingsView: View {
                     Text("Languages")
                 } footer: {
                     Text("When languages are chosen here, the download lists for Bibles, commentaries, and dictionaries show only modules in those languages.")
+                }
+
+                Section {
+                    NavigationLink {
+                        CurrentVersionPicker(history: history)
+                    } label: {
+                        HStack {
+                            Text("Current version")
+                            Spacer()
+                            Text(currentVersionSummary)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Bible version")
+                } footer: {
+                    Text("The version you are reading. Pick another installed version, or download a new one.")
                 }
 
                 Section {
@@ -291,6 +314,14 @@ struct SettingsView: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     }
 
+    /// The Current version row's value (REQ-LG-3): the version
+    /// being read, else the saved last reading's, else "None".
+    private var currentVersionSummary: String {
+        history?.version.id
+            ?? personalData.loadLastReading()?.moduleID
+            ?? "None"
+    }
+
     /// The Dictionary row's value: "Automatic" when neither lexicon
     /// is chosen, otherwise the chosen module IDs.
     private var dictionarySummary: String {
@@ -443,4 +474,94 @@ struct ShareSheet: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIActivityViewController,
                                 context: Context) {}
+}
+
+/// Settings > Bible version > Current version (REQ-LG-3): pick
+/// the version being read from the installed versions, or
+/// download a new one. Mirrors CommentaryModulePicker —
+/// checkmarked rows plus a download button opening the
+/// repository page, the list refreshed when the page closes.
+struct CurrentVersionPicker: View {
+    /// The live reading to switch in place; nil on a fresh
+    /// launch, where the pick updates the saved last reading.
+    let history: ReadingHistory?
+
+    @EnvironmentObject private var personalData: PersonalData
+    @Environment(\.moduleStore) private var store
+    @State private var versions: [BibleVersion] = []
+    @State private var currentID = ""
+    @State private var showingDownload = false
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(versions) { version in
+                    Button {
+                        pick(version)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(version.shortLabel)
+                                    .foregroundStyle(.primary)
+                                if version.displayName != version.shortLabel {
+                                    Text(version.displayName)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            if currentID == version.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                }
+            } footer: {
+                Text("The version shown in the reader. Private imports appear here too.")
+            }
+            Section {
+                Button("Download a New Version…") { showingDownload = true }
+            } footer: {
+                Text("New versions download from the Add Bible page, the same repositories the Library uses.")
+            }
+        }
+        .navigationTitle("Current Version")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            versions = BibleVersion.allInstalled(in: store)
+            currentID = history?.version.id
+                ?? personalData.loadLastReading()?.moduleID ?? ""
+        }
+        .sheet(isPresented: $showingDownload, onDismiss: {
+            versions = BibleVersion.allInstalled(in: store)
+        }) {
+            RepositoryView()
+        }
+    }
+
+    /// Switches the reading to `version`, keeping the place
+    /// being read — the chapter clamps to the new version's
+    /// range, like the reader's own version picker. With no
+    /// reading open, the pick becomes the saved last reading so
+    /// the next book opened uses it.
+    private func pick(_ version: BibleVersion) {
+        currentID = version.id
+        if let history {
+            history.version = version
+            let count = history.chapterCount
+            if history.chapter > count {
+                history.chapter = max(count, 1)
+            }
+        } else if let last = personalData.loadLastReading() {
+            personalData.saveLastReading(moduleID: version.id,
+                                         testament: last.testament,
+                                         book: last.book,
+                                         chapter: last.chapter)
+        } else {
+            personalData.saveLastReading(moduleID: version.id,
+                                         testament: 1, book: 1, chapter: 1)
+        }
+    }
 }
