@@ -348,7 +348,7 @@ struct ReaderView: View {
         }
         .onDisappear { dwellTask?.cancel() }
         .sheet(isPresented: $showingFullSettings) {
-            SettingsView()
+            SettingsView(history: history)
         }
         .sheet(isPresented: $showingBookChapterPicker) {
             BookChapterPickerSheet(history: history) { t, b, c in
