@@ -207,6 +207,28 @@ public enum NoteKeyMigration {
     }
 }
 
+/// The auxiliary panel's swipe-down-to-collapse decision
+/// (REQ-AP-18). The panel's tab contents scroll, so a plain
+/// downward drag must not collapse it: the gesture has to be a
+/// committed swipe — at least `minimumTranslation` points of
+/// downward travel and a predicted end well past the actual
+/// travel, which is what sets a flick apart from a scroll drag
+/// that merely ends while moving downward.
+public enum PanelCollapseGesture {
+    /// Downward travel (points) a swipe needs before it can
+    /// collapse the panel.
+    public static let minimumTranslation: CGFloat = 50
+    /// Predicted end translation (points) a swipe needs; a flick's
+    /// predicted end runs far ahead of its actual travel.
+    public static let minimumPredictedEnd: CGFloat = 110
+
+    public static func shouldCollapse(translation: CGFloat,
+                                      predictedEnd: CGFloat) -> Bool {
+        translation >= minimumTranslation
+            && predictedEnd >= minimumPredictedEnd
+    }
+}
+
 /// Grouping of one chapter's commentary entries (REQ-AP-5). A commentary
 /// stores a single entry covering a run of verses by repeating the same
 /// text at every verse it covers (verified against MHCC: the entry for
