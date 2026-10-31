@@ -110,7 +110,7 @@ struct LibraryView: View {
                 RepositoryView()
             }
             .sheet(isPresented: $showingSettings) {
-                SettingsView()
+                SettingsView(history: history)
             }
             .sheet(isPresented: $addingSource, onDismiss: refresh) {
                 SourceEditView()
