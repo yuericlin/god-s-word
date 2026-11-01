@@ -283,10 +283,9 @@ struct ReaderView: View {
             }
             ToolbarItem(placement: .bottomBar) {
                 HStack {
-                    Button { go(toChapter: history.chapter - 1) } label: {
+                    Button { turnChapter(by: -1) } label: {
                         Label("Previous", systemImage: "chevron.left")
                     }
-                    .disabled(!canGo(toChapter: history.chapter - 1))
                     Spacer()
                     if history.chapterCount > 0 {
                         Menu {
@@ -307,10 +306,9 @@ struct ReaderView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button { go(toChapter: history.chapter + 1) } label: {
+                    Button { turnChapter(by: 1) } label: {
                         Label("Next", systemImage: "chevron.right")
                     }
-                    .disabled(!canGo(toChapter: history.chapter + 1))
                     // Auxiliary panel toggle, next to the chapter
                     // controls (REQ-AP-1): an up arrow when the panel
                     // is collapsed, a down arrow when it is open.
@@ -488,9 +486,8 @@ struct ReaderView: View {
     }
 
     private func canGo(toChapter c: Int) -> Bool {
-        // Same-book navigation only (the bottom-bar arrows);
-        // middle swipes cross books (REQ-GS-1), and cross-book
-        // also comes via the chapter picker.
+        // Same-book check: the chapter menu's range, and the
+        // in-book fast path of turnChapter (REQ-GS-1).
         c >= 1 && c <= history.chapterCount
     }
 
@@ -499,13 +496,15 @@ struct ReaderView: View {
         history.chapter = c
     }
 
-    /// Middle-swipe chapter turn (REQ-GS-1): inside the book it
-    /// is go(toChapter:); at the book's edge it crosses into the
+    /// Chapter turn (REQ-GS-1), shared by the middle swipes and
+    /// the bottom-bar arrows: inside the book it is
+    /// go(toChapter:); at the book's edge it crosses into the
     /// adjacent book — forward from the last chapter to the next
     /// book's first chapter, backward from the first chapter to
     /// the previous book's last chapter — wrapping around the
     /// Bible (Revelation 22 -> Genesis 1, Genesis 1 -> Revelation
-    /// 22). The bottom-bar arrows keep stopping at the edges.
+    /// 22). With the wrap, every chapter has a turn both ways,
+    /// so the arrows are never disabled.
     private func turnChapter(by step: Int) {
         if canGo(toChapter: history.chapter + step) {
             go(toChapter: history.chapter + step)

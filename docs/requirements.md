@@ -266,8 +266,10 @@ Multiple (KJV Gen 1:1-2):
   previous book's last chapter (`BookLocation.adjacentBook`,
   unit-tested). The Bible wraps — forward from Revelation 22
   opens Genesis 1, and backward from Genesis 1 opens Revelation
-  22. The bottom-bar chapter arrows keep their same-book
-  behavior (disabled at a book's edges).
+  22. The bottom-bar chapter arrows do the same (they call the
+  same turn, so they cross and wrap identically, and are never
+  disabled: with the wrap, every chapter has a previous and a
+  next).
 
 ---
 
