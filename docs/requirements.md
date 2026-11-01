@@ -248,6 +248,22 @@ Multiple (KJV Gen 1:1-2):
   bilingual definitions; they have no standard Strong's entry.
 - **REQ-ST-6:** Morphology codes hiding in lemmas (Hebrew > 8674, Greek > 5624)
   are filtered out and never displayed.
+- **REQ-ST-7:** Cross-references inside a dictionary entry are
+  tappable links (`StrongsReferences` in SwordReader,
+  unit-tested): a "see HEBREW for 02986" / "see GREEK for 427"
+  reference renders as just its number ("2986"), and a bare
+  number the source uses as a same-lexicon reference ("from
+  2986") is a link too; Greek entries can cite Hebrew entries
+  and vice versa. Tapping opens the referenced entry in place.
+  Scripture citations ("(2 Sam. 23:20)", "25:25"), word-glued
+  digits ("H8674"), and the entry's own header number are not
+  links.
+- **REQ-ST-8:** The dictionary view keeps a history of the
+  entries viewed in the session, with back/forward arrows in
+  a bottom bar: back returns to the previously viewed entry,
+  and forward — enabled only after going back — reopens the
+  entry backed away from; tapping a new reference clears the
+  forward side, like a browser.
 
 ---
 
