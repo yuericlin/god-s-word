@@ -82,6 +82,75 @@ final class ChiUnsExtensionTests: XCTestCase {
     }
 }
 
+// MARK: - Strong's cross-reference segments (REQ-ST-7)
+
+final class StrongsReferencesTests: XCTestCase {
+    /// Compact rendering for assertions: text as-is, a reference
+    /// as [KEY=display].
+    private func render(_ definition: String, _ currentKey: String) -> String {
+        StrongsReferences.segments(in: definition, currentKey: currentKey)
+            .map { segment in
+                switch segment {
+                case .text(let s): return s
+                case .reference(let key, let display): return "[\(key)=\(display)]"
+                }
+            }
+            .joined()
+    }
+
+    func testSeeReferencesBecomeNumberLinks() {
+        // Hebrew entry citing two entries (H180's real text).
+        XCTAssertEqual(
+            render("a stream:--river. see HEBREW for 02986 see HEBREW for 02988", "H180"),
+            "a stream:--river. see [H2986=2986] see [H2988=2988]")
+        // Greek entry citing a Hebrew entry (G2's real text).
+        XCTAssertEqual(
+            render("of Moses:--Aaron. see HEBREW for 0175", "G2"),
+            "of Moses:--Aaron. see [H175=175]")
+        // Greek citing Greek.
+        XCTAssertEqual(
+            render("love. see GREEK for 25", "G26"),
+            "love. see [G25=25]")
+    }
+
+    func testInlineNumbersAreSameLexiconReferences() {
+        XCTAssertEqual(
+            render("from 2986 (in the sense of 2988); a stream", "H180"),
+            "from [H2986=2986] (in the sense of [H2988=2988]); a stream")
+        XCTAssertEqual(
+            render("also in composition (as a contraction from 427)", "G1"),
+            "also in composition (as a contraction from [G427=427])")
+    }
+
+    func testHeaderNumberIsNotAReference() {
+        // A Hebrew entry's cleaned text starts with its own number.
+        XCTAssertEqual(
+            render("180 'uwbal oo-bawl' or (shortened) ubal; from 2986", "H180"),
+            "180 'uwbal oo-bawl' or (shortened) ubal; from [H2986=2986]")
+    }
+
+    func testScriptureCitationsAreNotReferences() {
+        XCTAssertEqual(
+            render("by defect. transcription (2 Sam. 23:20) of a man", "H381"),
+            "by defect. transcription (2 Sam. 23:20) of a man")
+        XCTAssertEqual(
+            render("red (see Gen. 25:25); from 122", "H123"),
+            "red (see Gen. 25:25); from [H122=122]")
+    }
+
+    func testNonReferencesStayText() {
+        // Digits glued to a word.
+        XCTAssertEqual(render("only up to H8674 in the list", "H9001"),
+                       "only up to H8674 in the list")
+        // Outside the lexicon's range.
+        XCTAssertEqual(render("from 9999 and 0", "H180"),
+                       "from 9999 and 0")
+        // No numbers at all.
+        XCTAssertEqual(render("a primitive root; to shine", "H166"),
+                       "a primitive root; to shine")
+    }
+}
+
 // MARK: - Strong's number parsing (unit)
 
 final class StrongsNumberTests: XCTestCase {

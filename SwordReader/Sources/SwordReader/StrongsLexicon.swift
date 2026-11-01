@@ -195,6 +195,157 @@ public final class StrongsLexicon: @unchecked Sendable {
     }
 }
 
+/// Splits a cleaned lexicon definition into plain-text and
+/// cross-reference segments (REQ-ST-7), so the entry view can
+/// make the references tappable. Two reference forms occur in
+/// the Strong's texts:
+///
+/// - "see HEBREW for 02986" / "see GREEK for 427" — an explicit
+///   cross-reference, possibly to the other lexicon (Greek
+///   entries cite "see HEBREW for 0175"). The words "HEBREW for"
+///   are consumed; the segment displays just the number.
+/// - A bare number in the body ("from 2986", "a contraction of
+///   260") — the source's convention for a same-lexicon entry
+///   reference; it displays without leading zeros.
+///
+/// Numbers that are not references stay text: the entry's own
+/// header number (a Hebrew entry's first token), numbers inside
+/// a parenthesised scripture citation ("(2 Sam. 23:20)"), the
+/// chapter:verse of a citation, digits glued to a word (the
+/// 8674 in "H8674"), and numbers outside the lexicon's range
+/// (H 1...8674, G 1...5624).
+public enum StrongsReferences {
+    public enum Segment: Equatable {
+        case text(String)
+        case reference(key: String, display: String)
+    }
+
+    public static func segments(in definition: String,
+                                currentKey: String) -> [Segment] {
+        let prefix = currentKey.uppercased().hasPrefix("H") ? "H" : "G"
+        let maxNumber = prefix == "H" ? 8674 : 5624
+        let ownNumber = StrongsLexicon.strongsNumber(from: currentKey)
+        let chars = Array(definition)
+        let cited = citationRanges(chars)
+        var segments: [Segment] = []
+        var text = ""
+        func flushText() {
+            if !text.isEmpty {
+                segments.append(.text(text))
+                text = ""
+            }
+        }
+        var i = 0
+        while i < chars.count {
+            if let see = seeReference(chars, at: i) {
+                flushText()
+                segments.append(.reference(key: see.key, display: see.display))
+                i = see.end
+                continue
+            }
+            if chars[i].isNumber {
+                var j = i
+                while j < chars.count, chars[j].isNumber { j += 1 }
+                let digits = String(chars[i..<j])
+                if isReference(chars, from: i, to: j, digits: digits,
+                               prefix: prefix, ownNumber: ownNumber,
+                               maxNumber: maxNumber, cited: cited) {
+                    flushText()
+                    let n = Int(digits)!
+                    segments.append(.reference(key: "\(prefix)\(n)",
+                                               display: "\(n)"))
+                } else {
+                    text += digits
+                }
+                i = j
+                continue
+            }
+            text.append(chars[i])
+            i += 1
+        }
+        flushText()
+        return segments
+    }
+
+    /// Matches "HEBREW for 02986" / "GREEK for 427" at `i` (the
+    /// word must not be glued to a preceding letter). Returns the
+    /// target key, the display number, and the index past the
+    /// digits.
+    private static func seeReference(_ chars: [Character], at i: Int)
+        -> (key: String, display: String, end: Int)?
+    {
+        guard i == 0 || !chars[i - 1].isLetter else { return nil }
+        for (word, prefix) in [("HEBREW", "H"), ("GREEK", "G")] {
+            let w = Array(word)
+            guard i + w.count < chars.count,
+                  Array(chars[i ..< i + w.count]) == w else { continue }
+            var j = i + w.count
+            guard skipSpaces(chars, &j), matchWord(chars, &j, "for"),
+                  skipSpaces(chars, &j) else { continue }
+            let start = j
+            while j < chars.count, chars[j].isNumber { j += 1 }
+            guard j > start, let n = Int(String(chars[start..<j])), n >= 1
+            else { continue }
+            return ("\(prefix)\(n)", "\(n)", j)
+        }
+        return nil
+    }
+
+    /// Whether the digit run chars[from..<to] is a same-lexicon
+    /// entry reference (see the type's doc comment for the rules).
+    private static func isReference(_ chars: [Character], from i: Int,
+                                    to j: Int, digits: String,
+                                    prefix: String, ownNumber: Int?,
+                                    maxNumber: Int,
+                                    cited: [Range<Int>]) -> Bool {
+        // Glued to a word on either side ("H8674", "abc123").
+        if i > 0, chars[i - 1].isLetter || chars[i - 1].isNumber { return false }
+        if j < chars.count, chars[j].isLetter || chars[j].isNumber { return false }
+        // A scripture citation's chapter or verse ("25:25").
+        if j + 1 < chars.count, chars[j] == ":", chars[j + 1].isNumber { return false }
+        if i > 0, chars[i - 1] == ":" { return false }
+        // Inside a parenthesised citation ("(2 Sam. 23:20)").
+        if cited.contains(where: { $0.contains(i) }) { return false }
+        guard let n = Int(digits), (1...maxNumber).contains(n) else { return false }
+        // The entry's own header number (a Hebrew entry's first token).
+        if i == 0, n == ownNumber { return false }
+        return true
+    }
+
+    /// Index ranges of "(...)" spans that contain a ":" — the
+    /// scripture citations whose numbers are not references.
+    private static func citationRanges(_ chars: [Character]) -> [Range<Int>] {
+        var ranges: [Range<Int>] = []
+        var i = 0
+        while i < chars.count {
+            if chars[i] == "(", let close = chars[i...].firstIndex(of: ")") {
+                if chars[i...close].contains(":") {
+                    ranges.append(i..<(close + 1))
+                }
+                i = close + 1
+            } else {
+                i += 1
+            }
+        }
+        return ranges
+    }
+
+    private static func skipSpaces(_ chars: [Character], _ j: inout Int) -> Bool {
+        guard j < chars.count, chars[j] == " " else { return false }
+        while j < chars.count, chars[j] == " " { j += 1 }
+        return j < chars.count
+    }
+
+    private static func matchWord(_ chars: [Character], _ j: inout Int,
+                                  _ word: String) -> Bool {
+        let w = Array(word)
+        guard j + w.count <= chars.count,
+              Array(chars[j ..< j + w.count]) == w else { return false }
+        j += w.count
+        return true
+    }
+}
+
 private func readU16LE(_ d: [UInt8], _ o: Int) -> UInt16 {
     UInt16(d[o]) | (UInt16(d[o + 1]) << 8)
 }
