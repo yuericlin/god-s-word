@@ -189,8 +189,45 @@ struct LanguagesSettingsView: View {
             .sorted { $0.name < $1.name }
     }
 
+    /// The current selection on its own, in the main list's
+    /// order — shown at the top so unselecting never means
+    /// scrolling the whole catalog list (REQ-LG-4). Available
+    /// even while the catalogs load: selected codes are part of
+    /// `rows` whether or not a count is known yet.
+    private var selectedRows: [LanguageRow] {
+        rows.filter { personalData.interestedLanguages.contains($0.code) }
+    }
+
     var body: some View {
         List {
+            if !selectedRows.isEmpty {
+                Section {
+                    ForEach(selectedRows) { row in
+                        Button {
+                            toggle(row.code)
+                        } label: {
+                            HStack {
+                                Text(row.name).foregroundStyle(.primary)
+                                Spacer()
+                                if let count = row.count {
+                                    Text("\(count)")
+                                        .foregroundStyle(.secondary)
+                                }
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
+                    Button("Clear All") {
+                        personalData.interestedLanguages = []
+                    }
+                } header: {
+                    Text("Selected")
+                } footer: {
+                    Text("Tap a language to remove it. Clear All empties the selection, so every language shows again.")
+                }
+            }
             Section {
                 if loading {
                     HStack {
