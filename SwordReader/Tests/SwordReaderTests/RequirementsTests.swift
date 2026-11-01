@@ -370,6 +370,31 @@ final class BookLocationRequirementsTests: XCTestCase {
             }
         }
     }
+
+    // REQ-GS-1: chapter turns cross book boundaries via the
+    // adjacent book, wrapping around the Bible's ends.
+    func testAdjacentBookCrossesAndWraps() {
+        // Within a testament.
+        XCTAssertEqual(BookLocation.adjacentBook(testament: 1, book: 5, step: 1)?.book, 6)
+        XCTAssertEqual(BookLocation.adjacentBook(testament: 1, book: 5, step: -1)?.book, 4)
+        // Malachi -> Matthew, and back.
+        let toNT = BookLocation.adjacentBook(testament: 1, book: 39, step: 1)
+        XCTAssertEqual(toNT?.testament, 2)
+        XCTAssertEqual(toNT?.book, 1)
+        let toOT = BookLocation.adjacentBook(testament: 2, book: 1, step: -1)
+        XCTAssertEqual(toOT?.testament, 1)
+        XCTAssertEqual(toOT?.book, 39)
+        // The Bible wraps: Revelation -> Genesis, Genesis -> Revelation.
+        let wrapForward = BookLocation.adjacentBook(testament: 2, book: 27, step: 1)
+        XCTAssertEqual(wrapForward?.testament, 1)
+        XCTAssertEqual(wrapForward?.book, 1)
+        let wrapBackward = BookLocation.adjacentBook(testament: 1, book: 1, step: -1)
+        XCTAssertEqual(wrapBackward?.testament, 2)
+        XCTAssertEqual(wrapBackward?.book, 27)
+        // Outside the Bible there is no adjacent book.
+        XCTAssertNil(BookLocation.adjacentBook(testament: 1, book: 40, step: 1))
+        XCTAssertNil(BookLocation.adjacentBook(testament: 3, book: 1, step: -1))
+    }
 }
 
 // MARK: - REQ-PK-5: version pick keeps the position
