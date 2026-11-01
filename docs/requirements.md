@@ -250,14 +250,16 @@ Multiple (KJV Gen 1:1-2):
   are filtered out and never displayed.
 - **REQ-ST-7:** Cross-references inside a dictionary entry are
   tappable links (`StrongsReferences` in SwordReader,
-  unit-tested): a "see HEBREW for 02986" / "see GREEK for 427"
-  reference renders as just its number ("2986"), and a bare
-  number the source uses as a same-lexicon reference ("from
-  2986") is a link too; Greek entries can cite Hebrew entries
-  and vice versa. Tapping opens the referenced entry in place.
-  Scripture citations ("(2 Sam. 23:20)", "25:25"), word-glued
-  digits ("H8674"), and the entry's own header number are not
-  links.
+  unit-tested). A reference displays as its canonical key —
+  the lexicon letter plus the number zero-padded to four
+  digits ("HEBREW 0166" → "H0166", "GREEK 427" → "G0427") —
+  whether the source writes it as a see-reference ("see
+  HEBREW for 02986") or as a bare same-lexicon number in the
+  body ("from 2986"); Greek entries can cite Hebrew entries
+  and vice versa. Tapping opens the referenced entry in
+  place. Scripture citations ("(2 Sam. 23:20)", "25:25"),
+  word-glued digits ("H8674"), and the entry's own header
+  number are not links.
 - **REQ-ST-8:** The dictionary view keeps a history of the
   entries viewed in the session, with back/forward arrows in
   a bottom bar: back returns to the previously viewed entry,
