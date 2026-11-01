@@ -734,6 +734,17 @@ Multiple (KJV Gen 1:1-2):
   last reading so the next book opened uses it. A **Download a
   New Version…** button opens the Add Bible page
   (`RepositoryView`), and the list refreshes when it closes.
+- **REQ-LG-4:** The Languages page works like the version
+  pickers (REQ-LG-3): it opens on the current selection only
+  and fetches nothing — a **Selected** list ("All languages"
+  when the selection is empty) where tapping a language
+  removes it, plus a **Clear All** button that empties the
+  selection back to the all-languages state (REQ-LG-1). The
+  full catalog list (REQ-LG-2) is fetched and shown only when
+  the user taps **Select Languages…**, which opens it as its
+  own sheet with a Done button, like the Add Bible page;
+  unselecting therefore never requires scrolling the full
+  list on the settings page itself.
 - **REQ-DC-1:** Dictionaries (lexicon modules) are a third
   downloadable module type, with an "Add Dictionary" page mirroring
   Add Commentary (source picker, search, license line, progress

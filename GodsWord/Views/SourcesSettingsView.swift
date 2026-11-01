@@ -1,6 +1,6 @@
 // SourcesSettingsView.swift — Settings > Sources (REQ-SRC-2/3): pick the
 // default download source, manage sources, and update the public source
-// list on demand. Also Settings > Languages (REQ-LG-1/2).
+// list on demand. Also Settings > Languages (REQ-LG-1/2/4).
 
 import SwiftUI
 import SwordReader
@@ -159,25 +159,102 @@ func languageDisplayName(forPrimaryCode code: String) -> String {
     return Locale.current.localizedString(forLanguageCode: code) ?? code
 }
 
-/// Settings > Languages (REQ-LG-1/2): the languages the user is
+/// Settings > Languages (REQ-LG-1/2/4): the languages the user is
 /// interested in. When the list is non-empty, the download lists
 /// (Bibles, commentaries, dictionaries) show only modules in those
-/// languages. The choices come from the catalogs of all repository
-/// sources, counted by primary language subtag (a "zh" choice
-/// covers zh, zh-Hans, and zh-Hant modules alike).
+/// languages. Like the version pickers, the page itself shows only
+/// the current selection; the full language list is fetched and
+/// shown only when the user taps Select Languages… (REQ-LG-4).
 struct LanguagesSettingsView: View {
     @EnvironmentObject private var personalData: PersonalData
+    @State private var showingPicker = false
+
+    /// The current selection, by display name. Built from the
+    /// stored codes alone — this page fetches nothing.
+    private var selectedRows: [LanguageRow] {
+        personalData.interestedLanguages
+            .map { LanguageRow(code: $0, count: nil) }
+            .sorted { $0.name < $1.name }
+    }
+
+    var body: some View {
+        List {
+            if selectedRows.isEmpty {
+                Section {
+                    Text("All languages")
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("Selected")
+                } footer: {
+                    Text("With none chosen, the download lists for Bibles, commentaries, and dictionaries show modules in every language.")
+                }
+            } else {
+                Section {
+                    ForEach(selectedRows) { row in
+                        Button {
+                            remove(row.code)
+                        } label: {
+                            HStack {
+                                Text(row.name).foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
+                    Button("Clear All") {
+                        personalData.interestedLanguages = []
+                    }
+                } header: {
+                    Text("Selected")
+                } footer: {
+                    Text("Tap a language to remove it. Clear All empties the selection, so every language shows again.")
+                }
+            }
+            Section {
+                Button("Select Languages…") { showingPicker = true }
+            } footer: {
+                Text("The full list comes from your sources' catalogs and is fetched when you open it, like the Add Bible page.")
+            }
+        }
+        .navigationTitle("Languages")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingPicker) {
+            LanguageCatalogView()
+        }
+    }
+
+    private func remove(_ code: String) {
+        personalData.interestedLanguages.removeAll { $0 == code }
+    }
+}
+
+/// One language choice: its primary-subtag code, display name,
+/// and — when the catalogs were fetched — how many downloadable
+/// modules it has across the sources.
+private struct LanguageRow: Identifiable {
+    let code: String
+    let count: Int?
+    var id: String { code }
+    var name: String { languageDisplayName(forPrimaryCode: code) }
+}
+
+/// The full language list (REQ-LG-1/2), opened by Select
+/// Languages… and fetched then: the languages of every
+/// downloadable module in the sources' catalogs, counted by
+/// primary language subtag (a "zh" choice covers zh, zh-Hans,
+/// and zh-Hant modules alike) and de-duplicated by module ID
+/// across sources, plus any selected language no catalog
+/// currently offers (kept so it can be removed). Tapping a
+/// language selects or unselects it.
+struct LanguageCatalogView: View {
+    @EnvironmentObject private var personalData: PersonalData
+    @Environment(\.dismiss) private var dismiss
     @State private var counts: [String: Int] = [:]
     @State private var loading = true
     @State private var loadFailed = false
     @State private var partialFailure = false
-
-    private struct LanguageRow: Identifiable {
-        let code: String
-        let count: Int?
-        var id: String { code }
-        var name: String { languageDisplayName(forPrimaryCode: code) }
-    }
 
     /// Catalog languages plus any selected language no catalog
     /// currently offers (kept so it can be removed), sorted by name.
@@ -190,56 +267,63 @@ struct LanguagesSettingsView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                if loading {
-                    HStack {
-                        ProgressView().controlSize(.small)
-                        Text("Loading languages from your sources…")
+        NavigationStack {
+            List {
+                Section {
+                    if loading {
+                        HStack {
+                            ProgressView().controlSize(.small)
+                            Text("Loading languages from your sources…")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else if rows.isEmpty {
+                        Text("No languages found. Check your connection and try again.")
                             .foregroundStyle(.secondary)
-                    }
-                } else if rows.isEmpty {
-                    Text("No languages found. Check your connection and try again.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(rows) { row in
-                        Button {
-                            toggle(row.code)
-                        } label: {
-                            HStack {
-                                Text(row.name).foregroundStyle(.primary)
-                                Spacer()
-                                if let count = row.count {
-                                    Text("\(count)")
-                                        .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(rows) { row in
+                            Button {
+                                toggle(row.code)
+                            } label: {
+                                HStack {
+                                    Text(row.name).foregroundStyle(.primary)
+                                    Spacer()
+                                    if let count = row.count {
+                                        Text("\(count)")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    if personalData.interestedLanguages.contains(row.code) {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.tint)
+                                    }
                                 }
-                                if personalData.interestedLanguages.contains(row.code) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
-                                }
+                                .contentShape(Rectangle())
                             }
-                            .contentShape(Rectangle())
                         }
                     }
+                    if loadFailed && !loading {
+                        Button("Try Again") { Task { await load() } }
+                    }
+                } header: {
+                    Text("Languages of interest")
+                } footer: {
+                    Text("When at least one language is chosen, the download lists for Bibles, commentaries, and dictionaries show only modules in those languages. With none chosen, everything shows. The number is how many downloadable modules that language has across your sources.")
                 }
-                if loadFailed && !loading {
-                    Button("Try Again") { Task { await load() } }
+                if partialFailure && !loading {
+                    Section {
+                        Text("Some sources couldn't be reached, so their languages aren't listed.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                 }
-            } header: {
-                Text("Languages of interest")
-            } footer: {
-                Text("When at least one language is chosen, the download lists for Bibles, commentaries, and dictionaries show only modules in those languages. With none chosen, everything shows. The number is how many downloadable modules that language has across your sources.")
             }
-            if partialFailure && !loading {
-                Section {
-                    Text("Some sources couldn't be reached, so their languages aren't listed.")
-                        .font(.callout).foregroundStyle(.secondary)
+            .navigationTitle("Select Languages")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
                 }
             }
+            .task { await load() }
         }
-        .navigationTitle("Languages")
-        .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
     }
 
     private func toggle(_ code: String) {
