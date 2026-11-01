@@ -203,10 +203,14 @@ public final class StrongsLexicon: @unchecked Sendable {
 /// - "see HEBREW for 02986" / "see GREEK for 427" — an explicit
 ///   cross-reference, possibly to the other lexicon (Greek
 ///   entries cite "see HEBREW for 0175"). The words "HEBREW for"
-///   are consumed; the segment displays just the number.
+///   are consumed; the segment displays the canonical key.
 /// - A bare number in the body ("from 2986", "a contraction of
 ///   260") — the source's convention for a same-lexicon entry
-///   reference; it displays without leading zeros.
+///   reference.
+///
+/// Either way a reference displays as its canonical key — the
+/// lexicon letter plus the number zero-padded to four digits:
+/// "HEBREW 0166" becomes "H0166", "GREEK 427" becomes "G0427".
 ///
 /// Numbers that are not references stay text: the entry's own
 /// header number (a Hebrew entry's first token), numbers inside
@@ -253,7 +257,7 @@ public enum StrongsReferences {
                     flushText()
                     let n = Int(digits)!
                     segments.append(.reference(key: "\(prefix)\(n)",
-                                               display: "\(n)"))
+                                               display: canonicalKey(prefix, n)))
                 } else {
                     text += digits
                 }
@@ -286,9 +290,17 @@ public enum StrongsReferences {
             while j < chars.count, chars[j].isNumber { j += 1 }
             guard j > start, let n = Int(String(chars[start..<j])), n >= 1
             else { continue }
-            return ("\(prefix)\(n)", "\(n)", j)
+            return ("\(prefix)\(n)", canonicalKey(prefix, n), j)
         }
         return nil
+    }
+
+    /// The display form of a reference: the lexicon letter plus
+    /// the number zero-padded to four digits ("H0166", "G0427").
+    private static func canonicalKey(_ prefix: String, _ n: Int) -> String {
+        let digits = String(n)
+        return prefix + String(repeating: "0",
+                               count: max(0, 4 - digits.count)) + digits
     }
 
     /// Whether the digit run chars[from..<to] is a same-lexicon
