@@ -257,7 +257,17 @@ Multiple (KJV Gen 1:1-2):
   reader opens bookmarks panel).
 - Right edge swipe right = backward.
 - Left edge = settings drawer (reader only).
-- Middle swipes turn chapters.
+- Middle swipes turn chapters (crossing books at the edges, REQ-GS-1).
+
+- **REQ-GS-1:** Middle swipes turn chapters across book
+  boundaries: swiping forward (right to left) in a book's last
+  chapter opens the next book's first chapter, and swiping
+  backward (left to right) in a book's first chapter opens the
+  previous book's last chapter (`BookLocation.adjacentBook`,
+  unit-tested). The Bible wraps — forward from Revelation 22
+  opens Genesis 1, and backward from Genesis 1 opens Revelation
+  22. The bottom-bar chapter arrows keep their same-book
+  behavior (disabled at a book's edges).
 
 ---
 

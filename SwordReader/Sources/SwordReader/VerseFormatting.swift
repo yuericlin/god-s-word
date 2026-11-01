@@ -84,6 +84,21 @@ public enum BookLocation {
             ? (1, overall + 1)
             : (2, overall - otBookCount + 1)
     }
+
+    /// The book `step` books away from (testament, book) in the
+    /// 66-book order, wrapping around the Bible's ends: forward
+    /// from Malachi lands on Matthew, forward from Revelation
+    /// wraps to Genesis (and backward likewise). Nil when the
+    /// starting location is outside the Bible. Chapter turns use
+    /// it to cross book boundaries (REQ-GS-1).
+    public static func adjacentBook(testament: Int, book: Int, step: Int)
+        -> (testament: Int, book: Int)?
+    {
+        guard let overall = overallIndex(testament: testament, book: book)
+        else { return nil }
+        let wrapped = ((overall + step) % bookCount + bookCount) % bookCount
+        return testamentAndBook(overall: wrapped)
+    }
 }
 
 /// Which versions the Compare panel shows (REQ-CM-3..5).

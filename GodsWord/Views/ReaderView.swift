@@ -330,9 +330,9 @@ struct ReaderView: View {
                     let inRightEdge = viewSize.width > 0 && value.startLocation.x > viewSize.width - 20
                     guard !inRightEdge else { return }
                     if value.translation.width < -60 {
-                        go(toChapter: history.chapter + 1)
+                        turnChapter(by: 1)
                     } else if value.translation.width > 60 {
-                        go(toChapter: history.chapter - 1)
+                        turnChapter(by: -1)
                     }
                 }
         )
@@ -488,12 +488,52 @@ struct ReaderView: View {
     }
 
     private func canGo(toChapter c: Int) -> Bool {
-        // Same-book navigation only; cross-book comes via the chapter picker.
+        // Same-book navigation only (the bottom-bar arrows);
+        // middle swipes cross books (REQ-GS-1), and cross-book
+        // also comes via the chapter picker.
         c >= 1 && c <= history.chapterCount
     }
 
     private func go(toChapter c: Int) {
         guard canGo(toChapter: c) else { return }
+        history.chapter = c
+    }
+
+    /// Middle-swipe chapter turn (REQ-GS-1): inside the book it
+    /// is go(toChapter:); at the book's edge it crosses into the
+    /// adjacent book — forward from the last chapter to the next
+    /// book's first chapter, backward from the first chapter to
+    /// the previous book's last chapter — wrapping around the
+    /// Bible (Revelation 22 -> Genesis 1, Genesis 1 -> Revelation
+    /// 22). The bottom-bar arrows keep stopping at the edges.
+    private func turnChapter(by step: Int) {
+        if canGo(toChapter: history.chapter + step) {
+            go(toChapter: history.chapter + step)
+            return
+        }
+        guard let adjacent = BookLocation.adjacentBook(
+            testament: history.testament, book: history.book, step: step)
+        else { return }
+        if step > 0 {
+            jumpTo(testament: adjacent.testament, book: adjacent.book, chapter: 1)
+        } else {
+            // Land on the previous book's last chapter; a probe
+            // history reads that book's chapter count for the
+            // current version (the pattern LibraryView uses when
+            // it builds a reading in another book).
+            let probe = ReadingHistory(version: history.version,
+                                       testament: adjacent.testament,
+                                       book: adjacent.book, chapter: 1)
+            jumpTo(testament: adjacent.testament, book: adjacent.book,
+                   chapter: max(probe.chapterCount, 1))
+        }
+    }
+
+    /// Moves the reading to another book/chapter in place (the
+    /// chapter picker's assignment order).
+    private func jumpTo(testament t: Int, book b: Int, chapter c: Int) {
+        history.testament = t
+        history.book = b
         history.chapter = c
     }
 
