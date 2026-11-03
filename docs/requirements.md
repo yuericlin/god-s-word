@@ -787,3 +787,37 @@ Multiple (KJV Gen 1:1-2):
   AbbottSmithStrongs, MLStrong; other dictionaries install but
   have no Strong's entries to show. The choices persist like
   REQ-LG-2's selection (payload v9).
+
+## 18. Highlights
+
+- **REQ-HL-1:** While verses are selected, the selection bar
+  offers a **Highlight** action before Notes (Copy / Highlight /
+  Notes / Compare). Tapping it records the selected verses as
+  highlights and clears the selection, so the highlight shows.
+- **REQ-HL-2:** A highlighted verse's text renders with a
+  bright yellow background in **every** version — highlights
+  belong to the passage, not to a version (like bookmarks,
+  REQ-BM-11). The rendering applies in verse-by-verse,
+  paragraph, and Strong's modes; the verse number keeps its
+  own styling (a note's pale-yellow number stays visible),
+  and the selection's sky blue covers the yellow while the
+  verse is selected.
+- **REQ-HL-3:** A highlight records the time it was made, the
+  chapter, the verse range, and the version it was made in
+  (`Highlight` in SwordReader). A multi-run selection becomes
+  one highlight per contiguous run (`HighlightLogic.runs`);
+  adding a highlight that overlaps or touches an existing one
+  in the same chapter merges them into a single span that
+  keeps the earliest entry's time and version
+  (`HighlightLogic.adding`, unit-tested).
+- **REQ-HL-4:** The auxiliary panel has a **Highlights** tab
+  after Recents, listing every highlight newest first: the
+  reference, the version it was made in, and its date (the
+  note-row format). Tapping a row jumps the reader to that
+  passage in the version being read — never switching version;
+  swiping a row deletes the highlight.
+- **REQ-HL-5:** Highlights persist like bookmarks:
+  UserDefaults (`gw.highlights.v1`), the backup payload
+  (v11, additive — older payloads decode to [] and leave
+  current highlights alone), the iCloud highlights.json file,
+  and manual export/import (highlights.json).
