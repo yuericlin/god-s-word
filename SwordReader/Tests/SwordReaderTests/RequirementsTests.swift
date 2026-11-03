@@ -1543,3 +1543,111 @@ final class ModulePackageBackupRequirementsTests: XCTestCase {
         XCTAssertTrue(reader.entries.isEmpty)
     }
 }
+
+// MARK: - REQ-HL: Highlights
+
+final class HighlightRequirementsTests: XCTestCase {
+    private let t0 = Date(timeIntervalSince1970: 1_000)
+    private let t1 = Date(timeIntervalSince1970: 2_000)
+    private let t2 = Date(timeIntervalSince1970: 3_000)
+
+    private func highlight(_ start: Int, _ end: Int,
+                           chapter: Int = 3, version: String = "KJV",
+                           at time: Date) -> Highlight {
+        Highlight(testament: 2, book: 1, chapter: chapter,
+                  startVerse: start, endVerse: end,
+                  version: version, createdAt: time)
+    }
+
+    // REQ-HL-3: a highlight records its passage, the version it
+    // was made in, and its time; a reversed range normalizes.
+    func testHighlightRecord() {
+        let h = Highlight(testament: 1, book: 40, chapter: 28,
+                          startVerse: 20, endVerse: 18,
+                          version: "ChiUns", createdAt: t0)
+        XCTAssertEqual(h.startVerse, 18)
+        XCTAssertEqual(h.endVerse, 20)
+        XCTAssertEqual(h.verses, 18 ... 20)
+        XCTAssertEqual(h.version, "ChiUns")
+        XCTAssertEqual(h.createdAt, t0)
+        XCTAssertTrue(h.isAt(testament: 1, book: 40, chapter: 28))
+        XCTAssertFalse(h.isAt(testament: 1, book: 40, chapter: 27))
+        XCTAssertTrue(h.covers(19))
+        XCTAssertFalse(h.covers(21))
+    }
+
+    // REQ-HL-3: adding to an empty list and adding apart ranges
+    // keeps separate entries.
+    func testAddingSeparateRanges() {
+        var list = HighlightLogic.adding(highlight(1, 2, at: t0), to: [])
+        XCTAssertEqual(list.count, 1)
+        list = HighlightLogic.adding(highlight(5, 5, at: t1), to: list)
+        XCTAssertEqual(list.count, 2)
+        // A different chapter never merges.
+        list = HighlightLogic.adding(highlight(1, 2, chapter: 4, at: t2),
+                                     to: list)
+        XCTAssertEqual(list.count, 3)
+    }
+
+    // REQ-HL-3: overlapping and touching ranges merge into one
+    // span that keeps the earliest entry's time and version.
+    func testAddingMergesOverlapAndTouch() {
+        var list = HighlightLogic.adding(
+            highlight(3, 5, version: "KJV", at: t0), to: [])
+        list = HighlightLogic.adding(
+            highlight(5, 8, version: "NKJV", at: t1), to: list)
+        XCTAssertEqual(list.count, 1)
+        XCTAssertEqual(list[0].verses, 3 ... 8)
+        XCTAssertEqual(list[0].createdAt, t0)
+        XCTAssertEqual(list[0].version, "KJV")
+        // Adjacent (touching) ranges merge too.
+        list = HighlightLogic.adding(highlight(9, 9, at: t2), to: list)
+        XCTAssertEqual(list.count, 1)
+        XCTAssertEqual(list[0].verses, 3 ... 9)
+    }
+
+    // REQ-HL-3: a new range bridging two spans folds all three
+    // into one.
+    func testAddingBridgesTwoSpans() {
+        var list = HighlightLogic.adding(highlight(1, 2, at: t0), to: [])
+        list = HighlightLogic.adding(highlight(6, 7, at: t1), to: list)
+        list = HighlightLogic.adding(highlight(3, 5, at: t2), to: list)
+        XCTAssertEqual(list.count, 1)
+        XCTAssertEqual(list[0].verses, 1 ... 7)
+        XCTAssertEqual(list[0].createdAt, t0)
+    }
+
+    // REQ-HL-2: the highlighted verses of a chapter are the union
+    // of its highlights, whatever version they were made in;
+    // other chapters contribute nothing.
+    func testHighlightedVerses() {
+        let list = [highlight(2, 3, version: "KJV", at: t0),
+                    highlight(5, 5, version: "ChiUns", at: t1),
+                    highlight(9, 10, chapter: 4, at: t2)]
+        XCTAssertEqual(
+            HighlightLogic.highlightedVerses(in: list, testament: 2,
+                                             book: 1, chapter: 3),
+            [2, 3, 5])
+        XCTAssertTrue(
+            HighlightLogic.highlightedVerses(in: [], testament: 2,
+                                             book: 1, chapter: 3).isEmpty)
+    }
+
+    // REQ-HL-4: removal is by id; unknown ids change nothing.
+    func testRemoving() {
+        let a = highlight(1, 1, at: t0)
+        let b = highlight(3, 3, at: t1)
+        XCTAssertEqual(HighlightLogic.removing(id: a.id, from: [a, b]), [b])
+        XCTAssertEqual(HighlightLogic.removing(id: UUID(), from: [a, b]),
+                       [a, b])
+    }
+
+    // REQ-HL-1: a selection becomes one highlight per contiguous
+    // run.
+    func testRunsOfSelection() {
+        XCTAssertEqual(HighlightLogic.runs(of: [5, 1, 3, 2]),
+                       [1 ... 3, 5 ... 5])
+        XCTAssertEqual(HighlightLogic.runs(of: [7]), [7 ... 7])
+        XCTAssertEqual(HighlightLogic.runs(of: []), [])
+    }
+}

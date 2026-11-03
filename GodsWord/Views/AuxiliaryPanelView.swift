@@ -1,6 +1,7 @@
 // AuxiliaryPanelView.swift — the panel below the reading panel.
-// Four tabs: Notes, Commentary, the selected verse rendered with
-// Strong's numbers, and Recents (the reading history). The Notes tab
+// Five tabs: Notes, Commentary, the selected verse rendered with
+// Strong's numbers, Recents (the reading history), and Highlights.
+// The Notes tab
 // has Recents / Book / Chapter / Verse sub-tabs (REQ-NT-18) over the
 // scoped notes (REQ-NT-14); Commentary has Book / Chapter / Verse
 // sub-tabs (REQ-AP-1..11) showing the entries at those scopes.
@@ -54,6 +55,7 @@ struct AuxiliaryPanelView: View {
         case commentary = "Commentary"
         case strongs = "Strong's"
         case recents = "Recents"
+        case highlights = "Highlights"
     }
 
     enum PanelScope: String, CaseIterable {
@@ -126,6 +128,7 @@ struct AuxiliaryPanelView: View {
                 case .commentary: commentaryTab
                 case .strongs: strongsTab
                 case .recents: recentsTab
+                case .highlights: highlightsTab
                 }
             }
             .frame(height: 264)
@@ -996,6 +999,77 @@ struct AuxiliaryPanelView: View {
             history.book = entry.book
             history.chapter = entry.chapter
         }
+    }
+
+    // MARK: - Highlights tab
+
+    /// Every highlight, newest first (REQ-HL-4). Highlights are
+    /// shared across versions (REQ-HL-2), so the list is not
+    /// scoped to the version being read; each row names the
+    /// version its highlight was made in and when.
+    private var sortedHighlights: [Highlight] {
+        personalData.highlights.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func highlightReference(_ h: Highlight) -> String {
+        let book = bookName(testament: h.testament, book: h.book)
+        return h.startVerse == h.endVerse
+            ? "\(book) \(h.chapter):\(h.startVerse)"
+            : "\(book) \(h.chapter):\(h.startVerse)-\(h.endVerse)"
+    }
+
+    private var highlightsTab: some View {
+        Group {
+            if sortedHighlights.isEmpty {
+                VStack {
+                    Text("No highlights yet.")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+            } else {
+                List {
+                    ForEach(sortedHighlights) { h in
+                        Button {
+                            jumpToHighlight(h)
+                        } label: {
+                            HStack(spacing: 10) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
+                                        .opacity(0.65))
+                                    .frame(width: 4, height: 22)
+                                Text(highlightReference(h)
+                                     + sourceSuffix(h.version)
+                                     + noteDateSuffix(h.createdAt))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                personalData.removeHighlight(id: h.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+    }
+
+    /// Jumps the reader to a highlight's passage in the version
+    /// being read — highlights show in every version (REQ-HL-2),
+    /// so unlike a history jump this never switches version.
+    private func jumpToHighlight(_ h: Highlight) {
+        history.testament = h.testament
+        history.book = h.book
+        history.chapter = h.chapter
     }
 
     // MARK: - Shared

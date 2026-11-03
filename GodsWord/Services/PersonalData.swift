@@ -38,13 +38,16 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 10
+    public var version: Int = 11
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
     public var positions: [String: ReadingPosition]  // moduleID -> position
     public var installedModuleIDs: [String]
     public var bookmarks: [Bookmark]
+    /// Verse highlights (REQ-HL-5). Payload v11+; older payloads
+    /// decode to [] and leave current highlights alone.
+    public var highlights: [Highlight]
     public var verseNotes: [String: String]
     /// Note keys, most recently saved first (the panel's list order).
     public var verseNoteOrder: [String]
@@ -77,7 +80,8 @@ public struct BackupPayload: Codable, Sendable {
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
                 positions: [String: ReadingPosition], installedModuleIDs: [String],
-                bookmarks: [Bookmark] = [], verseNotes: [String: String] = [:],
+                bookmarks: [Bookmark] = [], highlights: [Highlight] = [],
+                verseNotes: [String: String] = [:],
                 verseNoteOrder: [String] = [],
                 compareVersionIDs: [String] = [],
                 bookNotes: [String: String] = [:],
@@ -98,6 +102,7 @@ public struct BackupPayload: Codable, Sendable {
         self.positions = positions
         self.installedModuleIDs = installedModuleIDs
         self.bookmarks = bookmarks
+        self.highlights = highlights
         self.verseNotes = verseNotes
         self.verseNoteOrder = verseNoteOrder
         self.compareVersionIDs = compareVersionIDs
@@ -126,6 +131,7 @@ public struct BackupPayload: Codable, Sendable {
         positions = try c.decode([String: ReadingPosition].self, forKey: .positions)
         installedModuleIDs = try c.decode([String].self, forKey: .installedModuleIDs)
         bookmarks = try c.decodeIfPresent([Bookmark].self, forKey: .bookmarks) ?? []
+        highlights = try c.decodeIfPresent([Highlight].self, forKey: .highlights) ?? []
         verseNotes = try c.decodeIfPresent([String: String].self, forKey: .verseNotes) ?? [:]
         verseNoteOrder = try c.decodeIfPresent([String].self, forKey: .verseNoteOrder) ?? []
         compareVersionIDs = try c.decodeIfPresent([String].self, forKey: .compareVersionIDs) ?? []
@@ -154,6 +160,7 @@ public final class PersonalData: ObservableObject {
     private let historyLogKey = "gw.historyLog.v1"
     private let lastReadingKey = "gw.lastReading.v1"
     private let bookmarksKey = "gw.bookmarks.v1"
+    private let highlightsKey = "gw.highlights.v1"
     private let verseNotesKey = "gw.verseNotes.v1"
     private let verseNoteOrderKey = "gw.verseNoteOrder.v1"
     private let compareVersionsKey = "gw.compareVersions.v1"
@@ -194,6 +201,12 @@ public final class PersonalData: ObservableObject {
             defaults.set(try? JSONEncoder().encode(marks), forKey: "gw.bookmarks.v1")
         }
         self.bookmarks = marks
+        if let data = defaults.data(forKey: highlightsKey),
+           let decoded = try? JSONDecoder().decode([Highlight].self, from: data) {
+            self.highlights = decoded
+        } else {
+            self.highlights = []
+        }
         self.verseNotes = defaults.dictionary(forKey: verseNotesKey) as? [String: String] ?? [:]
         self.verseNoteOrder = defaults.stringArray(forKey: verseNoteOrderKey) ?? []
         self.compareVersionIDs = defaults.stringArray(forKey: compareVersionsKey) ?? []
@@ -257,6 +270,50 @@ public final class PersonalData: ObservableObject {
             defaults.set(try? JSONEncoder().encode(bookmarks), forKey: bookmarksKey)
             syncBookmarksToiCloud()
         }
+    }
+
+    /// Verse highlights (REQ-HL-3): passage-keyed like notes, so
+    /// they show in every version; each records the version it was
+    /// made in and when. Persisted in UserDefaults.
+    @Published public var highlights: [Highlight] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(highlights), forKey: highlightsKey)
+            syncHighlightsToiCloud()
+        }
+    }
+
+    /// Highlights the selected verses of one chapter: one
+    /// highlight per contiguous run of the selection, each
+    /// stamped with the current time and the version being read;
+    /// overlapping or touching highlights merge (HighlightLogic).
+    public func addHighlight(testament: Int, book: Int, chapter: Int,
+                             verses: Set<Int>, version: String) {
+        guard !verses.isEmpty else { return }
+        var list = highlights
+        for run in HighlightLogic.runs(of: verses) {
+            list = HighlightLogic.adding(
+                Highlight(testament: testament, book: book,
+                          chapter: chapter,
+                          startVerse: run.lowerBound,
+                          endVerse: run.upperBound,
+                          version: version, createdAt: Date()),
+                to: list)
+        }
+        highlights = list
+    }
+
+    /// Removes one highlight (the Highlights tab's swipe-delete).
+    public func removeHighlight(id: UUID) {
+        highlights = HighlightLogic.removing(id: id, from: highlights)
+    }
+
+    /// The verses highlighted in the chapter being read — from
+    /// highlights made in any version (REQ-HL-2).
+    public func highlightedVerses(testament: Int, book: Int,
+                                  chapter: Int) -> Set<Int> {
+        HighlightLogic.highlightedVerses(in: highlights,
+                                         testament: testament,
+                                         book: book, chapter: chapter)
     }
 
     /// Per-verse text notes, keyed by
@@ -761,6 +818,7 @@ public final class PersonalData: ObservableObject {
                       positions: positions,
                       installedModuleIDs: installedModuleIDs,
                       bookmarks: bookmarks,
+                      highlights: highlights,
                       verseNotes: verseNotes,
                       verseNoteOrder: verseNoteOrder,
                       compareVersionIDs: compareVersionIDs,
@@ -840,6 +898,11 @@ public final class PersonalData: ObservableObject {
         if !payload.noteSources.isEmpty {
             noteSources = payload.noteSources
         }
+        // Highlights (payload v11+; older payloads decode to []
+        // and leave current highlights alone, like bookmarks).
+        if !payload.highlights.isEmpty {
+            highlights = payload.highlights
+        }
         // Notes in payloads from older builds still carry per-version
         // keys; fold them into the shared keys (REQ-NT-19). Also
         // derives sources for those payloads.
@@ -873,6 +936,11 @@ public final class PersonalData: ObservableObject {
     private func syncBookmarksToiCloud() {
         guard iCloudSync.shared.isEnabled else { return }
         try? iCloudSync.shared.save(bookmarks, as: .bookmarks)
+    }
+
+    private func syncHighlightsToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(highlights, as: .highlights)
     }
 
     private func syncNotesToiCloud() {
@@ -923,6 +991,7 @@ public final class PersonalData: ObservableObject {
         iCloudSync.shared.ensureFolders()
         // Save even empty collections so the files (and folder) appear.
         try? iCloudSync.shared.save(bookmarks, as: .bookmarks)
+        try? iCloudSync.shared.save(highlights, as: .highlights)
         try? iCloudSync.shared.save(verseNotes, as: .notes)
         try? iCloudSync.shared.save(bookNotes, as: .bookNotes)
         try? iCloudSync.shared.save(chapterNotes, as: .chapterNotes)
@@ -959,6 +1028,11 @@ public final class PersonalData: ObservableObject {
                                                             as: .bookmarks),
            !b.isEmpty {
             bookmarks = b
+        }
+        if let h: [Highlight] = try? iCloudSync.shared.load([Highlight].self,
+                                                             as: .highlights),
+           !h.isEmpty {
+            highlights = h
         }
         if let n: [String: String] = try? iCloudSync.shared.load(
             [String: String].self, as: .notes), !n.isEmpty {
@@ -1013,6 +1087,8 @@ public final class PersonalData: ObservableObject {
 
         try encoder.encode(bookmarks)
             .write(to: folder.appendingPathComponent("bookmarks.json"))
+        try encoder.encode(highlights)
+            .write(to: folder.appendingPathComponent("highlights.json"))
         try encoder.encode(verseNotes)
             .write(to: folder.appendingPathComponent("notes.json"))
         try encoder.encode(verseNoteOrder)
@@ -1070,6 +1146,9 @@ public final class PersonalData: ObservableObject {
             case "bookmarks":
                 let b = try JSONDecoder().decode([Bookmark].self, from: json)
                 if !b.isEmpty { bookmarks = b }
+            case "highlights":
+                let h = try JSONDecoder().decode([Highlight].self, from: json)
+                if !h.isEmpty { highlights = h }
             case "notes":
                 let n = try JSONDecoder().decode([String: String].self,
                                                  from: json)

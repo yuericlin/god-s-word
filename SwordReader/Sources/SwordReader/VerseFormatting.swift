@@ -222,6 +222,125 @@ public enum NoteKeyMigration {
     }
 }
 
+/// A highlighted verse range (REQ-HL-3). Like a note (REQ-NT-19),
+/// a highlight belongs to the passage, not to a version: nothing
+/// in its identity names a module, so it renders in every version;
+/// the version it was made in is recorded in `version`, the way a
+/// note records its source. `createdAt` is when it was made.
+public struct Highlight: Codable, Identifiable, Sendable, Equatable {
+    public var id: UUID
+    public var testament: Int  // 1 = OT, 2 = NT
+    public var book: Int       // 1-based within testament
+    public var chapter: Int
+    public var startVerse: Int
+    public var endVerse: Int
+    /// The version (module id) the highlight was made in.
+    public var version: String
+    public var createdAt: Date
+
+    public init(id: UUID = UUID(), testament: Int, book: Int,
+                chapter: Int, startVerse: Int, endVerse: Int,
+                version: String, createdAt: Date) {
+        self.id = id
+        self.testament = testament
+        self.book = book
+        self.chapter = chapter
+        self.startVerse = min(startVerse, endVerse)
+        self.endVerse = max(startVerse, endVerse)
+        self.version = version
+        self.createdAt = createdAt
+    }
+
+    /// The highlighted verses as a range.
+    public var verses: ClosedRange<Int> { startVerse ... endVerse }
+
+    /// Whether the highlight is in exactly this chapter.
+    public func isAt(testament: Int, book: Int, chapter: Int) -> Bool {
+        self.testament == testament && self.book == book
+            && self.chapter == chapter
+    }
+
+    /// Whether the highlight covers this verse of its chapter.
+    public func covers(_ verse: Int) -> Bool {
+        verses.contains(verse)
+    }
+}
+
+/// Pure operations on the highlight list (REQ-HL-3), kept in the
+/// package so they are unit-tested.
+public enum HighlightLogic {
+    /// Adds a highlight, merging every existing highlight in the
+    /// same chapter whose range overlaps or touches the new one
+    /// into a single span (so a chapter's Highlights list holds
+    /// one entry per contiguous highlighted span, never fragments
+    /// of one). The merged span keeps the id, version, and
+    /// createdAt of the earliest highlight folded into it.
+    public static func adding(_ new: Highlight,
+                              to list: [Highlight]) -> [Highlight] {
+        var merged = new
+        var kept: [Highlight] = []
+        for h in list {
+            if h.isAt(testament: new.testament, book: new.book,
+                      chapter: new.chapter),
+               h.startVerse <= merged.endVerse + 1,
+               merged.startVerse <= h.endVerse + 1 {
+                if h.createdAt < merged.createdAt {
+                    merged.id = h.id
+                    merged.version = h.version
+                    merged.createdAt = h.createdAt
+                }
+                merged.startVerse = min(merged.startVerse, h.startVerse)
+                merged.endVerse = max(merged.endVerse, h.endVerse)
+            } else {
+                kept.append(h)
+            }
+        }
+        kept.append(merged)
+        return kept
+    }
+
+    /// The verses highlighted in one chapter, across all versions
+    /// the highlights were made in (REQ-HL-2).
+    public static func highlightedVerses(in list: [Highlight],
+                                         testament: Int, book: Int,
+                                         chapter: Int) -> Set<Int> {
+        var out: Set<Int> = []
+        for h in list where h.isAt(testament: testament, book: book,
+                                   chapter: chapter) {
+            out.formUnion(h.verses)
+        }
+        return out
+    }
+
+    /// Removes one highlight by id; an unknown id changes nothing.
+    public static func removing(id: UUID,
+                                from list: [Highlight]) -> [Highlight] {
+        list.filter { $0.id != id }
+    }
+
+    /// The contiguous runs of a verse set: {1, 2, 3, 5} becomes
+    /// [1...3, 5...5]. A verse selection becomes one highlight
+    /// per run.
+    public static func runs(of verses: Set<Int>) -> [ClosedRange<Int>] {
+        let sorted = verses.sorted()
+        guard let first = sorted.first else { return [] }
+        var out: [ClosedRange<Int>] = []
+        var start = first
+        var prev = first
+        for v in sorted.dropFirst() {
+            if v == prev + 1 {
+                prev = v
+            } else {
+                out.append(start ... prev)
+                start = v
+                prev = v
+            }
+        }
+        out.append(start ... prev)
+        return out
+    }
+}
+
 /// The auxiliary panel's swipe-down-to-collapse decision
 /// (REQ-AP-18). The panel's tab contents scroll, so a plain
 /// downward drag must not collapse it: the gesture has to be a
