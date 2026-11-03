@@ -811,11 +811,20 @@ Multiple (KJV Gen 1:1-2):
   keeps the earliest entry's time and version
   (`HighlightLogic.adding`, unit-tested).
 - **REQ-HL-4:** The auxiliary panel has a **Highlights** tab
-  after Recents, listing every highlight newest first: the
-  reference, the version it was made in, and its date (the
-  note-row format). Tapping a row jumps the reader to that
-  passage in the version being read — never switching version;
-  swiping a row deletes the highlight.
+  after Recents, with three sub-tabs in the Notes tab's
+  pattern (REQ-NT-18): **Recents** lists every highlight in
+  reverse creation order (newest first); **Book** shows the
+  active book's highlights grouped by chapter, ordered by
+  verse within a chapter (`HighlightLogic.bookGroups`);
+  **Chapter** shows only the active chapter's highlights,
+  ordered by verse (`HighlightLogic.chapterHighlights`). A
+  sub-tab appears only when it has highlights to show
+  (`HighlightsTabLogic`, unit-tested); with no highlights at
+  all the tab shows its empty state. Every row shows the
+  reference, the version the highlight was made in, and its
+  date (the note-row format). Tapping a row jumps the reader
+  to that passage in the version being read — never switching
+  version; swiping a row deletes the highlight.
 - **REQ-HL-5:** Highlights persist like bookmarks:
   UserDefaults (`gw.highlights.v1`), the backup payload
   (v11, additive — older payloads decode to [] and leave
