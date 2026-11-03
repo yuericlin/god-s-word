@@ -82,7 +82,7 @@ struct ReaderView: View {
         VStack(spacing: 0) {
             readerContent
             // Auxiliary panel below the reading panel: Notes / Commentary /
-            // Strong's / Recents tabs (REQ-AP-1). It reads the same history
+            // Strong's / Recents / Highlights tabs (REQ-AP-1). It reads the same history
             // and the verse selection; the reading text above is untouched.
             // Collapsed (the default) it renders nothing — the toggle is
             // the arrow button in the bottom bar, next to the chapter
@@ -183,10 +183,11 @@ struct ReaderView: View {
                     })
                 }
             }
-            // Copy/Notes/Compare bar while verses are selected.
+            // Copy/Highlight/Notes/Compare bar while verses are selected.
             if !selectedVerses.isEmpty {
                 HStack(spacing: 24) {
                     Button("Copy") { copySelectedVerses() }
+                    Button("Highlight") { highlightSelection() }
                     Button("Notes") { openNoteEditorForSelection() }
                     Button("Compare") { showingCompare = true }
                     Button {
@@ -552,6 +553,7 @@ struct ReaderView: View {
         // without changing how it renders. Runs that already have a link
         // (verse number with a note) keep theirs.
         applyVerseLink(to: &out, verse: number)
+        applyHighlight(to: &out, verse: number)
         applySelectionHighlight(to: &out, verse: number)
         return out
     }
@@ -621,6 +623,7 @@ struct ReaderView: View {
         }
         // Verse link skips the Strong's numbers and the verse number (already linked).
         applyVerseLink(to: &out, verse: number)
+        applyHighlight(to: &out, verse: number)
         applySelectionHighlight(to: &out, verse: number)
         return out
     }
@@ -675,6 +678,42 @@ struct ReaderView: View {
     private func applySelectionHighlight(to attr: inout AttributedString, verse: Int) {
         guard selectedVerses.contains(verse) else { return }
         attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+    }
+
+    /// The verses of the chapter being read that carry a
+    /// highlight — made in any version (REQ-HL-2).
+    private var highlightedInChapter: Set<Int> {
+        personalData.highlightedVerses(testament: history.testament,
+                                       book: history.book,
+                                       chapter: history.chapter)
+    }
+
+    /// Bright yellow background on a highlighted verse's text
+    /// (REQ-HL-2). The verse number keeps its own styling, so a
+    /// note's pale-yellow number stays visible; the selection's
+    /// sky blue, applied after this, covers the yellow while the
+    /// verse is selected.
+    private func applyHighlight(to attr: inout AttributedString, verse: Int) {
+        guard highlightedInChapter.contains(verse) else { return }
+        // Skip the number run ("\(verse) ") and the space after it:
+        // the highlight belongs to the verse's text.
+        let prefix = "\(verse) ".count + 1
+        guard attr.characters.count > prefix else { return }
+        let start = attr.index(attr.startIndex, offsetByCharacters: prefix)
+        attr[start ..< attr.endIndex].backgroundColor =
+            UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
+    }
+
+    /// The selection bar's Highlight action (REQ-HL-1): records
+    /// the selected verses as highlights made in the version
+    /// being read, then clears the selection so the yellow shows.
+    private func highlightSelection() {
+        personalData.addHighlight(testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter,
+                                  verses: selectedVerses,
+                                  version: history.version.id)
+        selectedVerses = []
     }
 
     private func toggleSelection(_ verse: Int) {

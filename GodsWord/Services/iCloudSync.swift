@@ -79,6 +79,7 @@ public final class iCloudSync: ObservableObject {
 
     public enum FileName: String {
         case bookmarks = "bookmarks.json"
+        case highlights = "highlights.json"
         case notes = "notes.json"
         case bookNotes = "bookNotes.json"
         case chapterNotes = "chapterNotes.json"
