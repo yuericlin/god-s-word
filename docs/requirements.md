@@ -213,6 +213,14 @@ Multiple (KJV Gen 1:1-2):
   creation and the latest edit, and the source is the newest
   merged note's version. The migration is idempotent: with no
   per-version keys present it changes nothing.
+- **REQ-NT-20:** In the Notes tab's Recents, Book, and Chapter
+  lists, swiping a note row right-to-left offers **Delete** —
+  the same swipe-to-delete the panel's Recents (history) list
+  and the Highlights tab (REQ-HL-4) have. Deleting removes the
+  note at its scope (book, chapter, or verse) together with
+  its times and source, exactly as deleting in its editor
+  does. The three lists are `List`s so their rows carry the
+  swipe action.
 
 ---
 
