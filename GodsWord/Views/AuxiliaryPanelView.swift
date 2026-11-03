@@ -382,9 +382,7 @@ struct AuxiliaryPanelView: View {
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .swipeActions {
             Button(role: .destructive) {
                 deleteNote(row)
