@@ -318,6 +318,35 @@ public enum HighlightLogic {
         list.filter { $0.id != id }
     }
 
+    /// The active book's highlights grouped by chapter
+    /// (REQ-HL-4): chapters ascending, each chapter's highlights
+    /// ordered by verse — the Highlights tab's Book sub-tab.
+    public static func bookGroups(in list: [Highlight],
+                                  testament: Int, book: Int)
+        -> [(chapter: Int, highlights: [Highlight])] {
+        let byChapter = Dictionary(
+            grouping: list.filter {
+                $0.testament == testament && $0.book == book
+            }) { $0.chapter }
+        return byChapter.keys.sorted().map { chapter in
+            (chapter: chapter,
+             highlights: byChapter[chapter]!.sorted {
+                 ($0.startVerse, $0.endVerse) < ($1.startVerse, $1.endVerse)
+             })
+        }
+    }
+
+    /// One chapter's highlights ordered by verse (REQ-HL-4) —
+    /// the Highlights tab's Chapter sub-tab.
+    public static func chapterHighlights(in list: [Highlight],
+                                         testament: Int, book: Int,
+                                         chapter: Int) -> [Highlight] {
+        list.filter { $0.isAt(testament: testament, book: book,
+                              chapter: chapter) }
+            .sorted { ($0.startVerse, $0.endVerse)
+                        < ($1.startVerse, $1.endVerse) }
+    }
+
     /// The contiguous runs of a verse set: {1, 2, 3, 5} becomes
     /// [1...3, 5...5]. A verse selection becomes one highlight
     /// per run.
@@ -338,6 +367,74 @@ public enum HighlightLogic {
         }
         out.append(start ... prev)
         return out
+    }
+}
+
+/// The Highlights tab's sub-tabs, in bar order (REQ-HL-4):
+/// Recents (newest first), Book (the active book's highlights
+/// grouped by chapter), Chapter (the active chapter's only).
+/// Mirrors the Notes tab's sub-tab model (NotesTabLogic).
+public enum HighlightsSubTab: Int, CaseIterable, Sendable {
+    case recents = 0
+    case book
+    case chapter
+
+    /// Segment label in the sub-tab bar.
+    public var label: String {
+        switch self {
+        case .recents: return "Recents"
+        case .book: return "Book"
+        case .chapter: return "Chapter"
+        }
+    }
+}
+
+public enum HighlightsTabLogic {
+    /// Whether each sub-tab has at least one highlight to show.
+    public struct Availability: Equatable, Sendable {
+        public var recents: Bool
+        public var book: Bool
+        public var chapter: Bool
+
+        public init(recents: Bool, book: Bool, chapter: Bool) {
+            self.recents = recents
+            self.book = book
+            self.chapter = chapter
+        }
+
+        public func hasHighlights(for tab: HighlightsSubTab) -> Bool {
+            switch tab {
+            case .recents: return recents
+            case .book: return book
+            case .chapter: return chapter
+            }
+        }
+    }
+
+    /// The sub-tabs to put in the bar, in bar order: exactly those
+    /// with highlights. Empty when there are no highlights at all
+    /// (the panel then hides the bar and shows its empty state).
+    public static func visibleTabs(
+        _ availability: Availability) -> [HighlightsSubTab] {
+        HighlightsSubTab.allCases.filter {
+            availability.hasHighlights(for: $0)
+        }
+    }
+
+    /// The sub-tab to display: the selection when it is visible,
+    /// otherwise the nearest visible sub-tab by bar position
+    /// (ties go to the earlier sub-tab). Nil when no sub-tab is
+    /// visible.
+    public static func resolved(selected: HighlightsSubTab,
+                                availability: Availability)
+        -> HighlightsSubTab? {
+        let visible = visibleTabs(availability)
+        if visible.contains(selected) { return selected }
+        return visible.min { a, b in
+            let da = abs(a.rawValue - selected.rawValue)
+            let db = abs(b.rawValue - selected.rawValue)
+            return da != db ? da < db : a.rawValue < b.rawValue
+        }
     }
 }
 

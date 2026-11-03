@@ -1650,4 +1650,67 @@ final class HighlightRequirementsTests: XCTestCase {
         XCTAssertEqual(HighlightLogic.runs(of: [7]), [7 ... 7])
         XCTAssertEqual(HighlightLogic.runs(of: []), [])
     }
+
+    // REQ-HL-4 (Book sub-tab): the active book's highlights,
+    // grouped by chapter ascending and ordered by verse within
+    // a chapter; other books contribute nothing.
+    func testBookGroups() {
+        let list = [highlight(10, 10, chapter: 5, at: t0),
+                    highlight(2, 3, chapter: 5, at: t1),
+                    highlight(7, 7, chapter: 2, at: t2),
+                    Highlight(testament: 2, book: 2, chapter: 1,
+                              startVerse: 1, endVerse: 1,
+                              version: "KJV", createdAt: t0)]
+        let groups = HighlightLogic.bookGroups(in: list,
+                                               testament: 2, book: 1)
+        XCTAssertEqual(groups.map(\.chapter), [2, 5])
+        XCTAssertEqual(groups[0].highlights.map(\.startVerse), [7])
+        XCTAssertEqual(groups[1].highlights.map(\.startVerse), [2, 10])
+    }
+
+    // REQ-HL-4 (Chapter sub-tab): only the chapter's highlights,
+    // ordered by verse.
+    func testChapterHighlights() {
+        let list = [highlight(9, 9, at: t0),
+                    highlight(1, 2, at: t1),
+                    highlight(4, 4, chapter: 8, at: t2)]
+        let chapter = HighlightLogic.chapterHighlights(
+            in: list, testament: 2, book: 1, chapter: 3)
+        XCTAssertEqual(chapter.map(\.startVerse), [1, 9])
+    }
+
+    private func availability(_ recents: Bool, _ book: Bool,
+                              _ chapter: Bool)
+        -> HighlightsTabLogic.Availability {
+        HighlightsTabLogic.Availability(recents: recents, book: book,
+                                        chapter: chapter)
+    }
+
+    // REQ-HL-4: the sub-tab bar shows exactly the sub-tabs that
+    // have highlights.
+    func testHighlightsVisibleTabs() {
+        XCTAssertEqual(
+            HighlightsTabLogic.visibleTabs(availability(true, true, true)),
+            [.recents, .book, .chapter])
+        XCTAssertEqual(
+            HighlightsTabLogic.visibleTabs(availability(true, false, false)),
+            [.recents])
+        XCTAssertEqual(
+            HighlightsTabLogic.visibleTabs(availability(false, false, false)),
+            [])
+    }
+
+    // REQ-HL-4: a hidden selection falls back to the nearest
+    // visible sub-tab; nothing visible resolves to nil.
+    func testHighlightsResolvedTab() {
+        let a = availability(true, false, true)
+        XCTAssertEqual(
+            HighlightsTabLogic.resolved(selected: .chapter, availability: a),
+            .chapter)
+        XCTAssertEqual(
+            HighlightsTabLogic.resolved(selected: .book, availability: a),
+            .recents)
+        XCTAssertNil(HighlightsTabLogic.resolved(
+            selected: .recents, availability: availability(false, false, false)))
+    }
 }

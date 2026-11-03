@@ -49,6 +49,7 @@ struct AuxiliaryPanelView: View {
     @State private var strongsTokens: [WordToken] = []
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
+    @State private var highlightsSubTab: HighlightsSubTab = .recents
 
     enum PanelTab: String, CaseIterable {
         case notes = "Notes"
@@ -1003,12 +1004,111 @@ struct AuxiliaryPanelView: View {
 
     // MARK: - Highlights tab
 
-    /// Every highlight, newest first (REQ-HL-4). Highlights are
-    /// shared across versions (REQ-HL-2), so the list is not
-    /// scoped to the version being read; each row names the
-    /// version its highlight was made in and when.
+    /// Whether each Highlights sub-tab has highlights (REQ-HL-4),
+    /// in the Notes tab's pattern (REQ-NT-18): Recents = any
+    /// highlight at all; Book = any in the active book; Chapter =
+    /// any in the active chapter. Highlights are shared across
+    /// versions (REQ-HL-2), so none of the scopes is per-version.
+    private var highlightsAvailability: HighlightsTabLogic.Availability {
+        HighlightsTabLogic.Availability(
+            recents: !personalData.highlights.isEmpty,
+            book: personalData.highlights.contains {
+                $0.testament == history.testament && $0.book == history.book
+            },
+            chapter: personalData.highlights.contains {
+                $0.isAt(testament: history.testament, book: history.book,
+                        chapter: history.chapter)
+            })
+    }
+
+    private var visibleHighlightsTabs: [HighlightsSubTab] {
+        HighlightsTabLogic.visibleTabs(highlightsAvailability)
+    }
+
+    /// The sub-tab actually shown: the user's selection when it
+    /// is visible, otherwise the nearest visible one (REQ-HL-4).
+    /// Nil when there are no highlights at all — the bar hides
+    /// and the empty state shows instead.
+    private var effectiveHighlightsTab: HighlightsSubTab? {
+        HighlightsTabLogic.resolved(selected: highlightsSubTab,
+                                    availability: highlightsAvailability)
+    }
+
+    private var highlightsTabSelection: Binding<HighlightsSubTab> {
+        Binding(get: { effectiveHighlightsTab ?? .recents },
+                set: { highlightsSubTab = $0 })
+    }
+
+    private var highlightsTab: some View {
+        VStack(spacing: 0) {
+            if !visibleHighlightsTabs.isEmpty {
+                Picker("Highlights", selection: highlightsTabSelection) {
+                    ForEach(visibleHighlightsTabs, id: \.self) { t in
+                        Text(t.label).tag(t)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+            }
+
+            if let effectiveHighlightsTab {
+                switch effectiveHighlightsTab {
+                case .recents:
+                    // Reverse creation order: newest first.
+                    highlightList(sortedHighlights)
+                case .book:
+                    bookHighlightList
+                case .chapter:
+                    highlightList(HighlightLogic.chapterHighlights(
+                        in: personalData.highlights,
+                        testament: history.testament, book: history.book,
+                        chapter: history.chapter))
+                }
+            } else {
+                VStack {
+                    Text("No highlights yet.")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    /// Every highlight, newest first (the Recents sub-tab).
     private var sortedHighlights: [Highlight] {
         personalData.highlights.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    /// The Book sub-tab (REQ-HL-4): the active book's highlights
+    /// grouped by chapter, ordered by verse within a chapter.
+    private var bookHighlightList: some View {
+        let groups = HighlightLogic.bookGroups(
+            in: personalData.highlights,
+            testament: history.testament, book: history.book)
+        return List {
+            ForEach(groups.indices, id: \.self) { i in
+                Section {
+                    ForEach(groups[i].highlights) { h in
+                        highlightRow(h)
+                    }
+                } header: {
+                    Text("\(history.bookTitle) \(groups[i].chapter)")
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    private func highlightList(_ highlights: [Highlight]) -> some View {
+        List {
+            ForEach(highlights) { h in
+                highlightRow(h)
+            }
+        }
+        .listStyle(.plain)
     }
 
     private func highlightReference(_ h: Highlight) -> String {
@@ -1018,47 +1118,33 @@ struct AuxiliaryPanelView: View {
             : "\(book) \(h.chapter):\(h.startVerse)-\(h.endVerse)"
     }
 
-    private var highlightsTab: some View {
-        Group {
-            if sortedHighlights.isEmpty {
-                VStack {
-                    Text("No highlights yet.")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-            } else {
-                List {
-                    ForEach(sortedHighlights) { h in
-                        Button {
-                            jumpToHighlight(h)
-                        } label: {
-                            HStack(spacing: 10) {
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
-                                        .opacity(0.65))
-                                    .frame(width: 4, height: 22)
-                                Text(highlightReference(h)
-                                     + sourceSuffix(h.version)
-                                     + noteDateSuffix(h.createdAt))
-                                    .font(.subheadline)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                personalData.removeHighlight(id: h.id)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-                .listStyle(.plain)
+    /// One highlight row in any sub-tab: a yellow swatch and the
+    /// reference with the version it was made in and its date
+    /// (the note-row format). Tap jumps; swipe deletes.
+    private func highlightRow(_ h: Highlight) -> some View {
+        Button {
+            jumpToHighlight(h)
+        } label: {
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
+                        .opacity(0.65))
+                    .frame(width: 4, height: 22)
+                Text(highlightReference(h)
+                     + sourceSuffix(h.version)
+                     + noteDateSuffix(h.createdAt))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .swipeActions {
+            Button(role: .destructive) {
+                personalData.removeHighlight(id: h.id)
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
         }
     }
