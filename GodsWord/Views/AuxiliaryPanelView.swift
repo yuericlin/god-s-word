@@ -385,40 +385,55 @@ struct AuxiliaryPanelView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .swipeActions {
+            Button(role: .destructive) {
+                deleteNote(row)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
-    private func noteList(_ rows: [NoteRow]) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(rows) { row in
-                    noteRowView(row)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+    /// Swipe-to-delete for a note row (REQ-NT-20): removes the
+    /// note at the row's scope (its times and source go with it,
+    /// as when the editor deletes it).
+    private func deleteNote(_ row: NoteRow) {
+        switch row.kind {
+        case .book: personalData.setBookNote(nil, forKey: row.key)
+        case .chapter: personalData.setChapterNote(nil, forKey: row.key)
+        case .verse: personalData.setVerseNote(nil, forKey: row.key)
         }
+    }
+
+    /// A note list (REQ-NT-20): a List, like the Recents tab's
+    /// history list, so its rows carry the swipe-to-delete
+    /// action.
+    private func noteList(_ rows: [NoteRow]) -> some View {
+        List {
+            ForEach(rows) { row in
+                noteRowView(row)
+            }
+        }
+        .listStyle(.plain)
     }
 
     /// The Book sub-tab: an add-book-note entry when the book has no
     /// book note yet, then every note in the book.
     private var bookNotesContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if personalData.bookNote(forKey: bookNoteKey) == nil {
-                    Button {
-                        editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
-                    } label: {
-                        Label("Add Book Note", systemImage: "plus.circle")
-                            .font(.subheadline)
-                    }
-                }
-                ForEach(bookNoteRows) { row in
-                    noteRowView(row)
+        List {
+            if personalData.bookNote(forKey: bookNoteKey) == nil {
+                Button {
+                    editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
+                } label: {
+                    Label("Add Book Note", systemImage: "plus.circle")
+                        .font(.subheadline)
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+            ForEach(bookNoteRows) { row in
+                noteRowView(row)
+            }
         }
+        .listStyle(.plain)
     }
 
     private var notesTab: some View {
@@ -540,28 +555,25 @@ struct AuxiliaryPanelView: View {
     /// chapter has no chapter note, and the chapter's notes in
     /// reading order.
     private var chapterNotesContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if personalData.chapterNote(forKey: chapterNoteKey) == nil,
-                   let legacy = personalData.verseNote(forKey: verse1NoteKey) {
-                    legacyChapterNote(legacy)
-                } else if personalData.chapterNote(forKey: chapterNoteKey) == nil {
-                    Button {
-                        editorItem = .chapter(
-                            key: chapterNoteKey,
-                            reference: "\(history.bookTitle) \(history.chapter)")
-                    } label: {
-                        Label("Add Chapter Note", systemImage: "plus.circle")
-                            .font(.subheadline)
-                    }
-                }
-                ForEach(chapterNoteRows) { row in
-                    noteRowView(row)
+        List {
+            if personalData.chapterNote(forKey: chapterNoteKey) == nil,
+               let legacy = personalData.verseNote(forKey: verse1NoteKey) {
+                legacyChapterNote(legacy)
+            } else if personalData.chapterNote(forKey: chapterNoteKey) == nil {
+                Button {
+                    editorItem = .chapter(
+                        key: chapterNoteKey,
+                        reference: "\(history.bookTitle) \(history.chapter)")
+                } label: {
+                    Label("Add Chapter Note", systemImage: "plus.circle")
+                        .font(.subheadline)
                 }
             }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+            ForEach(chapterNoteRows) { row in
+                noteRowView(row)
+            }
         }
+        .listStyle(.plain)
     }
 
     /// The legacy verse-1 note shown in the Chapter sub-tab
