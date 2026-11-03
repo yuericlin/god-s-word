@@ -1132,7 +1132,12 @@ struct AuxiliaryPanelView: View {
 
     /// One highlight row in any sub-tab: a yellow swatch and the
     /// reference with the version it was made in and its date
-    /// (the note-row format). Tap jumps; swipe deletes.
+    /// (the note-row format). Tap jumps; swipe deletes. Built
+    /// exactly like a HistoryView row — default button style, no
+    /// content-shape override — so the List makes the whole row
+    /// the tap target, like the Recents tab's history items; the
+    /// plain style confined the tap to the label's own frame and
+    /// the rows felt dead.
     private func highlightRow(_ h: Highlight) -> some View {
         Button {
             jumpToHighlight(h)
@@ -1149,9 +1154,7 @@ struct AuxiliaryPanelView: View {
                     .foregroundStyle(.primary)
                 Spacer()
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .swipeActions {
             Button(role: .destructive) {
                 personalData.removeHighlight(id: h.id)
