@@ -224,6 +224,7 @@ Multiple (KJV Gen 1:1-2):
 
 ---
 
+- **REQ-NT-21:** A note's title line (reference, source, date) is a jump target. In the Notes tab's lists, tapping the title line jumps the reader to the note's passage in the version being read — for a verse note, to the verse itself: the reader selects it and scrolls it into view — exactly in verse-by-verse reading, approximately in paragraph mode (to the verse's share of the chapter's text length) (a book note lands on its book's first chapter), while tapping the note's text opens its editor. The note editors (verse and scoped) show their reference as a tappable title that makes the same jump and dismisses the editor.
 ## 4. Bookmarks panel
 
 ### Sections
