@@ -12,6 +12,9 @@ struct VerseNoteEditor: View {
     /// The version being read when the editor opened; recorded as
     /// the note's source (REQ-NT-19) when the note is first saved.
     let sourceModuleID: String
+    /// When set, the title is a button: tapping it jumps the
+    /// reader to the note's passage, then dismisses (REQ-NT-21).
+    let onJump: (() -> Void)?
     /// The note text when the editor opened; Save is disabled while unchanged.
     private let originalText: String
     @EnvironmentObject private var personalData: PersonalData
@@ -21,10 +24,12 @@ struct VerseNoteEditor: View {
     @State private var showingDeleteConfirm = false
 
     init(reference: String, noteKey: String, initialText: String,
-         seedText: String = "", sourceModuleID: String = "") {
+         seedText: String = "", sourceModuleID: String = "",
+         onJump: (() -> Void)? = nil) {
         self.reference = reference
         self.noteKey = noteKey
         self.sourceModuleID = sourceModuleID
+        self.onJump = onJump
         self.originalText = initialText
         // A brand-new note (no saved text) opens pre-filled with the seed
         // (the selected verses' text, or book + chapter); `originalText`
@@ -37,9 +42,21 @@ struct VerseNoteEditor: View {
             TextEditor(text: $text)
                 .focused($isFocused)
                 .padding()
-                .navigationTitle(reference)
+                .navigationTitle(onJump == nil ? reference : "")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    if let onJump {
+                        ToolbarItem(placement: .principal) {
+                            Button {
+                                onJump()
+                                dismiss()
+                            } label: {
+                                Text(reference)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
                     }
