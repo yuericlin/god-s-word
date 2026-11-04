@@ -417,8 +417,14 @@ struct AuxiliaryPanelView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 8)
             }
+            rowHairline
         }
+        .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
         .swipeActions {
             Button(role: .destructive) {
                 deleteNote(row)
@@ -442,6 +448,18 @@ struct AuxiliaryPanelView: View {
     /// A note list (REQ-NT-20): a List, like the Recents tab's
     /// history list, so its rows carry the swipe-to-delete
     /// action.
+    /// The bottom hairline the Notes lists' rows draw themselves
+    /// (their automatic separator is hidden): one straight
+    /// rectangle. The List's separator steps where it meets the
+    /// row background's edge — the kink the Highlights rows had
+    /// (PR #48) — so these rows clear their background too and
+    /// sit on the panel's gray.
+    private var rowHairline: some View {
+        Rectangle()
+            .fill(Color(uiColor: .separator))
+            .frame(height: 0.5)
+    }
+
     private func noteList(_ rows: [NoteRow]) -> some View {
         List {
             ForEach(rows) { row in
@@ -459,9 +477,18 @@ struct AuxiliaryPanelView: View {
                 Button {
                     editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
                 } label: {
-                    Label("Add Book Note", systemImage: "plus.circle")
-                        .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Label("Add Book Note", systemImage: "plus.circle")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, 11)
+                        rowHairline
+                    }
                 }
+                .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
             ForEach(bookNoteRows) { row in
                 noteRowView(row)
@@ -599,9 +626,18 @@ struct AuxiliaryPanelView: View {
                         key: chapterNoteKey,
                         reference: "\(history.bookTitle) \(history.chapter)")
                 } label: {
-                    Label("Add Chapter Note", systemImage: "plus.circle")
-                        .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Label("Add Chapter Note", systemImage: "plus.circle")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, 11)
+                        rowHairline
+                    }
                 }
+                .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
             ForEach(chapterNoteRows) { row in
                 noteRowView(row)
@@ -640,7 +676,13 @@ struct AuxiliaryPanelView: View {
                 }
             }
             .font(.subheadline)
+            rowHairline
+                .padding(.top, 3)
         }
+        .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 
     // MARK: - Commentary tab
