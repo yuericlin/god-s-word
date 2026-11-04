@@ -152,6 +152,7 @@ struct AuxiliaryPanelView: View {
                                         jumpTo(testament: p.testament,
                                                book: p.book,
                                                chapter: p.chapter)
+                                        history.pendingVerse = p.verse
                                     }
                                 })
                     .environmentObject(personalData)
@@ -248,6 +249,8 @@ struct AuxiliaryPanelView: View {
         let book: Int
         /// Chapter the title-line jump lands on (1 for a book note).
         let chapter: Int
+        /// The note's verse (verse notes only); the jump lands on it.
+        let verse: Int?
         let reference: String
         let text: String
         /// Version the note was first written in (REQ-NT-19).
@@ -262,7 +265,7 @@ struct AuxiliaryPanelView: View {
     }
 
     private func bookNoteRow(key: String, parsed: BookNoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .book, key: key, testament: parsed.testament, book: parsed.book, chapter: 1,
+        NoteRow(kind: .book, key: key, testament: parsed.testament, book: parsed.book, chapter: 1, verse: nil,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) — Book note",
                 text: personalData.bookNotes[key] ?? "",
                 source: personalData.noteSources[key],
@@ -270,7 +273,7 @@ struct AuxiliaryPanelView: View {
     }
 
     private func chapterNoteRow(key: String, parsed: ChapterNoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .chapter, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter,
+        NoteRow(kind: .chapter, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter, verse: nil,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter) — Chapter note",
                 text: personalData.chapterNotes[key] ?? "",
                 source: personalData.noteSources[key],
@@ -278,7 +281,7 @@ struct AuxiliaryPanelView: View {
     }
 
     private func verseNoteRow(key: String, parsed: NoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .verse, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter,
+        NoteRow(kind: .verse, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter, verse: parsed.verse,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)",
                 text: personalData.verseNotes[key] ?? "",
                 source: personalData.noteSources[key],
@@ -1212,6 +1215,9 @@ struct AuxiliaryPanelView: View {
     private func jumpToNote(_ row: NoteRow) {
         jumpTo(testament: row.testament, book: row.book,
               chapter: row.chapter)
+        if let verse = row.verse {
+            history.pendingVerse = verse
+        }
     }
 
     // MARK: - Shared

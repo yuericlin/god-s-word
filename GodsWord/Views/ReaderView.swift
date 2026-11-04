@@ -32,6 +32,12 @@ struct ReaderView: View {
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
+    /// Verse a note jump wants scrolled into view (REQ-NT-21).
+    @State private var scrollTargetVerse: Int? = nil
+    /// chapterKey of the chapter actually on screen (set when a
+    /// load completes), so a same-chapter verse jump lands at
+    /// once while a chapter-changing one waits for its load.
+    @State private var loadedChapterKey = ""
     @State private var noteEditorItem: NoteEditorItem?
     @State private var showingChapterNoteEditor = false
     @State private var showingCompare = false
@@ -113,6 +119,7 @@ struct ReaderView: View {
                                                     headingRow(heading)
                                                 }
                                                 Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                    .id("v\(v.verse)")
                                                     .font(.system(size: personalData.fontSize, design: .serif))
                                                     .lineSpacing(6)
                                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,6 +135,7 @@ struct ReaderView: View {
                                                     headingRow(heading)
                                                 }
                                                 Text(attributedVerse(number: v.verse, text: v.text))
+                                                    .id("v\(v.verse)")
                                                     .font(.system(size: personalData.fontSize, design: .serif))
                                                     .lineSpacing(6)
                                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,6 +162,11 @@ struct ReaderView: View {
                             }
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
+                        .onChange(of: scrollTargetVerse) {
+                            guard let target = scrollTargetVerse else { return }
+                            scrollTargetVerse = nil
+                            proxy.scrollTo("v\(target)", anchor: .center)
+                        }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
                     .environment(\.openURL, OpenURLAction { url in
@@ -335,12 +348,24 @@ struct ReaderView: View {
                     }
                 }
         )
-        .task(id: chapterKey) { await load() }
+        .task(id: chapterKey) {
+            await load()
+            applyPendingVerse()
+        }
         // Selection lives within a chapter: clear it when the location
         // changes, but keep it when only the version (module) changes.
         .onChange(of: history.testament) { selectedVerses = [] }
         .onChange(of: history.book) { selectedVerses = [] }
         .onChange(of: history.chapter) { selectedVerses = [] }
+        // A verse-note jump to the chapter already on screen lands
+        // at once; a chapter-changing jump is applied by the load
+        // task above instead (REQ-NT-21).
+        .onChange(of: history.pendingVerse) {
+            if history.pendingVerse != nil,
+               loadedChapterKey == chapterKey {
+                applyPendingVerse()
+            }
+        }
         .onAppear {
             availableVersions = allLibraryVersions()
             adoptReimportedVersion()
@@ -400,6 +425,7 @@ struct ReaderView: View {
                                     history.testament = p.testament
                                     history.book = p.book
                                     history.chapter = p.chapter
+                                    history.pendingVerse = p.verse
                                 }
                             })
                 .environmentObject(personalData)
@@ -850,6 +876,7 @@ struct ReaderView: View {
             headings = await history.version.loadHeadings(
                 testament: history.testament, book: history.book,
                 chapter: history.chapter)
+            loadedChapterKey = chapterKey
             personalData.savePosition(ReadingPosition(testament: history.testament,
                                                       book: history.book,
                                                       chapter: history.chapter),
@@ -872,6 +899,15 @@ struct ReaderView: View {
         } catch {
             loadError = error.localizedDescription
         }
+    }
+
+    /// Lands a verse-note jump (REQ-NT-21) once its chapter is on
+    /// screen: select the verse and arm the scroll to it.
+    private func applyPendingVerse() {
+        guard let verse = history.pendingVerse else { return }
+        history.pendingVerse = nil
+        selectedVerses = [verse]
+        scrollTargetVerse = verse
     }
 
     /// Records a history entry only if the user is still on the same
