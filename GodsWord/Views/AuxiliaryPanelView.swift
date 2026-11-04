@@ -1140,18 +1140,24 @@ struct AuxiliaryPanelView: View {
         Button {
             jumpToHighlight(h)
         } label: {
-            HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
-                        .opacity(0.65))
-                    .frame(width: 4, height: 22)
-                Text(highlightReference(h)
-                     + sourceSuffix(h.version)
-                     + noteDateSuffix(h.createdAt))
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                Spacer()
-            }
+            // A single text element, like a HistoryView row, with
+            // the swatch overlaid in its leading padding: leading
+            // the row with the swatch shape made the List draw the
+            // row's bottom separator in two segments at slightly
+            // different heights — a kink where the text begins.
+            Text(highlightReference(h)
+                 + sourceSuffix(h.version)
+                 + noteDateSuffix(h.createdAt))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 14)
+                .overlay(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
+                            .opacity(0.65))
+                        .frame(width: 4, height: 22)
+                }
         }
         .swipeActions {
             Button(role: .destructive) {
