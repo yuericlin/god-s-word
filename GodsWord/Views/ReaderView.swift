@@ -151,6 +151,22 @@ struct ReaderView: View {
                                         .lineSpacing(6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .onLongPressGesture { }
+                                        // Invisible ladder of 20 equal slices
+                                        // spanning the chapter text's height:
+                                        // the approximate scroll targets for
+                                        // verse jumps in paragraph mode.
+                                        .background {
+                                            GeometryReader { geo in
+                                                VStack(spacing: 0) {
+                                                    ForEach(0..<20, id: \.self) { i in
+                                                        Color.clear
+                                                            .id("frac-\(i)")
+                                                    }
+                                                }
+                                                .frame(height: geo.size.height)
+                                                .allowsHitTesting(false)
+                                            }
+                                        }
                                 }
                             }
                             .padding()
@@ -165,7 +181,14 @@ struct ReaderView: View {
                         .onChange(of: scrollTargetVerse) {
                             guard let target = scrollTargetVerse else { return }
                             scrollTargetVerse = nil
-                            proxy.scrollTo("v\(target)", anchor: .center)
+                            if personalData.verseByVerse {
+                                proxy.scrollTo("v\(target)", anchor: .center)
+                            } else if let i = paragraphAnchorIndex(for: target) {
+                                // Paragraph mode has no per-verse anchors:
+                                // scroll to the ladder slice at the verse's
+                                // share of the chapter's text (REQ-NT-21).
+                                proxy.scrollTo("frac-\(i)", anchor: .center)
+                            }
                         }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
@@ -899,6 +922,22 @@ struct ReaderView: View {
         } catch {
             loadError = error.localizedDescription
         }
+    }
+
+    /// The ladder slice (of 20) at a verse's share of the
+    /// chapter's text length — the approximate scroll target for
+    /// a verse jump in paragraph mode (REQ-NT-21). Nil when the
+    /// verse isn't in the loaded chapter.
+    private func paragraphAnchorIndex(for verse: Int) -> Int? {
+        guard verses.contains(where: { $0.verse == verse }) else { return nil }
+        var total = 0
+        var before = 0
+        for v in verses {
+            if v.verse < verse { before += v.text.count }
+            total += v.text.count
+        }
+        guard total > 0 else { return nil }
+        return min(19, Int(Double(before) / Double(total) * 20))
     }
 
     /// Lands a verse-note jump (REQ-NT-21) once its chapter is on
