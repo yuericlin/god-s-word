@@ -1170,6 +1170,7 @@ struct AuxiliaryPanelView: View {
         .listRowInsets(EdgeInsets(top: 11, leading: 16,
                                   bottom: 0, trailing: 0))
         .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
         .swipeActions {
             Button(role: .destructive) {
                 personalData.removeHighlight(id: h.id)
