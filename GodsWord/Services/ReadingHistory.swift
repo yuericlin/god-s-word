@@ -20,6 +20,12 @@ final class ReadingHistory {
     /// a dwell completes.
     var dwellMode = false
 
+    /// One-shot verse target from a verse-note jump (REQ-NT-21):
+    /// set together with the location, it tells the reader to
+    /// select this verse and scroll it into view once that
+    /// chapter is on screen. The reader clears it when it lands.
+    var pendingVerse: Int? = nil
+
     init(version: BibleVersion, testament: Int = 1, book: Int = 1, chapter: Int = 1) {
         self.version = version
         self.testament = testament

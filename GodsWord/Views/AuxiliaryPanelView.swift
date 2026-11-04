@@ -146,17 +146,38 @@ struct AuxiliaryPanelView: View {
                 VerseNoteEditor(reference: reference, noteKey: key,
                                 initialText: personalData.verseNote(forKey: key) ?? "",
                                 seedText: "\(history.bookTitle) \(history.chapter)\n",
-                                sourceModuleID: history.version.id)
+                                sourceModuleID: history.version.id,
+                                onJump: {
+                                    if let p = NoteKey.parse(key) {
+                                        jumpTo(testament: p.testament,
+                                               book: p.book,
+                                               chapter: p.chapter)
+                                        history.pendingVerse = p.verse
+                                    }
+                                })
                     .environmentObject(personalData)
             case .book(let key, let reference):
                 ScopedNoteEditor(reference: reference,
-                                 initialText: personalData.bookNote(forKey: key) ?? "") { text in
+                                 initialText: personalData.bookNote(forKey: key) ?? "",
+                                 onJump: {
+                                     if let p = BookNoteKey.parse(key) {
+                                         jumpTo(testament: p.testament,
+                                                book: p.book, chapter: 1)
+                                     }
+                                 }) { text in
                     personalData.setBookNote(text, forKey: key,
                                              source: history.version.id)
                 }
             case .chapter(let key, let reference):
                 ScopedNoteEditor(reference: reference,
-                                 initialText: personalData.chapterNote(forKey: key) ?? "") { text in
+                                 initialText: personalData.chapterNote(forKey: key) ?? "",
+                                 onJump: {
+                                     if let p = ChapterNoteKey.parse(key) {
+                                         jumpTo(testament: p.testament,
+                                                book: p.book,
+                                                chapter: p.chapter)
+                                     }
+                                 }) { text in
                     personalData.setChapterNote(text, forKey: key,
                                                 source: history.version.id)
                 }
@@ -224,6 +245,12 @@ struct AuxiliaryPanelView: View {
         enum Kind { case book, chapter, verse }
         let kind: Kind
         let key: String
+        let testament: Int
+        let book: Int
+        /// Chapter the title-line jump lands on (1 for a book note).
+        let chapter: Int
+        /// The note's verse (verse notes only); the jump lands on it.
+        let verse: Int?
         let reference: String
         let text: String
         /// Version the note was first written in (REQ-NT-19).
@@ -238,7 +265,7 @@ struct AuxiliaryPanelView: View {
     }
 
     private func bookNoteRow(key: String, parsed: BookNoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .book, key: key,
+        NoteRow(kind: .book, key: key, testament: parsed.testament, book: parsed.book, chapter: 1, verse: nil,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) — Book note",
                 text: personalData.bookNotes[key] ?? "",
                 source: personalData.noteSources[key],
@@ -246,7 +273,7 @@ struct AuxiliaryPanelView: View {
     }
 
     private func chapterNoteRow(key: String, parsed: ChapterNoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .chapter, key: key,
+        NoteRow(kind: .chapter, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter, verse: nil,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter) — Chapter note",
                 text: personalData.chapterNotes[key] ?? "",
                 source: personalData.noteSources[key],
@@ -254,7 +281,7 @@ struct AuxiliaryPanelView: View {
     }
 
     private func verseNoteRow(key: String, parsed: NoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .verse, key: key,
+        NoteRow(kind: .verse, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter, verse: parsed.verse,
                 reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)",
                 text: personalData.verseNotes[key] ?? "",
                 source: personalData.noteSources[key],
@@ -363,26 +390,41 @@ struct AuxiliaryPanelView: View {
         return " · \(source)"
     }
 
+    /// A note row in any Notes sub-tab: the title line (reference,
+    /// source, date) is a jump button — tapping it takes the reader
+    /// to the note's passage (REQ-NT-21) — while the note's text is
+    /// the editor button. Swipe offers Delete (REQ-NT-20).
     private func noteRowView(_ row: NoteRow) -> some View {
-        Button {
-            switch row.kind {
-            case .book: editorItem = .book(key: row.key, reference: row.reference)
-            case .chapter: editorItem = .chapter(key: row.key, reference: row.reference)
-            case .verse: editorItem = .verse(key: row.key, reference: row.reference)
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 3) {
+            Button {
+                jumpToNote(row)
+            } label: {
                 Text(row.reference + sourceSuffix(row.source)
                      + noteDateSuffix(row.updated))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Button {
+                switch row.kind {
+                case .book: editorItem = .book(key: row.key, reference: row.reference)
+                case .chapter: editorItem = .chapter(key: row.key, reference: row.reference)
+                case .verse: editorItem = .verse(key: row.key, reference: row.reference)
+                }
+            } label: {
                 Text(row.text)
                     .font(.system(size: personalData.fontSize, design: .serif))
                     .foregroundStyle(.primary)
                     .lineLimit(3)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 8)
             }
+            rowHairline
         }
+        .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
         .swipeActions {
             Button(role: .destructive) {
                 deleteNote(row)
@@ -406,6 +448,18 @@ struct AuxiliaryPanelView: View {
     /// A note list (REQ-NT-20): a List, like the Recents tab's
     /// history list, so its rows carry the swipe-to-delete
     /// action.
+    /// The bottom hairline the Notes lists' rows draw themselves
+    /// (their automatic separator is hidden): one straight
+    /// rectangle. The List's separator steps where it meets the
+    /// row background's edge — the kink the Highlights rows had
+    /// (PR #48) — so these rows clear their background too and
+    /// sit on the panel's gray.
+    private var rowHairline: some View {
+        Rectangle()
+            .fill(Color(uiColor: .separator))
+            .frame(height: 0.5)
+    }
+
     private func noteList(_ rows: [NoteRow]) -> some View {
         List {
             ForEach(rows) { row in
@@ -423,9 +477,18 @@ struct AuxiliaryPanelView: View {
                 Button {
                     editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
                 } label: {
-                    Label("Add Book Note", systemImage: "plus.circle")
-                        .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Label("Add Book Note", systemImage: "plus.circle")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, 11)
+                        rowHairline
+                    }
                 }
+                .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
             ForEach(bookNoteRows) { row in
                 noteRowView(row)
@@ -563,9 +626,18 @@ struct AuxiliaryPanelView: View {
                         key: chapterNoteKey,
                         reference: "\(history.bookTitle) \(history.chapter)")
                 } label: {
-                    Label("Add Chapter Note", systemImage: "plus.circle")
-                        .font(.subheadline)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Label("Add Chapter Note", systemImage: "plus.circle")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.bottom, 11)
+                        rowHairline
+                    }
                 }
+                .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
             ForEach(chapterNoteRows) { row in
                 noteRowView(row)
@@ -604,7 +676,13 @@ struct AuxiliaryPanelView: View {
                 }
             }
             .font(.subheadline)
+            rowHairline
+                .padding(.top, 3)
         }
+        .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 
     // MARK: - Commentary tab
@@ -1171,10 +1249,26 @@ struct AuxiliaryPanelView: View {
     /// Jumps the reader to a highlight's passage in the version
     /// being read — highlights show in every version (REQ-HL-2),
     /// so unlike a history jump this never switches version.
+    /// Moves the reader to a passage, in the version being read.
+    private func jumpTo(testament: Int, book: Int, chapter: Int) {
+        history.testament = testament
+        history.book = book
+        history.chapter = chapter
+    }
+
     private func jumpToHighlight(_ h: Highlight) {
-        history.testament = h.testament
-        history.book = h.book
-        history.chapter = h.chapter
+        jumpTo(testament: h.testament, book: h.book, chapter: h.chapter)
+    }
+
+    /// Title-line tap on a note row or a note editor's title
+    /// (REQ-NT-21): jump to the note's passage (a book note lands
+    /// on its first chapter; a verse note also lands on its verse).
+    private func jumpToNote(_ row: NoteRow) {
+        jumpTo(testament: row.testament, book: row.book,
+              chapter: row.chapter)
+        if let verse = row.verse {
+            history.pendingVerse = verse
+        }
     }
 
     // MARK: - Shared
@@ -1197,6 +1291,9 @@ struct AuxiliaryPanelView: View {
 /// caller decides which scoped store the note belongs to.
 struct ScopedNoteEditor: View {
     let reference: String
+    /// When set, the title is a button: tapping it jumps the
+    /// reader to the note's passage, then dismisses (REQ-NT-21).
+    let onJump: (() -> Void)?
     private let originalText: String
     private let onSave: (String?) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -1205,9 +1302,11 @@ struct ScopedNoteEditor: View {
     @State private var showingDeleteConfirm = false
 
     init(reference: String, initialText: String,
+         onJump: (() -> Void)? = nil,
          onSave: @escaping (String?) -> Void) {
         self.reference = reference
         self.originalText = initialText
+        self.onJump = onJump
         self.onSave = onSave
         _text = State(initialValue: initialText)
     }
@@ -1217,9 +1316,21 @@ struct ScopedNoteEditor: View {
             TextEditor(text: $text)
                 .focused($isFocused)
                 .padding()
-                .navigationTitle(reference)
+                .navigationTitle(onJump == nil ? reference : "")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
+                    if let onJump {
+                        ToolbarItem(placement: .principal) {
+                            Button {
+                                onJump()
+                                dismiss()
+                            } label: {
+                                Text(reference)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+                            }
+                        }
+                    }
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") { dismiss() }
                     }
