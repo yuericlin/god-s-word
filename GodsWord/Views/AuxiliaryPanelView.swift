@@ -1140,25 +1140,36 @@ struct AuxiliaryPanelView: View {
         Button {
             jumpToHighlight(h)
         } label: {
-            // A single text element, like a HistoryView row, with
-            // the swatch overlaid in its leading padding: leading
-            // the row with the swatch shape made the List draw the
-            // row's bottom separator in two segments at slightly
-            // different heights — a kink where the text begins.
-            Text(highlightReference(h)
-                 + sourceSuffix(h.version)
-                 + noteDateSuffix(h.createdAt))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 14)
-                .overlay(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
-                            .opacity(0.65))
-                        .frame(width: 4, height: 22)
-                }
+            // The row draws its own bottom hairline and hides the
+            // List's separator: the automatic separator rendered in
+            // two segments at slightly different heights — a kink
+            // where the text begins — both when the row led with
+            // the swatch shape and as a single padded text. One
+            // rectangle cannot kink. The swatch is overlaid in the
+            // text's leading padding.
+            VStack(alignment: .leading, spacing: 0) {
+                Text(highlightReference(h)
+                     + sourceSuffix(h.version)
+                     + noteDateSuffix(h.createdAt))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 14)
+                    .overlay(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(red: 1.0, green: 0.9, blue: 0.0)
+                                .opacity(0.65))
+                            .frame(width: 4, height: 22)
+                    }
+                    .padding(.bottom, 11)
+                Rectangle()
+                    .fill(Color(uiColor: .separator))
+                    .frame(height: 0.5)
+            }
         }
+        .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+        .listRowSeparator(.hidden)
         .swipeActions {
             Button(role: .destructive) {
                 personalData.removeHighlight(id: h.id)
