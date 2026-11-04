@@ -32,6 +32,12 @@ struct ReaderView: View {
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
+    /// Verse a note jump wants scrolled into view (REQ-NT-21).
+    @State private var scrollTargetVerse: Int? = nil
+    /// chapterKey of the chapter actually on screen (set when a
+    /// load completes), so a same-chapter verse jump lands at
+    /// once while a chapter-changing one waits for its load.
+    @State private var loadedChapterKey = ""
     @State private var noteEditorItem: NoteEditorItem?
     @State private var showingChapterNoteEditor = false
     @State private var showingCompare = false
@@ -113,6 +119,7 @@ struct ReaderView: View {
                                                     headingRow(heading)
                                                 }
                                                 Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                    .id("v\(v.verse)")
                                                     .font(.system(size: personalData.fontSize, design: .serif))
                                                     .lineSpacing(6)
                                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,6 +135,7 @@ struct ReaderView: View {
                                                     headingRow(heading)
                                                 }
                                                 Text(attributedVerse(number: v.verse, text: v.text))
+                                                    .id("v\(v.verse)")
                                                     .font(.system(size: personalData.fontSize, design: .serif))
                                                     .lineSpacing(6)
                                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -143,6 +151,22 @@ struct ReaderView: View {
                                         .lineSpacing(6)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .onLongPressGesture { }
+                                        // Invisible ladder of 20 equal slices
+                                        // spanning the chapter text's height:
+                                        // the approximate scroll targets for
+                                        // verse jumps in paragraph mode.
+                                        .background {
+                                            GeometryReader { geo in
+                                                VStack(spacing: 0) {
+                                                    ForEach(0..<20, id: \.self) { i in
+                                                        Color.clear
+                                                            .id("frac-\(i)")
+                                                    }
+                                                }
+                                                .frame(height: geo.size.height)
+                                                .allowsHitTesting(false)
+                                            }
+                                        }
                                 }
                             }
                             .padding()
@@ -154,6 +178,18 @@ struct ReaderView: View {
                             }
                         }
                         .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
+                        .onChange(of: scrollTargetVerse) {
+                            guard let target = scrollTargetVerse else { return }
+                            scrollTargetVerse = nil
+                            if personalData.verseByVerse {
+                                proxy.scrollTo("v\(target)", anchor: .center)
+                            } else if let i = paragraphAnchorIndex(for: target) {
+                                // Paragraph mode has no per-verse anchors:
+                                // scroll to the ladder slice at the verse's
+                                // share of the chapter's text (REQ-NT-21).
+                                proxy.scrollTo("frac-\(i)", anchor: .center)
+                            }
+                        }
                         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
                     .environment(\.openURL, OpenURLAction { url in
@@ -335,12 +371,24 @@ struct ReaderView: View {
                     }
                 }
         )
-        .task(id: chapterKey) { await load() }
+        .task(id: chapterKey) {
+            await load()
+            applyPendingVerse()
+        }
         // Selection lives within a chapter: clear it when the location
         // changes, but keep it when only the version (module) changes.
         .onChange(of: history.testament) { selectedVerses = [] }
         .onChange(of: history.book) { selectedVerses = [] }
         .onChange(of: history.chapter) { selectedVerses = [] }
+        // A verse-note jump to the chapter already on screen lands
+        // at once; a chapter-changing jump is applied by the load
+        // task above instead (REQ-NT-21).
+        .onChange(of: history.pendingVerse) {
+            if history.pendingVerse != nil,
+               loadedChapterKey == chapterKey {
+                applyPendingVerse()
+            }
+        }
         .onAppear {
             availableVersions = allLibraryVersions()
             adoptReimportedVersion()
@@ -394,13 +442,22 @@ struct ReaderView: View {
                             noteKey: item.id,
                             initialText: item.initialText,
                             seedText: item.seedText,
-                            sourceModuleID: history.version.id)
+                            sourceModuleID: history.version.id,
+                            onJump: {
+                                if let p = NoteKey.parse(item.id) {
+                                    history.testament = p.testament
+                                    history.book = p.book
+                                    history.chapter = p.chapter
+                                    history.pendingVerse = p.verse
+                                }
+                            })
                 .environmentObject(personalData)
         }
         .sheet(isPresented: $showingChapterNoteEditor) {
             ScopedNoteEditor(
                 reference: "\(history.bookTitle) \(history.chapter)",
-                initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? ""
+                initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? "",
+                onJump: {}
             ) { text in
                 personalData.setChapterNote(text, forKey: currentChapterNoteKey,
                                             source: history.version.id)
@@ -842,6 +899,7 @@ struct ReaderView: View {
             headings = await history.version.loadHeadings(
                 testament: history.testament, book: history.book,
                 chapter: history.chapter)
+            loadedChapterKey = chapterKey
             personalData.savePosition(ReadingPosition(testament: history.testament,
                                                       book: history.book,
                                                       chapter: history.chapter),
@@ -864,6 +922,31 @@ struct ReaderView: View {
         } catch {
             loadError = error.localizedDescription
         }
+    }
+
+    /// The ladder slice (of 20) at a verse's share of the
+    /// chapter's text length — the approximate scroll target for
+    /// a verse jump in paragraph mode (REQ-NT-21). Nil when the
+    /// verse isn't in the loaded chapter.
+    private func paragraphAnchorIndex(for verse: Int) -> Int? {
+        guard verses.contains(where: { $0.verse == verse }) else { return nil }
+        var total = 0
+        var before = 0
+        for v in verses {
+            if v.verse < verse { before += v.text.count }
+            total += v.text.count
+        }
+        guard total > 0 else { return nil }
+        return min(19, Int(Double(before) / Double(total) * 20))
+    }
+
+    /// Lands a verse-note jump (REQ-NT-21) once its chapter is on
+    /// screen: select the verse and arm the scroll to it.
+    private func applyPendingVerse() {
+        guard let verse = history.pendingVerse else { return }
+        history.pendingVerse = nil
+        selectedVerses = [verse]
+        scrollTargetVerse = verse
     }
 
     /// Records a history entry only if the user is still on the same
