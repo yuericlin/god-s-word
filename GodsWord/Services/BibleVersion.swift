@@ -37,7 +37,7 @@ enum BibleVersion: Identifiable, Equatable {
         }
     }
 
-    /// Full title, e.g. "King James Version" / "NKJV+".
+    /// Full title, e.g. "King James Version".
     var displayName: String {
         switch self {
         case .sword(let m): return m.info.description
@@ -46,7 +46,7 @@ enum BibleVersion: Identifiable, Equatable {
     }
 
     /// Compact label for toolbars and pickers: the module id for SWORD
-    /// versions (e.g. "KJV"), the title for private ones (e.g. "NKJV+").
+    /// versions (e.g. "KJV"), the title for private ones.
     var shortLabel: String {
         switch self {
         case .sword(let m): return m.id
@@ -160,33 +160,79 @@ enum BibleVersion: Identifiable, Equatable {
         }
     }
 
+    /// Canonical English book name for the red-letter artifact key
+    /// (the KJV versification's name, e.g. "Revelation of John").
+    private func artifactBookName(testament: Int, book: Int) -> String {
+        let overall = testament == 1 ? book - 1 : 39 + book - 1
+        return Versification.kjv.books[overall].name
+    }
+
     /// Strong's word tokens for one chapter (SWORD versions only).
-    /// Tokens also carry Jesus-speech flags from the module markup
-    /// (REQ-RL-1); the reader's red-letter setting decides whether
-    /// they are painted.
+    /// Tokens also carry Jesus-speech flags — from the module
+    /// markup (REQ-RL-1), or, for a tagless Strong's module like
+    /// ChiUns, from the bundled artifact (REQ-RL-4); the reader's
+    /// red-letter setting decides whether they are painted.
     func loadTokens(testament: Int, book: Int, chapter: Int) async
         -> [(verse: Int, tokens: [WordToken])]
     {
         guard case .sword(let m) = self, m.info.supportsStrongs else { return [] }
         guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [] }
-        return mod.chapterTokensWithJesus(testament: testament, book: book, chapter: chapter)
+        let tokenChapter = mod.chapterTokensWithJesus(testament: testament, book: book, chapter: chapter)
+        guard tokenChapter.allSatisfy({ $0.tokens.allSatisfy { !$0.isJesusSpeech } })
+        else { return tokenChapter }
+        // No markup flags anywhere in the chapter: fall back to
+        // the artifact. Tokens are plain-text segments, so
+        // cumulative character offsets locate each one.
+        let spans = RedLetterArtifact.chapterSpans(
+            versionID: m.id,
+            book: artifactBookName(testament: testament, book: book),
+            chapter: chapter)
+        guard !spans.isEmpty else { return tokenChapter }
+        return tokenChapter.map { entry in
+            let verseSpans = spans[entry.verse] ?? []
+            guard !verseSpans.isEmpty else { return entry }
+            var offset = 0
+            let marked = entry.tokens.map { token -> WordToken in
+                let range = (start: offset, end: offset + token.text.count)
+                offset = range.end
+                guard verseSpans.contains(where: { range.start < $0.end && $0.start < range.end })
+                else { return token }
+                return WordToken(text: token.text, strongs: token.strongs,
+                                 isJesusSpeech: true)
+            }
+            return (verse: entry.verse, tokens: marked)
+        }
     }
 
-    /// Jesus-speech character spans per verse for one chapter
-    /// (REQ-RL-1), from the module's `<q who="Jesus">` markup.
-    /// Private versions carry no such markup and return none.
+    /// Jesus-speech character spans per verse for one chapter:
+    /// the module's own `<q who="Jesus">` markup where it speaks
+    /// (REQ-RL-1), otherwise the bundled artifact for versions it
+    /// covers — currently ChiUns (REQ-RL-4).
     func loadJesusSpans(testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
     {
-        guard case .sword(let m) = self else { return [:] }
-        guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [:] }
-        return mod.chapterJesusSpans(testament: testament, book: book, chapter: chapter)
+        switch self {
+        case .sword(let m):
+            if let mod = try? await ModuleLoader.shared.module(for: m) {
+                let tagged = mod.chapterJesusSpans(testament: testament, book: book, chapter: chapter)
+                if !tagged.isEmpty { return tagged }
+            }
+            return RedLetterArtifact.chapterSpans(
+                versionID: m.id,
+                book: artifactBookName(testament: testament, book: book),
+                chapter: chapter)
+        case .private:
+            // The artifact is built purely from published
+            // modules and never relies on a private version;
+            // private imports carry no markup and return none.
+            return [:]
+        }
     }
 
     /// Section headings ("subtitles") for one chapter, keyed by
     /// verse number (REQ-RS-5). SWORD versions read the preverse
     /// section titles out of the module; private versions carry
-    /// theirs as a "¶…¶" prefix on the verse string (NKJV+).
+    /// theirs as a "¶…¶" prefix on the verse string.
     func loadHeadings(testament: Int, book: Int, chapter: Int) async -> [Int: String] {
         switch self {
         case .sword(let m):

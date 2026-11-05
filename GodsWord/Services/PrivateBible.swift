@@ -16,7 +16,7 @@
 //
 // A verse string may open with a section heading ("subtitle")
 // wrapped in pilcrows — "¶The Seventy Sent Out¶ After these
-// things…" (the NKJV+ convention). The heading is the verse's
+// things…" (a private-version convention). The heading is the verse's
 // REQ-RS-5 heading: it renders above the verse and never appears
 // inline in the verse text.
 
