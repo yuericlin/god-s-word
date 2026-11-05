@@ -354,6 +354,40 @@ public final class SwordModule: @unchecked Sendable {
         return out
     }
 
+    /// Jesus-speech truth for a whole book, walked in verse order
+    /// with the quotation depth carried across verses and chapters
+    /// (REQ-RL-5): chapter → verse → the verse's spans, its plain
+    /// text length (the spans' coordinate basis), and the depth
+    /// carried into it. A module without Jesus markup yields empty
+    /// spans throughout.
+    public func bookJesusTruth(testament: Int, book: Int)
+        -> [Int: [Int: RedLetterDerivation.TruthVerse]]
+    {
+        guard let bookInfo = versification.book(testament: testament, book: book)
+        else { return [:] }
+        var depth = 0
+        var out: [Int: [Int: RedLetterDerivation.TruthVerse]] = [:]
+        for c in 1 ... bookInfo.chapters {
+            guard let count = versification.verseCount(testament: testament,
+                                                       book: book, chapter: c)
+            else { continue }
+            var chapterOut: [Int: RedLetterDerivation.TruthVerse] = [:]
+            for v in 1 ... count {
+                guard let raw = rawVerse(testament: testament, book: book,
+                                         chapter: c, verse: v) else { continue }
+                let prepared = OsisPlain.removingSectionTitles(raw)
+                let (spans, depthOut) = OsisRedLetter.jesusSpans(in: prepared,
+                                                                 jesusDepthIn: depth)
+                let length = OsisPlain.plainText(from: OsisPlain.removeNotes(prepared)).count
+                chapterOut[v] = RedLetterDerivation.TruthVerse(
+                    spans: spans, textLength: length, depthIn: depth)
+                depth = depthOut
+            }
+            out[c] = chapterOut
+        }
+        return out
+    }
+
     /// Word tokens for one verse, with Jesus-speech flags from the
     /// module markup (REQ-RL-1); otherwise like `verseTokens`.
     public func verseTokensWithJesus(testament: Int, book: Int, chapter: Int, verse: Int) -> [WordToken]? {

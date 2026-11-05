@@ -181,12 +181,11 @@ enum BibleVersion: Identifiable, Equatable {
         guard tokenChapter.allSatisfy({ $0.tokens.allSatisfy { !$0.isJesusSpeech } })
         else { return tokenChapter }
         // No markup flags anywhere in the chapter: fall back to
-        // the artifact. Tokens are plain-text segments, so
-        // cumulative character offsets locate each one.
-        let spans = RedLetterArtifact.chapterSpans(
-            versionID: m.id,
-            book: artifactBookName(testament: testament, book: book),
-            chapter: chapter)
+        // the chapter's span source (the bundled artifact, or
+        // on-device derivation via loadJesusSpans). Tokens are
+        // plain-text segments, so cumulative character offsets
+        // locate each one.
+        let spans = await loadJesusSpans(testament: testament, book: book, chapter: chapter)
         guard !spans.isEmpty else { return tokenChapter }
         return tokenChapter.map { entry in
             let verseSpans = spans[entry.verse] ?? []
@@ -207,7 +206,9 @@ enum BibleVersion: Identifiable, Equatable {
     /// Jesus-speech character spans per verse for one chapter:
     /// the module's own `<q who="Jesus">` markup where it speaks
     /// (REQ-RL-1), otherwise the bundled artifact for versions it
-    /// covers — currently ChiUns (REQ-RL-4).
+    /// covers — currently ChiUns (REQ-RL-4) — otherwise spans
+    /// derived on-device from the installed markup-carrying
+    /// versions (REQ-RL-5).
     func loadJesusSpans(testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
     {
@@ -217,15 +218,16 @@ enum BibleVersion: Identifiable, Equatable {
                 let tagged = mod.chapterJesusSpans(testament: testament, book: book, chapter: chapter)
                 if !tagged.isEmpty { return tagged }
             }
-            return RedLetterArtifact.chapterSpans(
+            let artifact = RedLetterArtifact.chapterSpans(
                 versionID: m.id,
                 book: artifactBookName(testament: testament, book: book),
                 chapter: chapter)
+            if !artifact.isEmpty { return artifact }
+            return await RedLetterDerivationService.shared.derivedSpans(
+                version: self, testament: testament, book: book, chapter: chapter)
         case .private:
-            // The artifact is built purely from published
-            // modules and never relies on a private version;
-            // private imports carry no markup and return none.
-            return [:]
+            return await RedLetterDerivationService.shared.derivedSpans(
+                version: self, testament: testament, book: book, chapter: chapter)
         }
     }
 
@@ -250,5 +252,105 @@ enum BibleVersion: Identifiable, Equatable {
             }
             return out
         }
+    }
+}
+
+/// On-device red-letter derivation (REQ-RL-5). For a version with
+/// no markup of its own and no bundled-artifact coverage, spans
+/// are derived at read time from the installed markup-carrying
+/// versions — NASB1995 as primary, KJV as backup, the priority
+/// the bundled artifact's audit used — transferred through the
+/// version's own quotation delimiters. The per-book inputs (the
+/// sources' truth walks and, for module versions, the target
+/// book's rendered texts) are cached for the session; private
+/// versions' texts are read live, so a re-import is never served
+/// stale spans.
+private actor RedLetterDerivationService {
+    static let shared = RedLetterDerivationService()
+
+    private var truthCache: [String: [Int: [Int: RedLetterDerivation.TruthVerse]]] = [:]
+    private var bookTextCache: [String: [(chapter: Int, verse: Int, text: String)]] = [:]
+
+    func derivedSpans(version: BibleVersion, testament: Int, book: Int, chapter: Int) async
+        -> [Int: [(start: Int, end: Int)]]
+    {
+        // Jesus's speech is a New Testament record; the sources
+        // carry no markup elsewhere.
+        guard testament == 2 else { return [:] }
+        let installed = ModuleStore().installedModules()
+        var sources: [InstalledModule] = []
+        for wanted in ["nasb1995", "kjv"] {
+            if let found = installed.first(where: { $0.id.lowercased() == wanted }),
+               found.id != version.id {
+                sources.append(found)
+            }
+        }
+        guard !sources.isEmpty else { return [:] }
+
+        let bookTexts = await bookTexts(version: version, testament: testament, book: book)
+        guard !bookTexts.isEmpty,
+              let mode = RedLetterDerivation.detectMode(texts: bookTexts.map { $0.text })
+        else { return [:] }
+        let parity = RedLetterDerivation.parityStartsInside(
+            texts: bookTexts.map { $0.text }, mode: mode)
+        var startsInside: [Int: Bool] = [:]
+        var chapterTarget: [(verse: Int, text: String)] = []
+        for (index, entry) in bookTexts.enumerated() where entry.chapter == chapter {
+            chapterTarget.append((verse: entry.verse, text: entry.text))
+            startsInside[entry.verse] = parity[index]
+        }
+        guard !chapterTarget.isEmpty else { return [:] }
+
+        var derived: [Int: [(start: Int, end: Int)]] = [:]
+        for source in sources {
+            guard let truth = await truthBook(module: source,
+                                              testament: testament, book: book)[chapter]
+            else { continue }
+            let one = RedLetterDerivation.deriveChapter(
+                target: chapterTarget, truth: truth,
+                startsInside: startsInside, mode: mode)
+            derived = derived.isEmpty ? one
+                : RedLetterDerivation.merge(primary: derived, fallback: one)
+        }
+        return derived
+    }
+
+    /// The target book's rendered texts in book order. Module
+    /// versions are cached by id; private versions are read live
+    /// (their texts are already in memory, and a re-import under
+    /// the same id must not be served the old book).
+    private func bookTexts(version: BibleVersion, testament: Int, book: Int) async
+        -> [(chapter: Int, verse: Int, text: String)]
+    {
+        let key = "\(version.id)|\(testament).\(book)"
+        let cacheable: Bool
+        switch version {
+        case .sword: cacheable = true
+        case .private: cacheable = false
+        }
+        if cacheable, let hit = bookTextCache[key] { return hit }
+        var out: [(chapter: Int, verse: Int, text: String)] = []
+        let chapters = version.chapterCount(testament: testament, book: book)
+        guard chapters > 0 else { return [] }
+        for c in 1 ... chapters {
+            guard let rows = try? await version.loadChapter(
+                testament: testament, book: book, chapter: c) else { continue }
+            for row in rows { out.append((chapter: c, verse: row.verse, text: row.text)) }
+        }
+        if cacheable { bookTextCache[key] = out }
+        return out
+    }
+
+    /// A source module's truth walk for one book, cached by id.
+    private func truthBook(module: InstalledModule, testament: Int, book: Int) async
+        -> [Int: [Int: RedLetterDerivation.TruthVerse]]
+    {
+        let key = "\(module.id)|\(testament).\(book)"
+        if let hit = truthCache[key] { return hit }
+        guard let mod = try? await ModuleLoader.shared.module(for: module)
+        else { return [:] }
+        let truth = mod.bookJesusTruth(testament: testament, book: book)
+        truthCache[key] = truth
+        return truth
     }
 }

@@ -860,9 +860,10 @@ Multiple (KJV Gen 1:1-2):
   module's verse text (`OsisRedLetter.jesusSpans`, unit-tested).
   A quotation nested inside Jesus's words stays part of his
   speech. Where a version's own data carries no such tags, the
-  bundled artifact of REQ-RL-4 supplies the spans instead; the
-  reader never infers speakers from quotation marks alone at
-  run time.
+  bundled artifact of REQ-RL-4 supplies the spans instead, and
+  where the artifact does not reach, the derivation of
+  REQ-RL-5; quotation marks alone, without a markup-carrying
+  source behind them, never produce red letters.
 - **REQ-RL-2:** A **Red letters** toggle in the reading
   settings, directly after "Verse by verse" and before
   "Strong's numbers" (§10's settings order), **default ON**.
@@ -887,8 +888,28 @@ Multiple (KJV Gen 1:1-2):
   modules — NASB1995 publisher markup as the primary ground
   truth, KJV markup filling verses NASB left unattributed,
   every span audited against ChiUns's own quotation delimiters
-  (Nov 4–5, 2026) — and never relies on a private version:
-  private imports carry no markup and render no red letters.
+  (Nov 4–5, 2026) — and never relies on a private version.
   A module's own markup always takes precedence: the artifact
   answers only where the markup is silent, and a version with
-  neither markup nor artifact coverage renders no red letters.
+  neither markup nor artifact coverage falls to REQ-RL-5.
+- **REQ-RL-5:** A version with neither markup nor artifact
+  coverage — a private import, or any module whose text delimits
+  quotations — derives its spans on-device at read time
+  (`RedLetterDerivation`, unit-tested) from the installed
+  markup-carrying versions, NASB1995 as primary and KJV as
+  backup, the artifact audit's own priority. The derivation is
+  the audit's transfer run live: the source's per-verse speech
+  fractions, walked with quotation depth carried across the
+  book, are mapped through the target's own quotation
+  delimiters (「」 pairs, or toggling " pairs seeded by the
+  book-wide delimiter parity); a delimiter segment paints only
+  when the fractions attribute at least half of it to the
+  speech, and a verse the sources leave untagged paints
+  nothing. Derivation covers the New Testament, applies in the
+  same three reading modes, and needs no bundled data for the
+  version it serves — with no markup-carrying version
+  installed, the version renders no red letters. Cross-checked
+  offline (Nov 5, 2026): run over the real modules, the
+  transfer reproduces the bundled ChiUns artifact exactly and
+  the private test corpus's audited spans on 97.7% of verses,
+  the rest differing by one character at a span end.

@@ -15,9 +15,20 @@ public enum OsisRedLetter {
     /// titles already removed), so the spans index into the same
     /// string `OsisPlain.plainText(from:)` returns for it.
     public static func jesusSpans(in osis: String) -> [(start: Int, end: Int)] {
+        jesusSpans(in: osis, jesusDepthIn: 0).spans
+    }
+
+    /// Depth-aware variant: `jesusDepthIn` is the number of Jesus
+    /// quotations earlier verses of the same book left open, so a
+    /// verse that continues a speech — its markup holds only the
+    /// closing tag — still yields its span. Returns the spans plus
+    /// the number of Jesus quotations this verse leaves open.
+    public static func jesusSpans(in osis: String, jesusDepthIn: Int)
+        -> (spans: [(start: Int, end: Int)], jesusDepthOut: Int)
+    {
         let s = OsisPlain.removeNotes(osis)
         let plain = OsisPlain.plainText(from: s)
-        guard !plain.isEmpty else { return [] }
+        guard !plain.isEmpty else { return ([], jesusDepthIn) }
 
         // Split the markup into Jesus / non-Jesus chunks in document
         // order. A chunk is Jesus speech while at least one enclosing
@@ -25,9 +36,9 @@ public enum OsisRedLetter {
         // words (Scripture he cites, someone he quotes) stays part of
         // his speech, as red-letter editions print it.
         var chunks: [(osis: String, isJesus: Bool)] = []
-        var stack: [Bool] = []
+        var stack: [Bool] = Array(repeating: true, count: jesusDepthIn)
         var current = ""
-        var currentIsJesus = false
+        var currentIsJesus = jesusDepthIn > 0
         func flush() {
             if !current.isEmpty { chunks.append((current, currentIsJesus)) }
             current = ""
@@ -109,7 +120,7 @@ public enum OsisRedLetter {
             }
             merged.append(span)
         }
-        return merged
+        return (merged, stack.filter { $0 }.count)
     }
 
     /// True when `tag` (angle brackets included) opens a `<q …>` —
