@@ -894,19 +894,25 @@ Multiple (KJV Gen 1:1-2):
   neither markup nor artifact coverage falls to REQ-RL-5.
 - **REQ-RL-5:** A version with neither markup nor artifact
   coverage — a private import, or any module whose text delimits
-  quotations — derives its spans on-device at read time
-  (`RedLetterDerivation`, unit-tested) from the installed
+  quotations — has its spans derived on-device, once per book
+  (`RedLetterDerivation`, unit-tested): the first read that
+  needs a book runs the transfer from the installed
   markup-carrying versions, NASB1995 as primary and KJV as
-  backup, the artifact audit's own priority. The derivation is
-  the audit's transfer run live: the source's per-verse speech
-  fractions, walked with quotation depth carried across the
-  book, are mapped through the target's own quotation
-  delimiters (「」 pairs, or toggling " pairs seeded by the
-  book-wide delimiter parity); a delimiter segment paints only
-  when the fractions attribute at least half of it to the
-  speech, and a verse the sources leave untagged paints
-  nothing. Derivation covers the New Testament, applies in the
-  same three reading modes, and needs no bundled data for the
+  backup (the artifact audit's own priority), and saves the
+  resulting span table on the device with the version's data;
+  every later read is a plain lookup. The transfer is the
+  audit's own: the source's per-verse speech fractions, walked
+  with quotation depth carried across the book, are mapped
+  through the target's own quotation delimiters (「」 pairs, or
+  toggling " pairs seeded by the book-wide delimiter parity);
+  a delimiter segment paints only when the fractions attribute
+  at least half of it to the speech, and a verse the sources
+  leave untagged paints nothing. A saved table is keyed to the
+  source versions it was derived from and, for private imports,
+  to a fingerprint of the book's text, so installing a source
+  or re-importing the version re-derives instead of serving
+  stale spans. Derivation covers the New Testament, applies in
+  the same three reading modes, and bundles no data for the
   version it serves — with no markup-carrying version
   installed, the version renders no red letters. Cross-checked
   offline (Nov 5, 2026): run over the real modules, the

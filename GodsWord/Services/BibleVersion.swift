@@ -255,21 +255,29 @@ enum BibleVersion: Identifiable, Equatable {
     }
 }
 
-/// On-device red-letter derivation (REQ-RL-5). For a version with
-/// no markup of its own and no bundled-artifact coverage, spans
-/// are derived at read time from the installed markup-carrying
-/// versions — NASB1995 as primary, KJV as backup, the priority
-/// the bundled artifact's audit used — transferred through the
-/// version's own quotation delimiters. The per-book inputs (the
-/// sources' truth walks and, for module versions, the target
-/// book's rendered texts) are cached for the session; private
-/// versions' texts are read live, so a re-import is never served
-/// stale spans.
+/// On-device red-letter derivation (REQ-RL-5), derive-once: the
+/// first read that needs a book's spans runs the transfer from
+/// the installed markup-carrying versions — NASB1995 as primary,
+/// KJV as backup, the bundled artifact audit's priority — and
+/// saves the resulting span table on the device; every later
+/// read is a plain lookup. A saved table is keyed to the source
+/// versions it was derived from and, for private imports, to a
+/// fingerprint of the book's text, so installing a source or
+/// re-importing the version re-derives instead of serving stale
+/// spans. Module versions are keyed by id, as the module cache
+/// keys them. Tables live in Application Support/DerivedRedLetters.
 private actor RedLetterDerivationService {
     static let shared = RedLetterDerivationService()
 
+    /// One book's derived spans: "chapter.verse" → [start, end] pairs.
+    private struct SpanTable: Codable {
+        var sourceSignature: String
+        var targetFingerprint: String
+        var spans: [String: [[Int]]]
+    }
+
+    private var loadedTables: [String: SpanTable] = [:]
     private var truthCache: [String: [Int: [Int: RedLetterDerivation.TruthVerse]]] = [:]
-    private var bookTextCache: [String: [(chapter: Int, verse: Int, text: String)]] = [:]
 
     func derivedSpans(version: BibleVersion, testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
@@ -285,50 +293,139 @@ private actor RedLetterDerivationService {
                 sources.append(found)
             }
         }
+        let signature = sources.map { $0.id.lowercased() }.joined(separator: ",")
+
+        let key = "\(version.id)|\(testament).\(book)"
+        // Private imports are fingerprinted from their live text
+        // (already in memory); module versions key by id.
+        var liveBook: [(chapter: Int, verse: Int, text: String)]?
+        var fingerprint = "module"
+        if case .private = version {
+            let texts = await bookTexts(version: version, testament: testament, book: book)
+            liveBook = texts
+            fingerprint = Self.fingerprint(of: texts)
+        }
+        if let table = table(for: key, versionID: version.id,
+                             testament: testament, book: book),
+           table.sourceSignature == signature,
+           table.targetFingerprint == fingerprint {
+            return Self.chapterSlice(table, chapter: chapter)
+        }
         guard !sources.isEmpty else { return [:] }
 
-        let bookTexts = await bookTexts(version: version, testament: testament, book: book)
-        guard !bookTexts.isEmpty,
-              let mode = RedLetterDerivation.detectMode(texts: bookTexts.map { $0.text })
-        else { return [:] }
-        let parity = RedLetterDerivation.parityStartsInside(
-            texts: bookTexts.map { $0.text }, mode: mode)
-        var startsInside: [Int: Bool] = [:]
-        var chapterTarget: [(verse: Int, text: String)] = []
-        for (index, entry) in bookTexts.enumerated() where entry.chapter == chapter {
-            chapterTarget.append((verse: entry.verse, text: entry.text))
-            startsInside[entry.verse] = parity[index]
+        // Derive the whole book once, then save it.
+        let content = liveBook ?? await bookTexts(version: version,
+                                                  testament: testament, book: book)
+        var spans: [String: [[Int]]] = [:]
+        if !content.isEmpty,
+           let mode = RedLetterDerivation.detectMode(texts: content.map { $0.text }) {
+            let parity = RedLetterDerivation.parityStartsInside(
+                texts: content.map { $0.text }, mode: mode)
+            var derived: [Int: [Int: [(start: Int, end: Int)]]] = [:]
+            for source in sources {
+                let truth = await truthBook(module: source,
+                                            testament: testament, book: book)
+                for c in Set(content.map { $0.chapter }).sorted() {
+                    guard let truthChapter = truth[c] else { continue }
+                    var startsInside: [Int: Bool] = [:]
+                    var target: [(verse: Int, text: String)] = []
+                    for (index, entry) in content.enumerated() where entry.chapter == c {
+                        target.append((verse: entry.verse, text: entry.text))
+                        startsInside[entry.verse] = parity[index]
+                    }
+                    let one = RedLetterDerivation.deriveChapter(
+                        target: target, truth: truthChapter,
+                        startsInside: startsInside, mode: mode)
+                    guard !one.isEmpty else { continue }
+                    // The earlier source is primary; later sources
+                    // fill the verses it left unpainted.
+                    derived[c] = derived[c].map {
+                        RedLetterDerivation.merge(primary: $0, fallback: one)
+                    } ?? one
+                }
+            }
+            for (c, chapterSpans) in derived {
+                for (v, verseSpans) in chapterSpans where !verseSpans.isEmpty {
+                    spans["\(c).\(v)"] = verseSpans.map { [$0.start, $0.end] }
+                }
+            }
         }
-        guard !chapterTarget.isEmpty else { return [:] }
-
-        var derived: [Int: [(start: Int, end: Int)]] = [:]
-        for source in sources {
-            guard let truth = await truthBook(module: source,
-                                              testament: testament, book: book)[chapter]
-            else { continue }
-            let one = RedLetterDerivation.deriveChapter(
-                target: chapterTarget, truth: truth,
-                startsInside: startsInside, mode: mode)
-            derived = derived.isEmpty ? one
-                : RedLetterDerivation.merge(primary: derived, fallback: one)
-        }
-        return derived
+        let table = SpanTable(sourceSignature: signature,
+                              targetFingerprint: fingerprint, spans: spans)
+        save(table, for: key, versionID: version.id, testament: testament, book: book)
+        return Self.chapterSlice(table, chapter: chapter)
     }
 
-    /// The target book's rendered texts in book order. Module
-    /// versions are cached by id; private versions are read live
-    /// (their texts are already in memory, and a re-import under
-    /// the same id must not be served the old book).
+    // MARK: - Tables on disk
+
+    private func tableFile(versionID: String, testament: Int, book: Int) -> URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory,
+                                                  in: .userDomainMask).first!
+        let safeID = versionID.map { $0.isLetter || $0.isNumber ? $0 : "_" }
+        let dir = appSupport.appendingPathComponent("DerivedRedLetters",
+                                                    isDirectory: true)
+            .appendingPathComponent(String(safeID), isDirectory: true)
+        return dir.appendingPathComponent("\(testament)-\(book).json")
+    }
+
+    private func table(for key: String, versionID: String,
+                       testament: Int, book: Int) -> SpanTable?
+    {
+        if let hit = loadedTables[key] { return hit }
+        let url = tableFile(versionID: versionID, testament: testament, book: book)
+        guard let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode(SpanTable.self, from: data)
+        else { return nil }
+        loadedTables[key] = decoded
+        return decoded
+    }
+
+    private func save(_ table: SpanTable, for key: String, versionID: String,
+                      testament: Int, book: Int) {
+        loadedTables[key] = table
+        let url = tableFile(versionID: versionID, testament: testament, book: book)
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(table) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    private static func chapterSlice(_ table: SpanTable, chapter: Int)
+        -> [Int: [(start: Int, end: Int)]]
+    {
+        var out: [Int: [(start: Int, end: Int)]] = [:]
+        for (ref, pairs) in table.spans {
+            let parts = ref.split(separator: ".")
+            guard parts.count == 2, Int(parts[0]) == chapter,
+                  let verse = Int(parts[1]) else { continue }
+            out[verse] = pairs.compactMap { $0.count == 2 ? (start: $0[0], end: $0[1]) : nil }
+        }
+        return out
+    }
+
+    /// FNV-1a over a private book's rendered texts, in order.
+    private static func fingerprint(
+        of texts: [(chapter: Int, verse: Int, text: String)]) -> String
+    {
+        var hash: UInt64 = 0xcbf29ce484222325
+        func feed(_ s: String) {
+            for byte in s.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100000001b3 }
+            hash = (hash ^ 0x1f) &* 0x100000001b3
+        }
+        for entry in texts {
+            feed("\(entry.chapter).\(entry.verse)")
+            feed(entry.text)
+        }
+        return String(hash, radix: 16)
+    }
+
+    // MARK: - Derivation inputs
+
+    /// The target book's rendered texts in book order.
     private func bookTexts(version: BibleVersion, testament: Int, book: Int) async
         -> [(chapter: Int, verse: Int, text: String)]
     {
-        let key = "\(version.id)|\(testament).\(book)"
-        let cacheable: Bool
-        switch version {
-        case .sword: cacheable = true
-        case .private: cacheable = false
-        }
-        if cacheable, let hit = bookTextCache[key] { return hit }
         var out: [(chapter: Int, verse: Int, text: String)] = []
         let chapters = version.chapterCount(testament: testament, book: book)
         guard chapters > 0 else { return [] }
@@ -337,11 +434,10 @@ private actor RedLetterDerivationService {
                 testament: testament, book: book, chapter: c) else { continue }
             for row in rows { out.append((chapter: c, verse: row.verse, text: row.text)) }
         }
-        if cacheable { bookTextCache[key] = out }
         return out
     }
 
-    /// A source module's truth walk for one book, cached by id.
+    /// A source module's truth walk for one book, session-cached.
     private func truthBook(module: InstalledModule, testament: Int, book: Int) async
         -> [Int: [Int: RedLetterDerivation.TruthVerse]]
     {
