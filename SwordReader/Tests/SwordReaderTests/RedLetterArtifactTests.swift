@@ -1,7 +1,6 @@
 // RedLetterArtifactTests.swift
 // REQ-RL-4: the bundled span artifact covers the versions whose
-// own data carries no speaker markup (ChiUns and a private
-// Bible), in the
+// own data carries no speaker markup (the ChiUns module), in the
 // coordinates of the text exactly as rendered.
 
 import XCTest
@@ -46,18 +45,6 @@ final class RedLetterArtifactTests: XCTestCase {
                                               chapter: 3, verse: 16).isEmpty)
         XCTAssertTrue(RedLetterArtifact.spans(versionID: "NoSuchVersion", book: "John",
                                               chapter: 3, verse: 16).isEmpty)
-    }
-
-    /// Private-version sections are keyed by the FNV-1a hash of
-    /// the version id, so no private Bible is named in the data.
-    /// The algorithm is pinned here on a neutral id (the value
-    /// was computed with the same algorithm used to build the
-    /// table).
-    func testPrivateSectionKeyAlgorithm() {
-        XCTAssertEqual(RedLetterArtifact.sectionKey(for: "SomePrivateBible"),
-                       "c3429efae310e32a")
-        XCTAssertEqual(RedLetterArtifact.sectionKey(for: "someprivatebible"),
-                       "c3429efae310e32a")
     }
 
     /// Chapter queries return exactly that chapter's verses

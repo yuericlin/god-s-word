@@ -878,17 +878,17 @@ Multiple (KJV Gen 1:1-2):
   own styling). The verse number, section headings, highlight
   backgrounds, and selection behave exactly as before. The
   Compare view is not covered in v0.
-- **REQ-RL-4:** Versions without speaker markup show red
+- **REQ-RL-4:** A module without speaker markup shows red
   letters from a bundled span artifact (`RedLetterArtifact`)
-  when the artifact covers them — currently the ChiUns module
-  and a covered private Bible, in the verse-by-verse,
-  paragraph, and Strong's modes. The spans are character ranges
-  in the text exactly as rendered (section headings stripped,
-  whitespace sanitized — REQ-RS-5/6). The data was extracted
-  from the NASB1995 module's publisher markup as the primary
-  ground truth, with the KJV module's markup filling verses
-  NASB left unattributed, every span audited against the
-  target version's own quotation delimiters (Nov 4–5, 2026).
+  when the artifact covers it — currently the ChiUns module,
+  in the verse-by-verse, paragraph, and Strong's modes. The
+  spans are character ranges in the module's text exactly as
+  rendered. The artifact is built purely from published
+  modules — NASB1995 publisher markup as the primary ground
+  truth, KJV markup filling verses NASB left unattributed,
+  every span audited against ChiUns's own quotation delimiters
+  (Nov 4–5, 2026) — and never relies on a private version:
+  private imports carry no markup and render no red letters.
   A module's own markup always takes precedence: the artifact
   answers only where the markup is silent, and a version with
   neither markup nor artifact coverage renders no red letters.

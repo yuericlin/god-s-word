@@ -207,7 +207,7 @@ enum BibleVersion: Identifiable, Equatable {
     /// Jesus-speech character spans per verse for one chapter:
     /// the module's own `<q who="Jesus">` markup where it speaks
     /// (REQ-RL-1), otherwise the bundled artifact for versions it
-    /// covers — ChiUns and a covered private Bible (REQ-RL-4).
+    /// covers — currently ChiUns (REQ-RL-4).
     func loadJesusSpans(testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
     {
@@ -221,11 +221,11 @@ enum BibleVersion: Identifiable, Equatable {
                 versionID: m.id,
                 book: artifactBookName(testament: testament, book: book),
                 chapter: chapter)
-        case .private(let b):
-            return RedLetterArtifact.chapterSpans(
-                versionID: b.id,
-                book: artifactBookName(testament: testament, book: book),
-                chapter: chapter)
+        case .private:
+            // The artifact is built purely from published
+            // modules and never relies on a private version;
+            // private imports carry no markup and return none.
+            return [:]
         }
     }
 
