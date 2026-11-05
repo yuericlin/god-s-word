@@ -1,14 +1,18 @@
 // RedLetterDerivation.swift
 // On-device derivation of Jesus-speech spans for a version whose
 // own data carries no speaker markup (REQ-RL-5). The transfer is
-// the audited offline pipeline, run at read time: a markup-carrying
-// source version supplies each verse's speech as fractions of its
-// text; the target version's own quotation delimiters — 「」 pairs
-// or toggling " pairs, seeded by the book-wide delimiter parity —
+// the audited offline pipeline: a markup-carrying source version
+// supplies each verse's speech as fractions of its text; the
+// target version's own quotation delimiters — 「」 pairs or
+// toggling " pairs, seeded by the book-wide delimiter parity —
 // locate the corresponding segments; a segment is painted only
-// when the source's fractions attribute at least half of it to the
-// speech. Nothing is painted for a verse the source leaves
-// untagged: derivation locates delimiters, it never guesses.
+// when the source's fractions attribute at least half of it to
+// the speech. The rule throughout is strict — an attribution
+// that cannot be made with confidence is left unpainted: no
+// proportional guessing where the target has no delimiters, and
+// no rescue of a weakly attributed segment. Nothing is painted
+// for a verse the source leaves untagged: derivation locates
+// delimiters, it never guesses.
 
 import Foundation
 
@@ -97,30 +101,20 @@ public enum RedLetterDerivation {
                 : toggleSegments(chars, kfrac: kfrac, kcov: kcov)
             var painted: [(start: Int, end: Int)] = []
             if segs.isEmpty {
+                // No delimiters to locate the speech by: paint
+                // only when the source covers essentially the
+                // whole verse, so the verse itself is the span.
+                // Anything less is unsure, and unsure stays
+                // unpainted.
                 if kcov >= 0.9 {
                     painted = [(0, chars.count)]
-                } else if kcov >= 0.3 {
-                    painted = kfrac.map {
-                        (Int(($0.start * Double(length)).rounded()),
-                         Int(($0.end * Double(length)).rounded()))
-                    }
                 }
             } else {
-                var shares: [Double] = []
                 for (a, b) in segs {
                     let fa = Double(a) / Double(length)
                     let fb = Double(b) / Double(length)
                     let share = overlap(fa, fb, kfrac) / max(fb - fa, 1e-9)
-                    shares.append(share)
                     if share >= 0.5 { painted.append((a, b)) }
-                }
-                // A verse whose only quotation segment is the
-                // speech's continuation or a short answer the
-                // fractions place mostly elsewhere still paints
-                // when the source covers enough of the verse.
-                if segs.count == 1, painted.isEmpty, kcov >= 0.15,
-                   (shares.first ?? 0) >= 0.1 {
-                    painted = [segs[0]]
                 }
             }
             // A painted range holding no letter or digit at all is

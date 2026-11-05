@@ -18,24 +18,6 @@ final class RedLetterDerivationTests: XCTestCase {
             textLength: length, depthIn: depthIn)
     }
 
-    // MARK: OsisRedLetter depth carry
-
-    func testJesusSpansDepthCarryAcrossVerses() {
-        let v1 = "He said <q who=\"Jesus\">come and see"
-        let r1 = OsisRedLetter.jesusSpans(in: v1, jesusDepthIn: 0)
-        XCTAssertEqual(r1.spans.map { [$0.start, $0.end] }, [[8, 20]])
-        XCTAssertEqual(r1.jesusDepthOut, 1)
-
-        let v2 = "and rest</q> today"
-        let r2 = OsisRedLetter.jesusSpans(in: v2, jesusDepthIn: r1.jesusDepthOut)
-        XCTAssertEqual(r2.spans.map { [$0.start, $0.end] }, [[0, 8]])
-        XCTAssertEqual(r2.jesusDepthOut, 0)
-
-        // The standalone entry point is unchanged: a verse holding
-        // only a closing tag yields nothing on its own.
-        XCTAssertTrue(OsisRedLetter.jesusSpans(in: v2).isEmpty)
-    }
-
     // MARK: Mode detection and parity
 
     func testDetectMode() {
@@ -121,13 +103,36 @@ final class RedLetterDerivationTests: XCTestCase {
         XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[0, 11]])
     }
 
-    func testToggleNoDelimitersFallsBackToFractions() {
+    func testToggleNoDelimitersPartialCoveragePaintsNothing() {
+        // No quotation marks to locate the speech by, and the
+        // source covers only half its verse: unsure — unpainted.
         let text = "Come to me, all you."
         let out = RedLetterDerivation.deriveChapter(
             target: [(verse: 1, text: text)],
             truth: [1: truth([(2, 12)], length: 20)],
             startsInside: [:], mode: .toggleQuotes)
-        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[2, 12]])
+        XCTAssertTrue(out.isEmpty)
+    }
+
+    func testToggleNoDelimitersWholeVerseCoveredPaintsAll() {
+        let text = "Come to me, all you."
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(0, 20)], length: 20)],
+            startsInside: [:], mode: .toggleQuotes)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[0, 20]])
+    }
+
+    func testSoleSegmentWeakSharePaintsNothing() {
+        // The verse's only segment is attributed just a third of
+        // its length by the source's fractions: unsure — unpainted
+        // (no sole-segment rescue).
+        let text = "「一二三四五六七八」還有別的話語在這裡"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(0, 4)], length: 20)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertTrue(out.isEmpty)
     }
 
     func testUntaggedVersePaintsNothing() {

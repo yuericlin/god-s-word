@@ -257,13 +257,13 @@ enum BibleVersion: Identifiable, Equatable {
 
 /// On-device red-letter derivation (REQ-RL-5), derive-once: the
 /// first read that needs a book's spans runs the transfer from
-/// the installed markup-carrying versions — NASB1995 as primary,
-/// KJV as backup, the bundled artifact audit's priority — and
-/// saves the resulting span table on the device; every later
-/// read is a plain lookup. A saved table is keyed to the source
-/// versions it was derived from and, for private imports, to a
-/// fingerprint of the book's text, so installing a source or
-/// re-importing the version re-derives instead of serving stale
+/// the bundled source truth (`RedLetterTruth` — extracted from
+/// the published NASB1995 and KJV modules, so neither module
+/// needs to be installed) and saves the resulting span table on
+/// the device; every later read is a plain lookup. A saved table
+/// is keyed to the truth it was derived from and, for private
+/// imports, to a fingerprint of the book's text, so a truth
+/// update or a re-import re-derives instead of serving stale
 /// spans. Module versions are keyed by id, as the module cache
 /// keys them. Tables live in Application Support/DerivedRedLetters.
 private actor RedLetterDerivationService {
@@ -277,24 +277,14 @@ private actor RedLetterDerivationService {
     }
 
     private var loadedTables: [String: SpanTable] = [:]
-    private var truthCache: [String: [Int: [Int: RedLetterDerivation.TruthVerse]]] = [:]
 
     func derivedSpans(version: BibleVersion, testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
     {
-        // Jesus's speech is a New Testament record; the sources
-        // carry no markup elsewhere.
+        // Jesus's speech is a New Testament record; the bundled
+        // truth covers nothing elsewhere.
         guard testament == 2 else { return [:] }
-        let installed = ModuleStore().installedModules()
-        var sources: [InstalledModule] = []
-        for wanted in ["nasb1995", "kjv"] {
-            if let found = installed.first(where: { $0.id.lowercased() == wanted }),
-               found.id != version.id {
-                sources.append(found)
-            }
-        }
-        let signature = sources.map { $0.id.lowercased() }.joined(separator: ",")
-
+        let signature = "bundled:" + RedLetterTruth.sourceIDs.joined(separator: ",")
         let key = "\(version.id)|\(testament).\(book)"
         // Private imports are fingerprinted from their live text
         // (already in memory); module versions key by id.
@@ -311,7 +301,6 @@ private actor RedLetterDerivationService {
            table.targetFingerprint == fingerprint {
             return Self.chapterSlice(table, chapter: chapter)
         }
-        guard !sources.isEmpty else { return [:] }
 
         // Derive the whole book once, then save it.
         let content = liveBook ?? await bookTexts(version: version,
@@ -319,14 +308,16 @@ private actor RedLetterDerivationService {
         var spans: [String: [[Int]]] = [:]
         if !content.isEmpty,
            let mode = RedLetterDerivation.detectMode(texts: content.map { $0.text }) {
+            let overall = 39 + book - 1  // testament == 2 here
+            let bookName = Versification.kjv.books[overall].name
             let parity = RedLetterDerivation.parityStartsInside(
                 texts: content.map { $0.text }, mode: mode)
             var derived: [Int: [Int: [(start: Int, end: Int)]]] = [:]
-            for source in sources {
-                let truth = await truthBook(module: source,
-                                            testament: testament, book: book)
+            for sourceID in RedLetterTruth.sourceIDs {
                 for c in Set(content.map { $0.chapter }).sorted() {
-                    guard let truthChapter = truth[c] else { continue }
+                    let truthChapter = RedLetterTruth.truth(
+                        sourceID: sourceID, book: bookName, chapter: c)
+                    guard !truthChapter.isEmpty else { continue }
                     var startsInside: [Int: Bool] = [:]
                     var target: [(verse: Int, text: String)] = []
                     for (index, entry) in content.enumerated() where entry.chapter == c {
@@ -435,18 +426,5 @@ private actor RedLetterDerivationService {
             for row in rows { out.append((chapter: c, verse: row.verse, text: row.text)) }
         }
         return out
-    }
-
-    /// A source module's truth walk for one book, session-cached.
-    private func truthBook(module: InstalledModule, testament: Int, book: Int) async
-        -> [Int: [Int: RedLetterDerivation.TruthVerse]]
-    {
-        let key = "\(module.id)|\(testament).\(book)"
-        if let hit = truthCache[key] { return hit }
-        guard let mod = try? await ModuleLoader.shared.module(for: module)
-        else { return [:] }
-        let truth = mod.bookJesusTruth(testament: testament, book: book)
-        truthCache[key] = truth
-        return truth
     }
 }

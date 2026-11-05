@@ -888,7 +888,9 @@ Multiple (KJV Gen 1:1-2):
   modules — NASB1995 publisher markup as the primary ground
   truth, KJV markup filling verses NASB left unattributed,
   every span audited against ChiUns's own quotation delimiters
-  (Nov 4–5, 2026) — and never relies on a private version.
+  (Nov 4–5, 2026) — and never relies on a private version. The
+  audit is strict, under the rule of REQ-RL-5: an attribution it
+  could not make with confidence is left unpainted.
   A module's own markup always takes precedence: the artifact
   answers only where the markup is silent, and a version with
   neither markup nor artifact coverage falls to REQ-RL-5.
@@ -896,26 +898,32 @@ Multiple (KJV Gen 1:1-2):
   coverage — a private import, or any module whose text delimits
   quotations — has its spans derived on-device, once per book
   (`RedLetterDerivation`, unit-tested): the first read that
-  needs a book runs the transfer from the installed
-  markup-carrying versions, NASB1995 as primary and KJV as
-  backup (the artifact audit's own priority), and saves the
-  resulting span table on the device with the version's data;
-  every later read is a plain lookup. The transfer is the
-  audit's own: the source's per-verse speech fractions, walked
-  with quotation depth carried across the book, are mapped
-  through the target's own quotation delimiters (「」 pairs, or
-  toggling " pairs seeded by the book-wide delimiter parity);
-  a delimiter segment paints only when the fractions attribute
-  at least half of it to the speech, and a verse the sources
-  leave untagged paints nothing. A saved table is keyed to the
-  source versions it was derived from and, for private imports,
-  to a fingerprint of the book's text, so installing a source
-  or re-importing the version re-derives instead of serving
-  stale spans. Derivation covers the New Testament, applies in
-  the same three reading modes, and bundles no data for the
-  version it serves — with no markup-carrying version
-  installed, the version renders no red letters. Cross-checked
-  offline (Nov 5, 2026): run over the real modules, the
-  transfer reproduces the bundled ChiUns artifact exactly and
-  the private test corpus's audited spans on 97.7% of verses,
-  the rest differing by one character at a span end.
+  needs a book runs the transfer and saves the resulting span
+  table on the device with the version's data; every later read
+  is a plain lookup. The transfer's ground truth is bundled
+  with the app (`RedLetterTruth`): the NASB1995 and KJV
+  modules' own Jesus-speech spans, extracted Nov 5, 2026 with
+  quotation depth carried across each book — NASB1995 primary,
+  KJV backup, the artifact audit's priority — so derivation
+  needs neither source module installed. The transfer is the
+  audit's own: the source's per-verse speech fractions are
+  mapped through the target's own quotation delimiters
+  (「」 pairs, or toggling " pairs seeded by the book-wide
+  delimiter parity); a delimiter segment paints only when the
+  fractions attribute at least half of it to the speech. The
+  rule is strict — for unsure tags, don't tag: a verse the
+  sources leave untagged paints nothing, a segment under the
+  attribution threshold paints nothing however alone it stands,
+  and where the target has no delimiters only a verse the
+  source covers essentially whole is painted, never a
+  proportional guess. A saved table is keyed to the bundled
+  truth it was derived from and, for private imports, to a
+  fingerprint of the book's text, so a truth update or a
+  re-import re-derives instead of serving stale spans.
+  Derivation covers the New Testament and applies in the same
+  three reading modes. Cross-checked offline (Nov 5, 2026)
+  against the lenient audit pipeline: the strict rule leaves
+  18 fewer ChiUns verses painted (2,014 shipped in the
+  REQ-RL-4 artifact) and 16 fewer in the private test corpus,
+  every dropped verse an embedded re-quotation, a weak
+  attribution, or a delimiter-free partial coverage.
