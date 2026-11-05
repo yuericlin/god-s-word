@@ -10,17 +10,10 @@ import XCTest
 final class RedLetterArtifactTests: XCTestCase {
 
     /// Spans come from the real extraction (NASB1995 primary,
-    /// KJV backup, quotation-delimiter audit — Nov 4–5, 2026):
-    /// Jesus's answer to John in Matt 3:15 is exactly the quoted
-    /// sentence; the Father's voice in the next-but-one verse is
-    /// not Jesus and carries no span in either version.
-    func testKnownVerses() {
-        XCTAssertEqual(
-            RedLetterArtifact.spans(versionID: "nkjv-plus", book: "Matthew",
-                                    chapter: 3, verse: 15).map { [$0.start, $0.end] },
-            [[36, 121]])
-        XCTAssertTrue(RedLetterArtifact.spans(versionID: "nkjv-plus", book: "Matthew",
-                                              chapter: 3, verse: 17).isEmpty)
+    /// KJV backup, quotation-delimiter audit — Nov 4–5, 2026).
+    /// The Father's voice in Matt 3:17 is not Jesus and carries
+    /// no span.
+    func testFatherVoiceNotPainted() {
         XCTAssertTrue(RedLetterArtifact.spans(versionID: "ChiUns", book: "Matthew",
                                               chapter: 3, verse: 17).isEmpty)
     }

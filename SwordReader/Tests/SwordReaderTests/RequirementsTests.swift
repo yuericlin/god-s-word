@@ -260,7 +260,7 @@ final class HistoryRequirementsTests: XCTestCase {
 // MARK: - REQ-CM: Compare versions
 
 final class CompareRequirementsTests: XCTestCase {
-    let available = ["KJV", "ChiUns", "ASV", "NKJV+"]
+    let available = ["KJV", "ChiUns", "ASV", "WEB"]
 
     // REQ-CM-3: nil or empty setting -> only the current version.
     func testNilOrEmptySettingShowsOnlyCurrent() {
@@ -1595,7 +1595,7 @@ final class HighlightRequirementsTests: XCTestCase {
         var list = HighlightLogic.adding(
             highlight(3, 5, version: "KJV", at: t0), to: [])
         list = HighlightLogic.adding(
-            highlight(5, 8, version: "NKJV", at: t1), to: list)
+            highlight(5, 8, version: "ASV", at: t1), to: list)
         XCTAssertEqual(list.count, 1)
         XCTAssertEqual(list[0].verses, 3 ... 8)
         XCTAssertEqual(list[0].createdAt, t0)
