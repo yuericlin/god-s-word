@@ -61,7 +61,74 @@ public enum OsisPlain {
         // an empty or all-whitespace input leaves `out` empty, and
         // removeLast() on an empty string is a fatal error.)
         if out.last == " " { out.removeLast() }
+        return sanitized(out)
+    }
+
+    /// Whitespace cleanup for display (REQ-RS-6): collapses runs to
+    /// a single space and trims, then removes spaces that are never
+    /// wanted in print — between CJK letters and around CJK
+    /// punctuation (the Chinese modules segment text with spaces
+    /// that render as gaps, e.g. "看见 神的灵" for "看见神的灵"),
+    /// and before closing punctuation. Latin word spacing is
+    /// otherwise untouched. Applied to every verse the reader
+    /// shows: `plainText` ends here, and private versions are
+    /// sanitized by the caller.
+    public static func sanitized(_ text: String) -> String {
+        var chars: [Character] = []
+        chars.reserveCapacity(text.count)
+        var lastWasSpace = true // trims leading whitespace
+        for c in text {
+            if c.isWhitespace || c == "\u{00A0}" {
+                if !lastWasSpace { chars.append(" "); lastWasSpace = true }
+            } else {
+                chars.append(c)
+                lastWasSpace = false
+            }
+        }
+        if chars.last == " " { chars.removeLast() }
+        var out = ""
+        out.reserveCapacity(chars.count)
+        for idx in chars.indices {
+            let c = chars[idx]
+            if c == " ", idx > 0, idx + 1 < chars.count,
+               dropsSpace(prev: chars[idx - 1], next: chars[idx + 1],
+                          afterNext: idx + 2 < chars.count ? chars[idx + 2] : nil) {
+                continue
+            }
+            out.append(c)
+        }
         return out
+    }
+
+    /// True when the single space between `prev` and `next` should
+    /// not print. `afterNext` disambiguates quotes: a closing quote
+    /// (at the end, or followed by space/punctuation) takes no
+    /// space before it, while an opening quote keeps its space.
+    private static func dropsSpace(prev: Character, next: Character, afterNext: Character?) -> Bool {
+        if isCJKPunctuation(prev) || isCJKPunctuation(next) { return true }
+        if isCJKLetter(prev), isCJKLetter(next) { return true }
+        if next == "," || next == "." || next == ")" || next == "]" { return true }
+        if next == "\"" || next == "'" {
+            guard let a = afterNext else { return true }
+            return a == " " || a == "," || a == "." || a == ";" || a == ":"
+                || a == "!" || a == "?" || a == ")" || a == "]"
+        }
+        return false
+    }
+
+    private static func isCJKLetter(_ c: Character) -> Bool {
+        guard let v = c.unicodeScalars.first?.value else { return false }
+        return (0x3400 ... 0x4DBF).contains(v) || (0x4E00 ... 0x9FFF).contains(v)
+            || (0xF900 ... 0xFAFF).contains(v) || (0x3040 ... 0x30FF).contains(v)
+            || (0xAC00 ... 0xD7AF).contains(v)
+    }
+
+    private static func isCJKPunctuation(_ c: Character) -> Bool {
+        // Only the CJK punctuation blocks: characters shared with
+        // Latin typography (—, …, ·) are deliberately excluded, so
+        // an English em dash keeps its spaces.
+        guard let v = c.unicodeScalars.first?.value else { return false }
+        return (0x3000 ... 0x303F).contains(v) || (0xFF01 ... 0xFF5E).contains(v)
     }
 
     /// A `<title>` element found in an entry: its full range, its

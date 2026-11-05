@@ -412,6 +412,16 @@ Multiple (KJV Gen 1:1-2):
   unaffected. Private JSON versions carry a heading as a "¶…¶"
   prefix on the verse string (the NKJV+ convention) and are
   treated exactly the same way; the pilcrow markers never render.
+- **REQ-RS-6:** Verse text is whitespace-sanitized for display in
+  every version and mode (`OsisPlain.sanitized`, applied at the
+  end of `plainText` and to private-version text on load):
+  whitespace runs collapse to one space and the ends are trimmed;
+  a space between two CJK letters or next to CJK punctuation
+  never prints (the Chinese modules segment text with spaces
+  that render as gaps — "看见 神的灵" reads "看见神的灵"); a space
+  before closing punctuation (`,` `.` `)` `]` or a closing
+  quote) never prints. Latin word spacing is otherwise
+  untouched — on KJV text the sanitizer changes nothing.
 
 ---
 
