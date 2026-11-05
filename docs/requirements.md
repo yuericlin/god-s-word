@@ -417,10 +417,11 @@ Multiple (KJV Gen 1:1-2):
   end of `plainText` and to private-version text on load):
   whitespace runs collapse to one space and the ends are trimmed;
   a space between two CJK letters or next to CJK punctuation
-  never prints (the Chinese modules segment text with spaces
-  that render as gaps — "看见 神的灵" reads "看见神的灵"); a space
-  before closing punctuation (`,` `.` `)` `]` or a closing
-  quote) never prints. Latin word spacing is otherwise
+  never prints — except the reverence space before 神, which
+  always prints (in ChiUns it is the only space the module
+  contains: all 3,841 occurrences precede 神, e.g. "看见 神的灵");
+  a space before closing punctuation (`,` `.` `)` `]` or a
+  closing quote) never prints. Latin word spacing is otherwise
   untouched — on KJV text the sanitizer changes nothing.
 
 ---

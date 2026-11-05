@@ -67,12 +67,13 @@ public enum OsisPlain {
     /// Whitespace cleanup for display (REQ-RS-6): collapses runs to
     /// a single space and trims, then removes spaces that are never
     /// wanted in print — between CJK letters and around CJK
-    /// punctuation (the Chinese modules segment text with spaces
-    /// that render as gaps, e.g. "看见 神的灵" for "看见神的灵"),
-    /// and before closing punctuation. Latin word spacing is
-    /// otherwise untouched. Applied to every verse the reader
-    /// shows: `plainText` ends here, and private versions are
-    /// sanitized by the caller.
+    /// punctuation, and before closing punctuation. One space is
+    /// sacred: the reverence space the Chinese text sets before
+    /// 神 (God's name) always prints — in ChiUns it is in fact the
+    /// ONLY space the module contains (all 3,841 occurrences,
+    /// measured). Latin word spacing is otherwise untouched.
+    /// Applied to every verse the reader shows: `plainText` ends
+    /// here, and private versions are sanitized by the caller.
     public static func sanitized(_ text: String) -> String {
         var chars: [Character] = []
         chars.reserveCapacity(text.count)
@@ -105,6 +106,8 @@ public enum OsisPlain {
     /// (at the end, or followed by space/punctuation) takes no
     /// space before it, while an opening quote keeps its space.
     private static func dropsSpace(prev: Character, next: Character, afterNext: Character?) -> Bool {
+        // The reverence space before 神 always prints (REQ-RS-6).
+        if next == "神" { return false }
         if isCJKPunctuation(prev) || isCJKPunctuation(next) { return true }
         if isCJKLetter(prev), isCJKLetter(next) { return true }
         if next == "," || next == "." || next == ")" || next == "]" { return true }
