@@ -151,9 +151,11 @@ enum BibleVersion: Identifiable, Equatable {
             let ob = overallBook(testament: testament, book: book)
             guard let texts = b.chapter(book: ob, chapter: chapter) else { return [] }
             // A "¶…¶" prefix is the verse's section heading
-            // (REQ-RS-5), not verse text.
+            // (REQ-RS-5), not verse text. Whitespace is sanitized
+            // for display like module text (REQ-RS-6).
             return texts.enumerated().map {
-                (verse: $0.offset + 1, text: PrivateBible.splitHeading($0.element).text)
+                (verse: $0.offset + 1,
+                 text: OsisPlain.sanitized(PrivateBible.splitHeading($0.element).text))
             }
         }
     }
@@ -197,7 +199,7 @@ enum BibleVersion: Identifiable, Equatable {
             var out = [Int: String]()
             for (i, text) in texts.enumerated() {
                 if let heading = PrivateBible.splitHeading(text).heading {
-                    out[i + 1] = heading
+                    out[i + 1] = OsisPlain.sanitized(heading)
                 }
             }
             return out

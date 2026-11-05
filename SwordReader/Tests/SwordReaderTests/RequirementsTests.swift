@@ -1812,3 +1812,77 @@ final class RedLetterRequirementsTests: XCTestCase {
         XCTAssertTrue(plainTokens.allSatisfy { !$0.isJesusSpeech })
     }
 }
+
+// MARK: - Whitespace sanitization (REQ-RS-6)
+
+final class WhitespaceSanitizationTests: XCTestCase {
+
+    /// REQ-RS-6: a space between two CJK letters never prints,
+    /// except the reverence space before 神 (next test).
+    func testSpaceBetweenCJKLettersRemoved() {
+        XCTAssertEqual(OsisPlain.sanitized("耶稣 基督 的 家谱"),
+                       "耶稣基督的家谱")
+        XCTAssertEqual(OsisPlain.sanitized("看见 神的灵 彷佛鸽子降下"),
+                       "看见 神的灵彷佛鸽子降下")
+    }
+
+    /// REQ-RS-6: the single space before 神 is correct and always
+    /// prints — between letters (Matt 3:16's real shape) and after
+    /// punctuation alike. In ChiUns every space in the Bible
+    /// (3,841, measured) is this space.
+    func testReverenceSpaceBeforeShenPreserved() {
+        let matt316 = "他就看见 神的灵彷佛鸽子降下，落在他身上。"
+        XCTAssertEqual(OsisPlain.sanitized(matt316), matt316)
+        XCTAssertEqual(OsisPlain.sanitized("因为 神爱世人"), "因为 神爱世人")
+        XCTAssertEqual(OsisPlain.sanitized("起初， 神创造天地。"), "起初， 神创造天地。")
+    }
+
+    /// REQ-RS-6: no space next to CJK punctuation either.
+    func testSpacesAroundCJKPunctuationRemoved() {
+        XCTAssertEqual(OsisPlain.sanitized("耶稣回答说： 「你暂且许我。」 于是约翰许了他。"),
+                       "耶稣回答说：「你暂且许我。」于是约翰许了他。")
+        XCTAssertEqual(OsisPlain.sanitized("尽诸般的义 。"), "尽诸般的义。")
+    }
+
+    /// REQ-RS-6: runs collapse and the ends trim, in any script.
+    func testCollapseAndTrim() {
+        XCTAssertEqual(OsisPlain.sanitized("  In   the\tbeginning  "),
+                       "In the beginning")
+        XCTAssertEqual(OsisPlain.sanitized("  耶稣  基督  "), "耶稣基督")
+    }
+
+    /// REQ-RS-6: Latin text is otherwise untouched — word spaces,
+    /// an opening quote's space, and French-style space before
+    /// ';' all stay.
+    func testLatinSpacingUntouched() {
+        let genesis = "In the beginning God created the heavens and the earth."
+        XCTAssertEqual(OsisPlain.sanitized(genesis), genesis)
+        let speech = "But he answered and said, \"It is written, Man shall not live by bread alone.\""
+        XCTAssertEqual(OsisPlain.sanitized(speech), speech)
+        XCTAssertEqual(OsisPlain.sanitized("mot ; mot"), "mot ; mot")
+        // Characters shared with Latin typography keep their spaces.
+        XCTAssertEqual(OsisPlain.sanitized("a word — another"), "a word — another")
+    }
+
+    /// REQ-RS-6: no space before closing punctuation; a closing
+    /// quote hugs the word before it.
+    func testSpaceBeforeClosingPunctuationRemoved() {
+        XCTAssertEqual(OsisPlain.sanitized("fulfil all righteousness . \" Then"),
+                       "fulfil all righteousness.\" Then")
+        XCTAssertEqual(OsisPlain.sanitized("word , word"), "word, word")
+        XCTAssertEqual(OsisPlain.sanitized("(word )"), "(word)")
+    }
+
+    /// REQ-RS-6: sanitizing is idempotent, and plain text from
+    /// markup comes out sanitized (the reader's funnel).
+    func testIdempotentAndAppliedInPlainText() {
+        let messy = "看见 神 。 \"Suffer it . \" Then"
+        let once = OsisPlain.sanitized(messy)
+        XCTAssertEqual(OsisPlain.sanitized(once), once)
+        let osis = "<verse osisID=\"Matt.3.16\">他就看见 <w>神的灵</w> 彷佛鸽子降下</verse>"
+        XCTAssertEqual(OsisPlain.plainText(from: osis), "他就看见 神的灵彷佛鸽子降下")
+        let english = "<verse osisID=\"Gen.1.1\">In the beginning God created the heaven and the earth.</verse>"
+        XCTAssertEqual(OsisPlain.plainText(from: english),
+                       "In the beginning God created the heaven and the earth.")
+    }
+}
