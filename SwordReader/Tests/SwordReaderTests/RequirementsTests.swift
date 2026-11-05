@@ -1721,8 +1721,8 @@ final class RedLetterRequirementsTests: XCTestCase {
 
     private func spanText(_ osis: String, _ span: (start: Int, end: Int)) -> String {
         let plain = OsisPlain.plainText(from: osis)
-        let a = plain.index(plain.startIndex, offsetByCharacters: span.start)
-        let b = plain.index(plain.startIndex, offsetByCharacters: span.end)
+        let a = plain.index(plain.startIndex, offsetBy: span.start)
+        let b = plain.index(plain.startIndex, offsetBy: span.end)
         return String(plain[a ..< b])
     }
 

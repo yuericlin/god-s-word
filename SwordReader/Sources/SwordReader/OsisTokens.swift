@@ -57,8 +57,8 @@ public enum OsisTokens {
         let plain = OsisPlain.plainText(from: s)
         let jesusRanges: [Range<String.Index>] = markJesus
             ? OsisRedLetter.jesusSpans(in: osis).map { span in
-                plain.index(plain.startIndex, offsetByCharacters: span.start)
-                    ..< plain.index(plain.startIndex, offsetByCharacters: span.end)
+                plain.index(plain.startIndex, offsetBy: span.start)
+                    ..< plain.index(plain.startIndex, offsetBy: span.end)
             }
             : []
         func isJesus(_ range: Range<String.Index>) -> Bool {

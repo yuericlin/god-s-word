@@ -100,8 +100,8 @@ public enum OsisRedLetter {
         var merged: [(start: Int, end: Int)] = []
         for span in spans {
             if let last = merged.last {
-                let gap = plain[plain.index(plain.startIndex, offsetByCharacters: last.end)
-                    ..< plain.index(plain.startIndex, offsetByCharacters: span.start)]
+                let gap = plain[plain.index(plain.startIndex, offsetBy: last.end)
+                    ..< plain.index(plain.startIndex, offsetBy: span.start)]
                 if gap.allSatisfy({ $0 == " " || $0 == "\t" || $0 == "\n" }) {
                     merged[merged.count - 1].end = span.end
                     continue
@@ -115,7 +115,7 @@ public enum OsisRedLetter {
     /// True when `tag` (angle brackets included) opens a `<q …>` —
     /// or, with `closing`, is a `</q>` — as opposed to some other
     /// element whose name merely starts with "q".
-    private static func isQTag(_ tag: String, closing: Bool) -> Bool {
+    private static func isQTag(_ tag: Substring, closing: Bool) -> Bool {
         var t = tag.dropFirst()  // "<"
         if closing {
             guard t.hasPrefix("/") else { return false }
@@ -130,7 +130,7 @@ public enum OsisRedLetter {
     }
 
     /// True when an opening `<q …>` tag carries who="Jesus".
-    private static func isJesusQTag(_ tag: String) -> Bool {
+    private static func isJesusQTag(_ tag: Substring) -> Bool {
         let low = tag.lowercased().replacingOccurrences(of: "'", with: "\"")
         return low.contains("who=\"jesus\"")
     }
