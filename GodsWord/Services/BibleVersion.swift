@@ -303,8 +303,13 @@ private actor RedLetterDerivationService {
         }
 
         // Derive the whole book once, then save it.
-        let content = liveBook ?? await bookTexts(version: version,
-                                                  testament: testament, book: book)
+        let content: [(chapter: Int, verse: Int, text: String)]
+        if let liveBook {
+            content = liveBook
+        } else {
+            content = await bookTexts(version: version,
+                                      testament: testament, book: book)
+        }
         var spans: [String: [[Int]]] = [:]
         if !content.isEmpty,
            let mode = RedLetterDerivation.detectMode(texts: content.map { $0.text }) {
