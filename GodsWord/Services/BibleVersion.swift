@@ -37,7 +37,7 @@ enum BibleVersion: Identifiable, Equatable {
         }
     }
 
-    /// Full title, e.g. "King James Version" / "NKJV+".
+    /// Full title, e.g. "King James Version".
     var displayName: String {
         switch self {
         case .sword(let m): return m.info.description
@@ -46,7 +46,7 @@ enum BibleVersion: Identifiable, Equatable {
     }
 
     /// Compact label for toolbars and pickers: the module id for SWORD
-    /// versions (e.g. "KJV"), the title for private ones (e.g. "NKJV+").
+    /// versions (e.g. "KJV"), the title for private ones.
     var shortLabel: String {
         switch self {
         case .sword(let m): return m.id
@@ -177,9 +177,9 @@ enum BibleVersion: Identifiable, Equatable {
     {
         guard case .sword(let m) = self, m.info.supportsStrongs else { return [] }
         guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [] }
-        let chapter = mod.chapterTokensWithJesus(testament: testament, book: book, chapter: chapter)
-        guard chapter.allSatisfy({ $0.tokens.allSatisfy { !$0.isJesusSpeech } })
-        else { return chapter }
+        let tokenChapter = mod.chapterTokensWithJesus(testament: testament, book: book, chapter: chapter)
+        guard tokenChapter.allSatisfy({ $0.tokens.allSatisfy { !$0.isJesusSpeech } })
+        else { return tokenChapter }
         // No markup flags anywhere in the chapter: fall back to
         // the artifact. Tokens are plain-text segments, so
         // cumulative character offsets locate each one.
@@ -187,8 +187,8 @@ enum BibleVersion: Identifiable, Equatable {
             versionID: m.id,
             book: artifactBookName(testament: testament, book: book),
             chapter: chapter)
-        guard !spans.isEmpty else { return chapter }
-        return chapter.map { entry in
+        guard !spans.isEmpty else { return tokenChapter }
+        return tokenChapter.map { entry in
             let verseSpans = spans[entry.verse] ?? []
             guard !verseSpans.isEmpty else { return entry }
             var offset = 0
@@ -207,7 +207,7 @@ enum BibleVersion: Identifiable, Equatable {
     /// Jesus-speech character spans per verse for one chapter:
     /// the module's own `<q who="Jesus">` markup where it speaks
     /// (REQ-RL-1), otherwise the bundled artifact for versions it
-    /// covers — ChiUns and the NKJV+ private Bible (REQ-RL-4).
+    /// covers — ChiUns and a covered private Bible (REQ-RL-4).
     func loadJesusSpans(testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
     {
@@ -232,7 +232,7 @@ enum BibleVersion: Identifiable, Equatable {
     /// Section headings ("subtitles") for one chapter, keyed by
     /// verse number (REQ-RS-5). SWORD versions read the preverse
     /// section titles out of the module; private versions carry
-    /// theirs as a "¶…¶" prefix on the verse string (NKJV+).
+    /// theirs as a "¶…¶" prefix on the verse string.
     func loadHeadings(testament: Int, book: Int, chapter: Int) async -> [Int: String] {
         switch self {
         case .sword(let m):

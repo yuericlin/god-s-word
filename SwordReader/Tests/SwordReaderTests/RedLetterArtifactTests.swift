@@ -1,6 +1,7 @@
 // RedLetterArtifactTests.swift
 // REQ-RL-4: the bundled span artifact covers the versions whose
-// own data carries no speaker markup (ChiUns, NKJV+), in the
+// own data carries no speaker markup (ChiUns and a private
+// Bible), in the
 // coordinates of the text exactly as rendered.
 
 import XCTest

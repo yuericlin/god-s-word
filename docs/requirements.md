@@ -410,7 +410,7 @@ Multiple (KJV Gen 1:1-2):
   text. Canonical psalm titles are scripture text and stay in the
   verse. Versions whose modules carry no such titles are
   unaffected. Private JSON versions carry a heading as a "¶…¶"
-  prefix on the verse string (the NKJV+ convention) and are
+  prefix on the verse string (a private-version convention) and are
   treated exactly the same way; the pilcrow markers never render.
 - **REQ-RS-6:** Verse text is whitespace-sanitized for display in
   every version and mode (`OsisPlain.sanitized`, applied at the
@@ -881,7 +881,7 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-RL-4:** Versions without speaker markup show red
   letters from a bundled span artifact (`RedLetterArtifact`)
   when the artifact covers them — currently the ChiUns module
-  and the NKJV+ private Bible, in the verse-by-verse,
+  and a covered private Bible, in the verse-by-verse,
   paragraph, and Strong's modes. The spans are character ranges
   in the text exactly as rendered (section headings stripped,
   whitespace sanitized — REQ-RS-5/6). The data was extracted

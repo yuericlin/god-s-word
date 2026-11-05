@@ -1,7 +1,7 @@
 // RedLetterArtifact.swift
 // Bundled Jesus-speech spans for versions whose own data carries
-// no speaker markup (REQ-RL-4): the ChiUns module and the NKJV+
-// private Bible. Spans are character ranges in each verse's text
+// no speaker markup (REQ-RL-4): the ChiUns module and a private
+// imported Bible. Spans are character ranges in each verse's text
 // exactly as the reader renders it (section headings stripped,
 // whitespace sanitized — REQ-RS-5/6).
 //
@@ -9,7 +9,7 @@
 // publisher red-letter markup as the primary ground truth, with
 // the KJV module's markup filling verses NASB left unattributed,
 // and every span audited against the target version's own
-// quotation delimiters (quotation marks in NKJV+, \u{300C}\u{300D} in ChiUns).
+// quotation delimiters.
 // A module's own markup always takes precedence over this table.
 
 import Foundation
