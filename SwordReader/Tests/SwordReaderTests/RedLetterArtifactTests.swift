@@ -52,7 +52,7 @@ final class RedLetterArtifactTests: XCTestCase {
     func testChapterSpans() {
         let ch3 = RedLetterArtifact.chapterSpans(versionID: "ChiUns",
                                                  book: "Matthew", chapter: 3)
-        XCTAssertEqual(ch3[15].map { [$0.start, $0.end] }, [[6, 34]])
+        XCTAssertEqual(ch3[15]?.map { [$0.start, $0.end] }, [[6, 34]])
         XCTAssertNil(ch3[17])
         let ch1 = RedLetterArtifact.chapterSpans(versionID: "ChiUns",
                                                  book: "John", chapter: 1)
