@@ -397,7 +397,13 @@ struct ReaderView: View {
             adoptReimportedVersion()
         }
         .onDisappear { dwellTask?.cancel() }
-        .sheet(isPresented: $showingFullSettings) {
+        .sheet(isPresented: $showingFullSettings, onDismiss: {
+            // Downloads and deletions inside Settings change the
+            // library; the version picker reads the snapshot taken
+            // when the reader appeared, so take a fresh one.
+            availableVersions = allLibraryVersions()
+            adoptReimportedVersion()
+        }) {
             SettingsView(history: history)
         }
         .sheet(isPresented: $showingBookChapterPicker) {

@@ -855,16 +855,14 @@ Multiple (KJV Gen 1:1-2):
 
 ## 19. Red letters
 
-- **REQ-RL-1:** Words of Jesus are identified ONLY from the
+- **REQ-RL-1:** Words of Jesus are identified from the
   module's own markup: OSIS `<q who="Jesus">` spans in a SWORD
   module's verse text (`OsisRedLetter.jesusSpans`, unit-tested).
   A quotation nested inside Jesus's words stays part of his
-  speech. Versions whose data carries no such tags — private
-  JSON versions, and modules whose markup has no speaker tags
-  (e.g. ChiUns) — render no red letters; the reader never
-  infers speakers from quotation marks alone. (A bundled
-  span artifact covering untagged versions is future work,
-  prepared in the step-0 extraction of Nov 4, 2026.)
+  speech. Where a version's own data carries no such tags, the
+  bundled artifact of REQ-RL-4 supplies the spans instead; the
+  reader never infers speakers from quotation marks alone at
+  run time.
 - **REQ-RL-2:** A **Red letters** toggle in the reading
   settings, directly after "Verse by verse" and before
   "Strong's numbers" (§10's settings order), **default ON**.
@@ -880,3 +878,17 @@ Multiple (KJV Gen 1:1-2):
   own styling). The verse number, section headings, highlight
   backgrounds, and selection behave exactly as before. The
   Compare view is not covered in v0.
+- **REQ-RL-4:** Versions without speaker markup show red
+  letters from a bundled span artifact (`RedLetterArtifact`)
+  when the artifact covers them — currently the ChiUns module
+  and the NKJV+ private Bible, in the verse-by-verse,
+  paragraph, and Strong's modes. The spans are character ranges
+  in the text exactly as rendered (section headings stripped,
+  whitespace sanitized — REQ-RS-5/6). The data was extracted
+  from the NASB1995 module's publisher markup as the primary
+  ground truth, with the KJV module's markup filling verses
+  NASB left unattributed, every span audited against the
+  target version's own quotation delimiters (Nov 4–5, 2026).
+  A module's own markup always takes precedence: the artifact
+  answers only where the markup is silent, and a version with
+  neither markup nor artifact coverage renders no red letters.
