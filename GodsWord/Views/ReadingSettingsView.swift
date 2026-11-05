@@ -1,5 +1,6 @@
-// ReadingSettingsView.swift — text size + verse-by-verse + Strong's numbers,
-// shared by the Settings screen and the reader's slide-in settings drawer.
+// ReadingSettingsView.swift — text size + verse-by-verse + red letters
+// + Strong's numbers, shared by the Settings screen and the reader's
+// slide-in settings drawer.
 
 import SwiftUI
 
@@ -17,6 +18,7 @@ struct ReadingSettingsView: View {
                         value: $personalData.fontSize, in: 12 ... 32, step: 1)
             }
             Toggle("Verse by verse", isOn: $personalData.verseByVerse)
+            Toggle("Red letters", isOn: $personalData.showRedLetters)
             if showStrongsOption {
                 Toggle("Strong's numbers", isOn: $personalData.showStrongs)
             }

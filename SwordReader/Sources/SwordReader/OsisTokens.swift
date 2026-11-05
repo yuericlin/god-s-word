@@ -17,10 +17,16 @@ public struct WordToken: Sendable {
     public let text: String
     /// Normalized Strong's numbers, e.g. ["H7225", "G26"].
     public let strongs: [String]
+    /// True when the token's text falls inside a `<q who="Jesus">`
+    /// quotation in the module markup (REQ-RL-1). Only
+    /// `tokensWithStrongsAndJesus` computes it; plain
+    /// `tokensWithStrongs` leaves it false.
+    public let isJesusSpeech: Bool
 
-    public init(text: String, strongs: [String] = []) {
+    public init(text: String, strongs: [String] = [], isJesusSpeech: Bool = false) {
         self.text = text
         self.strongs = strongs
+        self.isJesusSpeech = isJesusSpeech
     }
 }
 
@@ -36,8 +42,28 @@ public enum OsisTokens {
     /// the plain verse text exactly. Self-closing `<w/>` tags carry no
     /// word and are skipped.
     public static func tokensWithStrongs(from osis: String) -> [WordToken] {
+        buildTokens(from: osis, markJesus: false)
+    }
+
+    /// Like `tokensWithStrongs`, but each token also records whether
+    /// its text is Jesus's speech per the markup's
+    /// `<q who="Jesus">` tags (REQ-RL-1).
+    public static func tokensWithStrongsAndJesus(from osis: String) -> [WordToken] {
+        buildTokens(from: osis, markJesus: true)
+    }
+
+    private static func buildTokens(from osis: String, markJesus: Bool) -> [WordToken] {
         let s = OsisPlain.removeNotes(osis)
         let plain = OsisPlain.plainText(from: s)
+        let jesusRanges: [Range<String.Index>] = markJesus
+            ? OsisRedLetter.jesusSpans(in: osis).map { span in
+                plain.index(plain.startIndex, offsetByCharacters: span.start)
+                    ..< plain.index(plain.startIndex, offsetByCharacters: span.end)
+            }
+            : []
+        func isJesus(_ range: Range<String.Index>) -> Bool {
+            !range.isEmpty && jesusRanges.contains { range.overlaps($0) }
+        }
 
         // (plain range, Strong's) for each <w>, in document order.
         var ranges = [(range: Range<String.Index>, strongs: [String])]()
@@ -79,13 +105,18 @@ public enum OsisTokens {
         var pos = plain.startIndex
         for r in ranges {
             if pos < r.range.lowerBound {
-                tokens.append(WordToken(text: String(plain[pos ..< r.range.lowerBound])))
+                let gap = pos ..< r.range.lowerBound
+                tokens.append(WordToken(text: String(plain[gap]),
+                                        isJesusSpeech: isJesus(gap)))
             }
-            tokens.append(WordToken(text: String(plain[r.range]), strongs: r.strongs))
+            tokens.append(WordToken(text: String(plain[r.range]), strongs: r.strongs,
+                                    isJesusSpeech: isJesus(r.range)))
             pos = r.range.upperBound
         }
         if pos < plain.endIndex {
-            tokens.append(WordToken(text: String(plain[pos...])))
+            let rest = pos ..< plain.endIndex
+            tokens.append(WordToken(text: String(plain[rest]),
+                                    isJesusSpeech: isJesus(rest)))
         }
         return tokens
     }

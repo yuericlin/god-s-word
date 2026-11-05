@@ -1714,3 +1714,101 @@ final class HighlightRequirementsTests: XCTestCase {
             selected: .recents, availability: availability(false, false, false)))
     }
 }
+
+// MARK: - Red letters (REQ-RL-1)
+
+final class RedLetterRequirementsTests: XCTestCase {
+
+    private func spanText(_ osis: String, _ span: (start: Int, end: Int)) -> String {
+        let plain = OsisPlain.plainText(from: osis)
+        let a = plain.index(plain.startIndex, offsetByCharacters: span.start)
+        let b = plain.index(plain.startIndex, offsetByCharacters: span.end)
+        return String(plain[a ..< b])
+    }
+
+    /// REQ-RL-1: a <q who="Jesus"> span is located in the verse's
+    /// plain text, exactly covering the spoken words.
+    func testJesusSpanFromTags() {
+        let osis = """
+            <verse osisID="Matt.3.15">But <w lemma="strong:G2424">Jesus</w> answering \
+            said unto him, <q marker="" who="Jesus"><w lemma="strong:G863">Suffer</w> \
+            it to be so now: for thus it becometh us to fulfil all \
+            righteousness.</q> Then he suffered him.</verse>
+            """
+        let spans = OsisRedLetter.jesusSpans(in: osis)
+        XCTAssertEqual(spans.count, 1)
+        XCTAssertEqual(spanText(osis, spans[0]),
+                       "Suffer it to be so now: for thus it becometh us to fulfil all righteousness.")
+    }
+
+    /// REQ-RL-1: another speaker's untagged quotation in the same
+    /// verse is not marked; only Jesus's is.
+    func testOnlyJesusQuoteIsMarked() {
+        let osis = """
+            <verse osisID="Matt.4.4">And the tempter said, <q marker="">If thou be \
+            the Son of God, command that these stones be made bread.</q> But he \
+            answered and said, <q marker="" who="Jesus">It is written, Man shall \
+            not live by bread alone.</q></verse>
+            """
+        let spans = OsisRedLetter.jesusSpans(in: osis)
+        XCTAssertEqual(spans.count, 1)
+        XCTAssertEqual(spanText(osis, spans[0]),
+                       "It is written, Man shall not live by bread alone.")
+    }
+
+    /// REQ-RL-1: a quotation nested inside Jesus's words (the
+    /// Scripture he cites) stays part of his speech — one span.
+    func testNestedQuoteStaysInsideJesusSpan() {
+        let osis = """
+            <verse osisID="Matt.4.7">Jesus said unto him, <q marker="" who="Jesus">It \
+            is written again, <q marker="">Thou shalt not tempt the Lord thy \
+            God.</q></q></verse>
+            """
+        let spans = OsisRedLetter.jesusSpans(in: osis)
+        XCTAssertEqual(spans.count, 1)
+        XCTAssertEqual(spanText(osis, spans[0]),
+                       "It is written again, Thou shalt not tempt the Lord thy God.")
+    }
+
+    /// REQ-RL-1: no speaker tags (the ChiUns shape) — no spans,
+    /// even though the text itself contains speech.
+    func testNoSpeechTagsYieldNoSpans() {
+        let osis = """
+            <verse osisID="Matt.3.15">耶穌回答說、你們暫且容許我吧。</verse>
+            """
+        XCTAssertEqual(OsisRedLetter.jesusSpans(in: osis).count, 0)
+    }
+
+    /// REQ-RL-1: a speech covering the whole verse spans it fully.
+    func testWholeVerseSpeech() {
+        let osis = """
+            <verse osisID="Matt.5.3"><q marker="" who="Jesus">Blessed are the poor \
+            in spirit: for theirs is the kingdom of heaven.</q></verse>
+            """
+        let plain = OsisPlain.plainText(from: osis)
+        let spans = OsisRedLetter.jesusSpans(in: osis)
+        XCTAssertEqual(spans.count, 1)
+        XCTAssertEqual(spans[0].start, 0)
+        XCTAssertEqual(spans[0].end, plain.count)
+    }
+
+    /// REQ-RL-1: in Strong's mode the tokens inside the speech
+    /// carry the Jesus flag; narration tokens do not; the plain
+    /// tokenizer never flags.
+    func testTokensFlagJesusSpeech() {
+        let osis = """
+            <verse osisID="Matt.3.15">But <w lemma="strong:G2424">Jesus</w> answering \
+            said unto him, <q marker="" who="Jesus"><w lemma="strong:G863">Suffer</w> \
+            it to be so now.</q> Then he suffered him.</verse>
+            """
+        let tokens = OsisTokens.tokensWithStrongsAndJesus(from: osis)
+        XCTAssertEqual(tokens.map(\.text).joined(), OsisPlain.plainText(from: osis))
+        let suffer = tokens.first { $0.text.contains("Suffer") }
+        XCTAssertEqual(suffer?.isJesusSpeech, true)
+        XCTAssertEqual(suffer?.strongs, ["G863"])
+        let jesusName = tokens.first { $0.text.contains("Jesus") }
+        XCTAssertEqual(jesusName?.isJesusSpeech, false)
+        let plainTokens = OsisTokens.tokensWithStrongs(from: osis)
+        XCTAssertTrue(plainTokens.allSatisfy { !$0.isJesusSpeech })
+    }
+}

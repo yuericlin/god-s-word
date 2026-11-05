@@ -42,6 +42,9 @@ public struct BackupPayload: Codable, Sendable {
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
+    /// Red-letter display preference (REQ-RL-2); payloads written
+    /// before it existed decode to the default, true.
+    public var showRedLetters: Bool
     public var positions: [String: ReadingPosition]  // moduleID -> position
     public var installedModuleIDs: [String]
     public var bookmarks: [Bookmark]
@@ -79,6 +82,7 @@ public struct BackupPayload: Codable, Sendable {
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
+                showRedLetters: Bool = true,
                 positions: [String: ReadingPosition], installedModuleIDs: [String],
                 bookmarks: [Bookmark] = [], highlights: [Highlight] = [],
                 verseNotes: [String: String] = [:],
@@ -99,6 +103,7 @@ public struct BackupPayload: Codable, Sendable {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
         self.showStrongs = showStrongs
+        self.showRedLetters = showRedLetters
         self.positions = positions
         self.installedModuleIDs = installedModuleIDs
         self.bookmarks = bookmarks
@@ -128,6 +133,7 @@ public struct BackupPayload: Codable, Sendable {
         fontSize = try c.decode(Double.self, forKey: .fontSize)
         verseByVerse = try c.decodeIfPresent(Bool.self, forKey: .verseByVerse) ?? false
         showStrongs = try c.decodeIfPresent(Bool.self, forKey: .showStrongs) ?? false
+        showRedLetters = try c.decodeIfPresent(Bool.self, forKey: .showRedLetters) ?? true
         positions = try c.decode([String: ReadingPosition].self, forKey: .positions)
         installedModuleIDs = try c.decode([String].self, forKey: .installedModuleIDs)
         bookmarks = try c.decodeIfPresent([Bookmark].self, forKey: .bookmarks) ?? []
@@ -157,6 +163,7 @@ public final class PersonalData: ObservableObject {
     private let fontSizeKey = "gw.fontSize.v1"
     private let verseByVerseKey = "gw.verseByVerse.v1"
     private let showStrongsKey = "gw.showStrongs.v1"
+    private let showRedLettersKey = "gw.showRedLetters.v1"
     private let historyLogKey = "gw.historyLog.v1"
     private let lastReadingKey = "gw.lastReading.v1"
     private let bookmarksKey = "gw.bookmarks.v1"
@@ -183,6 +190,9 @@ public final class PersonalData: ObservableObject {
         self.fontSize = saved > 0 ? saved : 19
         self.verseByVerse = defaults.bool(forKey: verseByVerseKey)
         self.showStrongs = defaults.bool(forKey: showStrongsKey)
+        // Default true (REQ-RL-2): only an explicitly stored value
+        // turns red letters off.
+        self.showRedLetters = defaults.object(forKey: showRedLettersKey) as? Bool ?? true
         let log: [HistoryEntry]
         if let data = defaults.data(forKey: "gw.historyLog.v1"),
            let decoded = try? JSONDecoder().decode([HistoryEntry].self, from: data) {
@@ -254,6 +264,12 @@ public final class PersonalData: ObservableObject {
     /// entry.
     @Published public var showStrongs: Bool {
         didSet { defaults.set(showStrongs, forKey: showStrongsKey) }
+    }
+
+    /// When true (default), the words of Jesus render red and bold
+    /// in versions whose module markup tags them (REQ-RL-2/RL-3).
+    @Published public var showRedLetters: Bool {
+        didSet { defaults.set(showRedLetters, forKey: showRedLettersKey) }
     }
 
     /// Full reading history, most recent first. Persisted in UserDefaults.
@@ -815,6 +831,7 @@ public final class PersonalData: ObservableObject {
         BackupPayload(fontSize: fontSize,
                       verseByVerse: verseByVerse,
                       showStrongs: showStrongs,
+                      showRedLetters: showRedLetters,
                       positions: positions,
                       installedModuleIDs: installedModuleIDs,
                       bookmarks: bookmarks,
@@ -840,6 +857,7 @@ public final class PersonalData: ObservableObject {
         fontSize = payload.fontSize
         verseByVerse = payload.verseByVerse
         showStrongs = payload.showStrongs
+        showRedLetters = payload.showRedLetters
         positions = payload.positions
         // Old backups predate bookmarks (decode yields []); don't let
         // those wipe the current ribbons.
@@ -917,6 +935,9 @@ public final class PersonalData: ObservableObject {
         public var fontSize: Double
         public var verseByVerse: Bool
         public var showStrongs: Bool
+        /// Optional so settings files written before red letters
+        /// existed still decode (nil = leave the current value).
+        public var showRedLetters: Bool?
         public var repositoryURL: String
         public var installedModuleIDs: [String]
         /// Optional so settings.json files written before Compare existed
@@ -1010,7 +1031,8 @@ public final class PersonalData: ObservableObject {
         guard iCloudSync.shared.isEnabled else { return }
         let settings = iCloudSettings(
             fontSize: fontSize, verseByVerse: verseByVerse,
-            showStrongs: showStrongs, repositoryURL: repositoryURL,
+            showStrongs: showStrongs, showRedLetters: showRedLetters,
+            repositoryURL: repositoryURL,
             installedModuleIDs: installedModuleIDs,
             compareVersionIDs: compareVersionIDs,
             commentaryModuleID: commentaryModuleID,
@@ -1109,7 +1131,7 @@ public final class PersonalData: ObservableObject {
             .write(to: folder.appendingPathComponent("history.json"))
         let settings = iCloudSettings(
             fontSize: fontSize, verseByVerse: verseByVerse,
-            showStrongs: showStrongs,
+            showStrongs: showStrongs, showRedLetters: showRedLetters,
             repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
             installedModuleIDs: [],
             compareVersionIDs: compareVersionIDs,
@@ -1190,6 +1212,7 @@ public final class PersonalData: ObservableObject {
                 fontSize = s.fontSize
                 verseByVerse = s.verseByVerse
                 showStrongs = s.showStrongs
+                if let sr = s.showRedLetters { showRedLetters = sr }
                 if let ids = s.compareVersionIDs { compareVersionIDs = ids }
                 if let cid = s.commentaryModuleID, !cid.isEmpty {
                     commentaryModuleID = cid
