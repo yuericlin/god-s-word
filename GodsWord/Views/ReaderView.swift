@@ -16,6 +16,9 @@ struct ReaderView: View {
     @State private var verseTokens: [(verse: Int, tokens: [WordToken])] = []
     /// Section headings ("subtitles") by verse number (REQ-RS-5).
     @State private var headings: [Int: String] = [:]
+    /// Jesus-speech character spans by verse number (REQ-RL-1);
+    /// empty for versions whose module carries no speech tags.
+    @State private var jesusSpans: [Int: [(start: Int, end: Int)]] = [:]
     @State private var loadError: String?
     @State private var showingSettings = false
     @State private var showingFullSettings = false
@@ -610,6 +613,7 @@ struct ReaderView: View {
         // without changing how it renders. Runs that already have a link
         // (verse number with a note) keep theirs.
         applyVerseLink(to: &out, verse: number)
+        applyRedLetters(to: &out, verse: number)
         applyHighlight(to: &out, verse: number)
         applySelectionHighlight(to: &out, verse: number)
         return out
@@ -673,7 +677,12 @@ struct ReaderView: View {
         }
         out += AttributedString(" ")
         for token in tokens {
-            out += AttributedString(token.text)
+            var seg = AttributedString(token.text)
+            if personalData.showRedLetters, token.isJesusSpeech {
+                seg.foregroundColor = Self.redLetterColor
+                seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+            }
+            out += seg
             for key in token.strongs {
                 out += attributedStrongsNumber(key)
             }
@@ -743,6 +752,33 @@ struct ReaderView: View {
         personalData.highlightedVerses(testament: history.testament,
                                        book: history.book,
                                        chapter: history.chapter)
+    }
+
+    /// Red-letter color (REQ-RL-3): the classic deep red on light
+    /// backgrounds, brighter on dark so it stays readable.
+    private static let redLetterColor = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0, green: 0.42, blue: 0.36, alpha: 1)
+            : UIColor(red: 0.76, green: 0.09, blue: 0.07, alpha: 1)
+    })
+
+    /// Paints the verse's Jesus-speech spans red and bold
+    /// (REQ-RL-3). Spans are character offsets into the verse text;
+    /// the number prefix is skipped exactly as in applyHighlight.
+    /// No-op when the setting is off or the version's module
+    /// carries no speech tags for the verse (REQ-RL-1).
+    private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
+        guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
+        let prefix = "\(verse) ".count + 1
+        for span in spans {
+            let start = prefix + span.start
+            let end = prefix + span.end
+            guard start < end, end <= attr.characters.count else { continue }
+            let r = attr.index(attr.startIndex, offsetByCharacters: start)
+                ..< attr.index(attr.startIndex, offsetByCharacters: end)
+            attr[r].foregroundColor = Self.redLetterColor
+            attr[r].font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+        }
     }
 
     /// Bright yellow background on a highlighted verse's text
@@ -894,6 +930,9 @@ struct ReaderView: View {
             }
             verses = rendered
             verseTokens = await history.version.loadTokens(
+                testament: history.testament, book: history.book,
+                chapter: history.chapter)
+            jesusSpans = await history.version.loadJesusSpans(
                 testament: history.testament, book: history.book,
                 chapter: history.chapter)
             headings = await history.version.loadHeadings(

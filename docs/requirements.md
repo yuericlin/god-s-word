@@ -839,3 +839,33 @@ Multiple (KJV Gen 1:1-2):
   (v11, additive — older payloads decode to [] and leave
   current highlights alone), the iCloud highlights.json file,
   and manual export/import (highlights.json).
+
+---
+
+## 19. Red letters
+
+- **REQ-RL-1:** Words of Jesus are identified ONLY from the
+  module's own markup: OSIS `<q who="Jesus">` spans in a SWORD
+  module's verse text (`OsisRedLetter.jesusSpans`, unit-tested).
+  A quotation nested inside Jesus's words stays part of his
+  speech. Versions whose data carries no such tags — private
+  JSON versions, and modules whose markup has no speaker tags
+  (e.g. ChiUns) — render no red letters; the reader never
+  infers speakers from quotation marks alone. (A bundled
+  span artifact covering untagged versions is future work,
+  prepared in the step-0 extraction of Nov 4, 2026.)
+- **REQ-RL-2:** A **Red letters** toggle in the reading
+  settings, directly after "Verse by verse" and before
+  "Strong's numbers" (§10's settings order), **default ON**.
+  Persisted in UserDefaults (`gw.showRedLetters.v1`), the
+  backup payload, and the settings sync/export files; payloads
+  and settings files written before the setting existed leave
+  it ON.
+- **REQ-RL-3:** With the setting on, Jesus's words render
+  **red and bold** in the reading serif — a deep red in light
+  mode, a brighter red in dark mode. The rendering applies in
+  verse-by-verse, paragraph, and Strong's modes (in Strong's
+  mode the word is red and bold; its Strong's number keeps its
+  own styling). The verse number, section headings, highlight
+  backgrounds, and selection behave exactly as before. The
+  Compare view is not covered in v0.

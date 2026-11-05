@@ -159,12 +159,26 @@ enum BibleVersion: Identifiable, Equatable {
     }
 
     /// Strong's word tokens for one chapter (SWORD versions only).
+    /// Tokens also carry Jesus-speech flags from the module markup
+    /// (REQ-RL-1); the reader's red-letter setting decides whether
+    /// they are painted.
     func loadTokens(testament: Int, book: Int, chapter: Int) async
         -> [(verse: Int, tokens: [WordToken])]
     {
         guard case .sword(let m) = self, m.info.supportsStrongs else { return [] }
         guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [] }
-        return mod.chapterTokens(testament: testament, book: book, chapter: chapter)
+        return mod.chapterTokensWithJesus(testament: testament, book: book, chapter: chapter)
+    }
+
+    /// Jesus-speech character spans per verse for one chapter
+    /// (REQ-RL-1), from the module's `<q who="Jesus">` markup.
+    /// Private versions carry no such markup and return none.
+    func loadJesusSpans(testament: Int, book: Int, chapter: Int) async
+        -> [Int: [(start: Int, end: Int)]]
+    {
+        guard case .sword(let m) = self else { return [:] }
+        guard let mod = try? await ModuleLoader.shared.module(for: m) else { return [:] }
+        return mod.chapterJesusSpans(testament: testament, book: book, chapter: chapter)
     }
 
     /// Section headings ("subtitles") for one chapter, keyed by

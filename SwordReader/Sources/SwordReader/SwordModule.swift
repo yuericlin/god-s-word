@@ -328,4 +328,53 @@ public final class SwordModule: @unchecked Sendable {
         }
         return out
     }
+
+    /// Character-offset spans of Jesus's speech in one verse's plain
+    /// text (REQ-RL-1), from the module's `<q who="Jesus">` markup;
+    /// empty when the module carries no such tags for the verse.
+    public func verseJesusSpans(testament: Int, book: Int, chapter: Int, verse: Int)
+        -> [(start: Int, end: Int)]
+    {
+        rawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
+            .map { OsisRedLetter.jesusSpans(in: OsisPlain.removingSectionTitles($0)) } ?? []
+    }
+
+    /// Jesus-speech spans for a whole chapter, keyed by verse number
+    /// (verses without spans are absent).
+    public func chapterJesusSpans(testament: Int, book: Int, chapter: Int)
+        -> [Int: [(start: Int, end: Int)]]
+    {
+        guard let count = versification.verseCount(testament: testament, book: book, chapter: chapter)
+        else { return [:] }
+        var out = [Int: [(start: Int, end: Int)]]()
+        for v in 1 ... count {
+            let spans = verseJesusSpans(testament: testament, book: book, chapter: chapter, verse: v)
+            if !spans.isEmpty { out[v] = spans }
+        }
+        return out
+    }
+
+    /// Word tokens for one verse, with Jesus-speech flags from the
+    /// module markup (REQ-RL-1); otherwise like `verseTokens`.
+    public func verseTokensWithJesus(testament: Int, book: Int, chapter: Int, verse: Int) -> [WordToken]? {
+        rawVerse(testament: testament, book: book, chapter: chapter, verse: verse)
+            .map { OsisTokens.tokensWithStrongsAndJesus(from: OsisPlain.removingSectionTitles($0)) }
+    }
+
+    /// All verses of a chapter as (verseNumber, word tokens with
+    /// Jesus-speech flags), skipping empty entries.
+    public func chapterTokensWithJesus(testament: Int, book: Int, chapter: Int)
+        -> [(verse: Int, tokens: [WordToken])]
+    {
+        guard let count = versification.verseCount(testament: testament, book: book, chapter: chapter)
+        else { return [] }
+        var out = [(verse: Int, tokens: [WordToken])]()
+        out.reserveCapacity(count)
+        for v in 1 ... count {
+            if let t = verseTokensWithJesus(testament: testament, book: book, chapter: chapter, verse: v) {
+                out.append((verse: v, tokens: t))
+            }
+        }
+        return out
+    }
 }
