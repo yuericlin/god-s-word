@@ -181,12 +181,11 @@ enum BibleVersion: Identifiable, Equatable {
         guard tokenChapter.allSatisfy({ $0.tokens.allSatisfy { !$0.isJesusSpeech } })
         else { return tokenChapter }
         // No markup flags anywhere in the chapter: fall back to
-        // the artifact. Tokens are plain-text segments, so
-        // cumulative character offsets locate each one.
-        let spans = RedLetterArtifact.chapterSpans(
-            versionID: m.id,
-            book: artifactBookName(testament: testament, book: book),
-            chapter: chapter)
+        // the chapter's span source (the bundled artifact, or
+        // on-device derivation via loadJesusSpans). Tokens are
+        // plain-text segments, so cumulative character offsets
+        // locate each one.
+        let spans = await loadJesusSpans(testament: testament, book: book, chapter: chapter)
         guard !spans.isEmpty else { return tokenChapter }
         return tokenChapter.map { entry in
             let verseSpans = spans[entry.verse] ?? []
@@ -207,7 +206,9 @@ enum BibleVersion: Identifiable, Equatable {
     /// Jesus-speech character spans per verse for one chapter:
     /// the module's own `<q who="Jesus">` markup where it speaks
     /// (REQ-RL-1), otherwise the bundled artifact for versions it
-    /// covers — currently ChiUns (REQ-RL-4).
+    /// covers — currently ChiUns (REQ-RL-4) — otherwise spans
+    /// derived on-device from the installed markup-carrying
+    /// versions (REQ-RL-5).
     func loadJesusSpans(testament: Int, book: Int, chapter: Int) async
         -> [Int: [(start: Int, end: Int)]]
     {
@@ -217,15 +218,16 @@ enum BibleVersion: Identifiable, Equatable {
                 let tagged = mod.chapterJesusSpans(testament: testament, book: book, chapter: chapter)
                 if !tagged.isEmpty { return tagged }
             }
-            return RedLetterArtifact.chapterSpans(
+            let artifact = RedLetterArtifact.chapterSpans(
                 versionID: m.id,
                 book: artifactBookName(testament: testament, book: book),
                 chapter: chapter)
+            if !artifact.isEmpty { return artifact }
+            return await RedLetterDerivationService.shared.derivedSpans(
+                version: self, testament: testament, book: book, chapter: chapter)
         case .private:
-            // The artifact is built purely from published
-            // modules and never relies on a private version;
-            // private imports carry no markup and return none.
-            return [:]
+            return await RedLetterDerivationService.shared.derivedSpans(
+                version: self, testament: testament, book: book, chapter: chapter)
         }
     }
 
@@ -250,5 +252,184 @@ enum BibleVersion: Identifiable, Equatable {
             }
             return out
         }
+    }
+}
+
+/// On-device red-letter derivation (REQ-RL-5), derive-once: the
+/// first read that needs a book's spans runs the transfer from
+/// the bundled source truth (`RedLetterTruth` — extracted from
+/// the published NASB1995 and KJV modules, so neither module
+/// needs to be installed) and saves the resulting span table on
+/// the device; every later read is a plain lookup. A saved table
+/// is keyed to the truth it was derived from and, for private
+/// imports, to a fingerprint of the book's text, so a truth
+/// update or a re-import re-derives instead of serving stale
+/// spans. Module versions are keyed by id, as the module cache
+/// keys them. Tables live in Application Support/DerivedRedLetters.
+private actor RedLetterDerivationService {
+    static let shared = RedLetterDerivationService()
+
+    /// One book's derived spans: "chapter.verse" → [start, end] pairs.
+    private struct SpanTable: Codable {
+        var sourceSignature: String
+        var targetFingerprint: String
+        var spans: [String: [[Int]]]
+    }
+
+    private var loadedTables: [String: SpanTable] = [:]
+
+    func derivedSpans(version: BibleVersion, testament: Int, book: Int, chapter: Int) async
+        -> [Int: [(start: Int, end: Int)]]
+    {
+        // Jesus's speech is a New Testament record; the bundled
+        // truth covers nothing elsewhere.
+        guard testament == 2 else { return [:] }
+        let signature = "bundled:" + RedLetterTruth.sourceIDs.joined(separator: ",")
+        let key = "\(version.id)|\(testament).\(book)"
+        // Private imports are fingerprinted from their live text
+        // (already in memory); module versions key by id.
+        var liveBook: [(chapter: Int, verse: Int, text: String)]?
+        var fingerprint = "module"
+        if case .private = version {
+            let texts = await bookTexts(version: version, testament: testament, book: book)
+            liveBook = texts
+            fingerprint = Self.fingerprint(of: texts)
+        }
+        if let table = table(for: key, versionID: version.id,
+                             testament: testament, book: book),
+           table.sourceSignature == signature,
+           table.targetFingerprint == fingerprint {
+            return Self.chapterSlice(table, chapter: chapter)
+        }
+
+        // Derive the whole book once, then save it.
+        let content: [(chapter: Int, verse: Int, text: String)]
+        if let liveBook {
+            content = liveBook
+        } else {
+            content = await bookTexts(version: version,
+                                      testament: testament, book: book)
+        }
+        var spans: [String: [[Int]]] = [:]
+        if !content.isEmpty,
+           let mode = RedLetterDerivation.detectMode(texts: content.map { $0.text }) {
+            let overall = 39 + book - 1  // testament == 2 here
+            let bookName = Versification.kjv.books[overall].name
+            let parity = RedLetterDerivation.parityStartsInside(
+                texts: content.map { $0.text }, mode: mode)
+            var derived: [Int: [Int: [(start: Int, end: Int)]]] = [:]
+            for sourceID in RedLetterTruth.sourceIDs {
+                for c in Set(content.map { $0.chapter }).sorted() {
+                    let truthChapter = RedLetterTruth.truth(
+                        sourceID: sourceID, book: bookName, chapter: c)
+                    guard !truthChapter.isEmpty else { continue }
+                    var startsInside: [Int: Bool] = [:]
+                    var target: [(verse: Int, text: String)] = []
+                    for (index, entry) in content.enumerated() where entry.chapter == c {
+                        target.append((verse: entry.verse, text: entry.text))
+                        startsInside[entry.verse] = parity[index]
+                    }
+                    let one = RedLetterDerivation.deriveChapter(
+                        target: target, truth: truthChapter,
+                        startsInside: startsInside, mode: mode)
+                    guard !one.isEmpty else { continue }
+                    // The earlier source is primary; later sources
+                    // fill the verses it left unpainted.
+                    derived[c] = derived[c].map {
+                        RedLetterDerivation.merge(primary: $0, fallback: one)
+                    } ?? one
+                }
+            }
+            for (c, chapterSpans) in derived {
+                for (v, verseSpans) in chapterSpans where !verseSpans.isEmpty {
+                    spans["\(c).\(v)"] = verseSpans.map { [$0.start, $0.end] }
+                }
+            }
+        }
+        let table = SpanTable(sourceSignature: signature,
+                              targetFingerprint: fingerprint, spans: spans)
+        save(table, for: key, versionID: version.id, testament: testament, book: book)
+        return Self.chapterSlice(table, chapter: chapter)
+    }
+
+    // MARK: - Tables on disk
+
+    private func tableFile(versionID: String, testament: Int, book: Int) -> URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory,
+                                                  in: .userDomainMask).first!
+        let safeID = versionID.map { $0.isLetter || $0.isNumber ? $0 : "_" }
+        let dir = appSupport.appendingPathComponent("DerivedRedLetters",
+                                                    isDirectory: true)
+            .appendingPathComponent(String(safeID), isDirectory: true)
+        return dir.appendingPathComponent("\(testament)-\(book).json")
+    }
+
+    private func table(for key: String, versionID: String,
+                       testament: Int, book: Int) -> SpanTable?
+    {
+        if let hit = loadedTables[key] { return hit }
+        let url = tableFile(versionID: versionID, testament: testament, book: book)
+        guard let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode(SpanTable.self, from: data)
+        else { return nil }
+        loadedTables[key] = decoded
+        return decoded
+    }
+
+    private func save(_ table: SpanTable, for key: String, versionID: String,
+                      testament: Int, book: Int) {
+        loadedTables[key] = table
+        let url = tableFile(versionID: versionID, testament: testament, book: book)
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(table) {
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    private static func chapterSlice(_ table: SpanTable, chapter: Int)
+        -> [Int: [(start: Int, end: Int)]]
+    {
+        var out: [Int: [(start: Int, end: Int)]] = [:]
+        for (ref, pairs) in table.spans {
+            let parts = ref.split(separator: ".")
+            guard parts.count == 2, Int(parts[0]) == chapter,
+                  let verse = Int(parts[1]) else { continue }
+            out[verse] = pairs.compactMap { $0.count == 2 ? (start: $0[0], end: $0[1]) : nil }
+        }
+        return out
+    }
+
+    /// FNV-1a over a private book's rendered texts, in order.
+    private static func fingerprint(
+        of texts: [(chapter: Int, verse: Int, text: String)]) -> String
+    {
+        var hash: UInt64 = 0xcbf29ce484222325
+        func feed(_ s: String) {
+            for byte in s.utf8 { hash = (hash ^ UInt64(byte)) &* 0x100000001b3 }
+            hash = (hash ^ 0x1f) &* 0x100000001b3
+        }
+        for entry in texts {
+            feed("\(entry.chapter).\(entry.verse)")
+            feed(entry.text)
+        }
+        return String(hash, radix: 16)
+    }
+
+    // MARK: - Derivation inputs
+
+    /// The target book's rendered texts in book order.
+    private func bookTexts(version: BibleVersion, testament: Int, book: Int) async
+        -> [(chapter: Int, verse: Int, text: String)]
+    {
+        var out: [(chapter: Int, verse: Int, text: String)] = []
+        let chapters = version.chapterCount(testament: testament, book: book)
+        guard chapters > 0 else { return [] }
+        for c in 1 ... chapters {
+            guard let rows = try? await version.loadChapter(
+                testament: testament, book: book, chapter: c) else { continue }
+            for row in rows { out.append((chapter: c, verse: row.verse, text: row.text)) }
+        }
+        return out
     }
 }
