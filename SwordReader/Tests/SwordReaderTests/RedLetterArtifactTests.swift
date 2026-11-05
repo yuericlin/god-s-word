@@ -48,6 +48,18 @@ final class RedLetterArtifactTests: XCTestCase {
                                               chapter: 3, verse: 16).isEmpty)
     }
 
+    /// Private-version sections are keyed by the FNV-1a hash of
+    /// the version id, so no private Bible is named in the data.
+    /// The algorithm is pinned here on a neutral id (the value
+    /// was computed with the same algorithm used to build the
+    /// table).
+    func testPrivateSectionKeyAlgorithm() {
+        XCTAssertEqual(RedLetterArtifact.sectionKey(for: "SomePrivateBible"),
+                       "c3429efae310e32a")
+        XCTAssertEqual(RedLetterArtifact.sectionKey(for: "someprivatebible"),
+                       "c3429efae310e32a")
+    }
+
     /// Chapter queries return exactly that chapter's verses
     /// (a chapter-1 query must not bleed into chapter 11+).
     func testChapterSpans() {
