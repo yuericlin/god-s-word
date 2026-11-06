@@ -59,4 +59,29 @@ final class RedLetterArtifactTests: XCTestCase {
         XCTAssertTrue(ch1.values.allSatisfy { !$0.isEmpty })
         XCTAssertFalse(ch1.isEmpty)
     }
+
+    /// Regression (Nov 6, 2026): Revelation spans must be
+    /// computed on Revelation's own texts. An earlier artifact
+    /// build read ChiUns's Jude + Revelation entries shifted by
+    /// one to two verses — the module stream carries extra
+    /// entries the offline reader's fixed heading model
+    /// undercounted — so Rev 22:12 carried 22:10's span
+    /// ([6, 25], mid-quote on the true text) and 22:16 carried
+    /// 22:14's ([0, 32]). Rebuilt with the reader anchored to
+    /// the module's own chapter markers: each span now runs
+    /// quote to quote on the verse's own text.
+    func testRevelationSpansAreQuoteAligned() {
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Revelation of John",
+                                    chapter: 22, verse: 12).map { [$0.start, $0.end] },
+            [[0, 25]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Revelation of John",
+                                    chapter: 22, verse: 13).map { [$0.start, $0.end] },
+            [[0, 33]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Revelation of John",
+                                    chapter: 22, verse: 16).map { [$0.start, $0.end] },
+            [[0, 48]])
+    }
 }

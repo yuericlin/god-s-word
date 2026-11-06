@@ -923,7 +923,14 @@ Multiple (KJV Gen 1:1-2):
   Derivation covers the New Testament and applies in the same
   three reading modes. Cross-checked offline (Nov 5, 2026)
   against the lenient audit pipeline: the strict rule leaves
-  18 fewer ChiUns verses painted (2,014 shipped in the
-  REQ-RL-4 artifact) and 16 fewer in the private test corpus,
-  every dropped verse an embedded re-quotation, a weak
-  attribution, or a delimiter-free partial coverage.
+  18 fewer ChiUns verses painted and 16 fewer in the private
+  test corpus, every dropped verse an embedded re-quotation,
+  a weak attribution, or a delimiter-free partial coverage.
+  The REQ-RL-4 artifact was rebuilt Nov 6, 2026 with the
+  offline reader anchored to the module's own chapter
+  markers — its fixed heading model had undercounted extra
+  entries in ChiUns's stream, shifting the Jude + Revelation
+  reads by one to two verses (Rev 22:12 carried 22:10's
+  span); 2,018 ChiUns verses ship, with Revelation's spans
+  quote-aligned on the verses' own texts (pinned in
+  RedLetterArtifactTests).
