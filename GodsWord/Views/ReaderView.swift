@@ -980,15 +980,16 @@ struct ReaderView: View {
     /// Small ribbons next to a verse number for that verse's
     /// bookmarks (REQ-BM-12): one per bookmark, in its color,
     /// at the head of the verse's row, top-aligned with the
-    /// verse number and its note background. Renders nothing
-    /// for an unbookmarked verse.
+    /// verse number and its note background. Same ribbon shape
+    /// and translucency (0.55) as the chapter-level ribbons,
+    /// just smaller. Renders nothing for an unbookmarked verse.
     @ViewBuilder
     private func verseRibbonMarks(verse: Int) -> some View {
         if let marks = verseBookmarksInChapter[verse], !marks.isEmpty {
             HStack(alignment: .top, spacing: 2) {
                 ForEach(marks) { mark in
                     RibbonShape()
-                        .fill(mark.color.opacity(0.85))
+                        .fill(mark.color.opacity(0.55))
                         .frame(width: personalData.fontSize * 0.6,
                                height: personalData.fontSize * 1.05)
                 }
@@ -1008,7 +1009,7 @@ struct ReaderView: View {
             var glyph = AttributedString("▼")
             glyph.font = .system(size: personalData.fontSize * 0.6,
                                  design: .serif)
-            glyph.foregroundColor = mark.color
+            glyph.foregroundColor = mark.color.opacity(0.55)
             out += glyph
         }
         return out

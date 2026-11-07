@@ -390,12 +390,14 @@ Multiple (KJV Gen 1:1-2):
   (the original behavior); bookmarks stored before this feature
   have no verse and stay chapter-level. A verse-level bookmark
   renders **next to its verse number**: in verse-by-verse mode
-  (plain and Strong's) a small ribbon in the bookmark's color —
-  one per bookmark at that verse — stands at the head of the
-  verse's row, its top aligned with the verse number (and the
-  number's note background). Paragraph mode has no rows, so the
-  marker is a small "▼" in the bookmark's color right after the
-  verse number in the flowing text. The bookmark editor gains a
+  (plain and Strong's) a ribbon in the bookmark's color — the
+  same ribbon shape and translucency (0.55) as the chapter-level
+  ribbons (REQ-BM-3), just smaller; one per bookmark at that
+  verse — stands at the head of the verse's row, its top
+  aligned with the verse number (and the number's note
+  background). Paragraph mode has no rows, so the marker is a
+  small "▼" in the bookmark's color at the same translucency
+  right after the verse number in the flowing text. The bookmark editor gains a
   Verse picker ("Chapter only", or a verse of the chosen
   chapter) so a bookmark's level can be set or cleared by hand,
   and reference labels show "Book chapter:verse" for verse-level
