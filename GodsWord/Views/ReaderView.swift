@@ -126,12 +126,12 @@ struct ReaderView: View {
                                                     headingRow(heading)
                                                 }
                                                 HStack(alignment: .top, spacing: 0) {
-                                                    verseRibbonMarks(verse: v.verse)
+                                                    verseRowMarks(verse: v.verse)
                                                     Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
                                                         .font(.system(size: personalData.fontSize, design: .serif))
                                                         .lineSpacing(6)
                                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, (verseBookmarksInChapter[v.verse] ?? []).isEmpty ? 0 : 5)
+                                                        .padding(.leading, hasRowMarks(verse: v.verse) ? 5 : 0)
                                                         // Swallow long-press so the empty-area
                                                         // menu doesn't fire on text.
                                                         .onLongPressGesture { }
@@ -146,12 +146,12 @@ struct ReaderView: View {
                                                     headingRow(heading)
                                                 }
                                                 HStack(alignment: .top, spacing: 0) {
-                                                    verseRibbonMarks(verse: v.verse)
+                                                    verseRowMarks(verse: v.verse)
                                                     Text(attributedVerse(number: v.verse, text: v.text))
                                                         .font(.system(size: personalData.fontSize, design: .serif))
                                                         .lineSpacing(6)
                                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, (verseBookmarksInChapter[v.verse] ?? []).isEmpty ? 0 : 5)
+                                                        .padding(.leading, hasRowMarks(verse: v.verse) ? 5 : 0)
                                                         .onLongPressGesture { }
                                                 }
                                                 .id("v\(v.verse)")
@@ -636,20 +636,21 @@ struct ReaderView: View {
     }
 
     private func attributedVerse(number: Int, text: String,
-                                 inlineBookmarkMarks: Bool = false) -> AttributedString {
+                                 inlineMarks: Bool = false) -> AttributedString {
         var out = attributedVerseNumber(number)
         if hasNote(verse: number) {
-            // Yellow background highlights the verse number; tapping it opens the note.
-            // (backgroundColor isn't overridden by link styling, unlike foregroundColor.)
+            // The number links to the note (REQ-NT-6); the
+            // indicator itself is the sticky-note icon next to
+            // the number (REQ-NT-5), not a background.
             let numRange = out.startIndex..<out.endIndex
-            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
             out[numRange].link = URL(string: "note://\(number)")
             out[numRange].underlineStyle = []
         }
-        if inlineBookmarkMarks {
-            // Paragraph mode only (REQ-BM-12): a colored marker
-            // right after the number. Verse-by-verse rows draw
-            // ribbon views instead.
+        if inlineMarks {
+            // Paragraph mode only (REQ-NT-5, REQ-BM-12): small
+            // markers right after the number. Verse-by-verse
+            // rows draw the real icon/ribbon views instead.
+            out += noteGlyphRun(verse: number)
             out += bookmarkGlyphRun(verse: number)
         }
         out += AttributedString(" ")
@@ -693,7 +694,7 @@ struct ReaderView: View {
                 out += AttributedString("\n")
             } else if i > 0 { out += AttributedString(" ") }
             out += attributedVerse(number: v.verse, text: v.text,
-                                   inlineBookmarkMarks: true)
+                                   inlineMarks: true)
         }
         return out
     }
@@ -714,16 +715,17 @@ struct ReaderView: View {
     /// they belong to. Segments concatenate directly (they already carry
     /// their spacing); numbers render small and raised.
     private func attributedVerseTokens(number: Int, tokens: [WordToken],
-                                       inlineBookmarkMarks: Bool = false) -> AttributedString {
+                                       inlineMarks: Bool = false) -> AttributedString {
         var out = attributedVerseNumber(number)
         if hasNote(verse: number) {
-            // Yellow background highlights the verse number; tapping it opens the note.
+            // The number links to the note (REQ-NT-6); the
+            // indicator is the sticky-note icon (REQ-NT-5).
             let numRange = out.startIndex..<out.endIndex
-            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
             out[numRange].link = URL(string: "note://\(number)")
             out[numRange].underlineStyle = []
         }
-        if inlineBookmarkMarks {
+        if inlineMarks {
+            out += noteGlyphRun(verse: number)
             out += bookmarkGlyphRun(verse: number)
         }
         out += AttributedString(" ")
@@ -777,7 +779,7 @@ struct ReaderView: View {
                 out += AttributedString("\n")
             } else if i > 0 { out += AttributedString(" ") }
             out += attributedVerseTokens(number: v.verse, tokens: v.tokens,
-                                         inlineBookmarkMarks: true)
+                                         inlineMarks: true)
         }
         return out
     }
@@ -977,25 +979,51 @@ struct ReaderView: View {
         return grouped
     }
 
-    /// Small ribbons next to a verse number for that verse's
-    /// bookmarks (REQ-BM-12): one per bookmark, in its color,
-    /// at the head of the verse's row, top-aligned with the
-    /// verse number and its note background. Same ribbon shape
-    /// and translucency (0.55) as the chapter-level ribbons,
-    /// just smaller. Renders nothing for an unbookmarked verse.
+    /// The marks standing next to a verse number at the head of
+    /// its row: the verse's bookmark ribbons (REQ-BM-12) — same
+    /// ribbon shape and translucency (0.55) as the chapter-level
+    /// ribbons, just smaller, top-aligned with the verse number —
+    /// then the sticky-note icon when the verse has a note
+    /// (REQ-NT-5); tapping the icon opens the note, like tapping
+    /// the number. Renders nothing for an unmarked verse.
     @ViewBuilder
-    private func verseRibbonMarks(verse: Int) -> some View {
-        if let marks = verseBookmarksInChapter[verse], !marks.isEmpty {
-            HStack(alignment: .top, spacing: 2) {
+    private func verseRowMarks(verse: Int) -> some View {
+        let marks = verseBookmarksInChapter[verse] ?? []
+        if !marks.isEmpty || hasNote(verse: verse) {
+            HStack(alignment: .top, spacing: 3) {
                 ForEach(marks) { mark in
                     RibbonShape()
                         .fill(mark.color.opacity(0.55))
                         .frame(width: personalData.fontSize * 0.6,
                                height: personalData.fontSize * 1.05)
                 }
+                if hasNote(verse: verse) {
+                    StickyNoteIcon(size: personalData.fontSize * 0.82)
+                        .onTapGesture { openNoteEditor(for: verse) }
+                }
             }
             .padding(.top, 2)
         }
+    }
+
+    /// Whether the verse carries any row mark (a bookmark ribbon
+    /// or the note icon) — the row's text indents to make room.
+    private func hasRowMarks(verse: Int) -> Bool {
+        !(verseBookmarksInChapter[verse] ?? []).isEmpty
+            || hasNote(verse: verse)
+    }
+
+    /// Paragraph mode's note marker (REQ-NT-5): a small bright
+    /// yellow square — a mini sticky note — right after the
+    /// verse number, at the ribbons' 0.55 translucency.
+    private func noteGlyphRun(verse: Int) -> AttributedString {
+        guard hasNote(verse: verse) else { return AttributedString("") }
+        var glyph = AttributedString("■")
+        glyph.font = .system(size: personalData.fontSize * 0.55,
+                             design: .serif)
+        glyph.foregroundColor = Color(red: 1.0, green: 0.85, blue: 0.0)
+            .opacity(0.55)
+        return glyph
     }
 
     /// Paragraph mode's verse-bookmark marker (REQ-BM-12): one

@@ -102,13 +102,19 @@ Multiple (KJV Gen 1:1-2):
   creates a chapter-level note (REQ-NT-15).
 
 ### Indicator
-- **REQ-NT-5:** A verse with a note shows a yellow background highlight on its
-  verse number (`UIColor(1.0, 0.9, 0.45, alpha 0.55)`).
-- **REQ-NT-6:** Tapping the highlighted verse number opens the note editor.
-  (The highlight uses `backgroundColor`, which — unlike `foregroundColor` — is
-  not overridden by link styling.)
+- **REQ-NT-5:** A verse with a note shows a **sticky-note icon** next to
+  its verse number: a small sticky-note shape (square with a
+  folded corner) in bright yellow (1.0, 0.85, 0.0) at 0.55
+  translucency — the same treatment as the bookmark ribbons.
+  In verse-by-verse mode (plain and Strong's) the icon stands
+  at the head of the verse's row, beside any bookmark ribbons
+  for that verse; in paragraph mode a small bright-yellow
+  square at the same translucency sits right after the number
+  in the flowing text. (Until Nov 7, 2026 the indicator was a
+  pale-yellow background on the number itself.)
+- **REQ-NT-6:** Tapping the verse number — or the sticky-note
+  icon — opens the note editor.
 
-### Editor
 - **REQ-NT-7:** The note editor auto-focuses on appear: cursor shows and the
   keyboard comes up (via `@FocusState` with a 0.4s delay after the sheet
   animation).
@@ -394,8 +400,7 @@ Multiple (KJV Gen 1:1-2):
   same ribbon shape and translucency (0.55) as the chapter-level
   ribbons (REQ-BM-3), just smaller; one per bookmark at that
   verse — stands at the head of the verse's row, its top
-  aligned with the verse number (and the number's note
-  background). Paragraph mode has no rows, so the marker is a
+  aligned with the verse number (and the note icon beside it). Paragraph mode has no rows, so the marker is a
   small "▼" in the bookmark's color at the same translucency
   right after the verse number in the flowing text. The bookmark editor gains a
   Verse picker ("Chapter only", or a verse of the chosen
@@ -866,7 +871,7 @@ Multiple (KJV Gen 1:1-2):
   belong to the passage, not to a version (like bookmarks,
   REQ-BM-11). The rendering applies in verse-by-verse,
   paragraph, and Strong's modes; the verse number keeps its
-  own styling (a note's pale-yellow number stays visible),
+  own styling (a note's sticky-note icon beside it stays visible),
   and the selection's sky blue covers the yellow while the
   verse is selected. Where a highlighted verse's text is
   Jesus's speech and red letters are on, the speech spans
