@@ -153,6 +153,7 @@ struct BookmarkRibbonsRow: View {
             return ""
         }
         var text = "\(name) \(bookmark.chapter)"
+        if let verse = bookmark.verse { text += ":\(verse)" }
         // Last-change date on the same line, without an "Updated"
         // label (REQ-BM-10): "Genesis 12 - Oct 22, 2026". Bookmarks
         // written before timestamps show no date part.
@@ -254,6 +255,11 @@ struct BookmarksPanel: View {
         let count = max(history.chapterCount(testament: bookmark.testament,
                                              book: bookmark.book), 1)
         history.chapter = min(max(bookmark.chapter, 1), count)
+        // A verse-level bookmark also lands on its verse — the
+        // reader selects and scrolls to it like a note jump
+        // (REQ-BM-5). A chapter-level jump clears any stale
+        // pending verse.
+        history.pendingVerse = bookmark.verse
         showing = false
     }
 
@@ -270,6 +276,9 @@ struct BookmarkEditView: View {
     @State private var color: Color
     @State private var overallBook: Int
     @State private var chapter: Int
+    /// 0 = chapter-level (no verse); 1... = the marked verse
+    /// (REQ-BM-12).
+    @State private var verse: Int
 
     init(bookmark: Bookmark, history: ReadingHistory) {
         self.bookmark = bookmark
@@ -280,6 +289,7 @@ struct BookmarkEditView: View {
             ? bookmark.book - 1 : 39 + bookmark.book - 1
         _overallBook = State(initialValue: min(max(overall, 0), 65))
         _chapter = State(initialValue: max(bookmark.chapter, 1))
+        _verse = State(initialValue: bookmark.verse ?? 0)
     }
 
     var body: some View {
@@ -302,6 +312,15 @@ struct BookmarkEditView: View {
                     }
                     .onChange(of: overallBook) {
                         chapter = min(chapter, chapterCount)
+                    }
+                    Picker("Verse", selection: $verse) {
+                        Text("Chapter only").tag(0)
+                        ForEach(1...verseCount, id: \.self) { v in
+                            Text("\(v)").tag(v)
+                        }
+                    }
+                    .onChange(of: chapter) {
+                        verse = min(verse, verseCount)
                     }
                 }
             }
@@ -332,6 +351,16 @@ struct BookmarkEditView: View {
         return max(history.chapterCount(testament: t, book: b), 1)
     }
 
+    /// Verses in the chosen book/chapter (KJV versification,
+    /// the app's canonical numbering).
+    private var verseCount: Int {
+        let counts = Versification.kjv.versesPerChapter
+        guard counts.indices.contains(overallBook),
+              counts[overallBook].indices.contains(chapter - 1)
+        else { return 1 }
+        return max(counts[overallBook][chapter - 1], 1)
+    }
+
     private func save() {
         let t = overallBook < 39 ? 1 : 2
         let b = overallBook < 39 ? overallBook + 1 : overallBook - 39 + 1
@@ -347,6 +376,7 @@ struct BookmarkEditView: View {
         updated.testament = t
         updated.book = b
         updated.chapter = min(max(chapter, 1), chapterCount)
+        updated.verse = verse == 0 ? nil : min(verse, verseCount)
         personalData.saveBookmark(updated)
     }
 }

@@ -340,13 +340,19 @@ Multiple (KJV Gen 1:1-2):
   3 light purple (0.79,0.66,0.91), 4 light silver (0.83,0.83,0.83), 5 light
   green (0.56,0.93,0.56).
 - **REQ-BM-3:** While reading, small vertical ribbons show at the top-right
-  corner, but ONLY for bookmarks pointing at the chapter being read. Unmarked
-  chapters show nothing.
+  corner, but ONLY for **chapter-level** bookmarks pointing at the chapter
+  being read (verse-level bookmarks render at their verse instead,
+  REQ-BM-12). Unmarked chapters show nothing.
 - **REQ-BM-4:** The bookmarks panel shows small translucent ribbons at its
   top-right corner, one per bookmark.
-- **REQ-BM-5:** Single tap on a bookmark jumps to its chapter.
+- **REQ-BM-5:** Single tap on a bookmark jumps to its chapter; a
+  verse-level bookmark also lands on its verse — selected and
+  scrolled to, like a note jump (the reader's pending-verse
+  mechanism).
 - **REQ-BM-6:** Holding a bookmark for 1 second offers: Assign (point it at the
-  chapter being read), Edit (name, ribbon color, book & chapter), Delete.
+  chapter being read — assigning to a chapter makes it chapter-level,
+  clearing any verse), Edit (name, ribbon color, book, chapter & verse),
+  Delete.
 - **REQ-BM-7:** Bookmarks persist in UserDefaults (`gw.bookmarks.v1`) and Drive
   backups (payload v4+). Old backups load without wiping bookmarks.
 
@@ -374,10 +380,38 @@ Multiple (KJV Gen 1:1-2):
   timestamps and show just the book and chapter until they are next
   saved or assigned.
 - **REQ-BM-11:** Bookmarks are version-independent: a bookmark names
-  a testament/book/chapter only (no version is stored with it), so
-  a bookmark set while reading one version shows — reader ribbons,
-  panel, and jumps — in every version. Same sharing rule as notes
-  (REQ-NT-19); bookmarks never carried a version.
+  a testament/book/chapter and optionally a verse (no version is
+  stored with it), so a bookmark set while reading one version
+  shows — reader ribbons, panel, and jumps — in every version.
+  Same sharing rule as notes (REQ-NT-19); bookmarks never carried
+  a version.
+- **REQ-BM-12:** A bookmark may carry a **verse** (1-based within
+  its chapter). With no verse set it marks the chapter as a whole
+  (the original behavior); bookmarks stored before this feature
+  have no verse and stay chapter-level. A verse-level bookmark
+  renders **next to its verse number**: in verse-by-verse mode
+  (plain and Strong's) a small ribbon in the bookmark's color —
+  one per bookmark at that verse — stands at the head of the
+  verse's row, its top aligned with the verse number (and the
+  number's note background). Paragraph mode has no rows, so the
+  marker is a small "▼" in the bookmark's color right after the
+  verse number in the flowing text. The bookmark editor gains a
+  Verse picker ("Chapter only", or a verse of the chosen
+  chapter) so a bookmark's level can be set or cleared by hand,
+  and reference labels show "Book chapter:verse" for verse-level
+  bookmarks (panel ribbons, Assign list).
+- **REQ-BM-13:** While verses are selected, the selection bar
+  offers a **Bookmark** action after Notes (Copy / Highlight /
+  Notes / Bookmark / Compare). It opens the Assign sheet
+  (REQ-BM-8) targeted at the selection: a single selected verse
+  targets that verse (the sheet's new-bookmark draft and any
+  chosen bookmark land at "Book chapter:verse"); a multi-verse
+  selection targets the chapter as a whole. When a bookmark
+  already sits exactly at the selection's target, the action
+  reads **Unmark** instead: tapping it deletes the bookmark(s)
+  at that target and clears the selection (mirrors Unhighlight,
+  REQ-HL-1). The reading area's long-press Assign Bookmark keeps
+  targeting the chapter.
 
 ## 9. Two-level book/chapter picker
 

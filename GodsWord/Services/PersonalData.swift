@@ -742,9 +742,10 @@ public final class PersonalData: ObservableObject {
     /// Points an existing bookmark at another chapter. Used by the bookmarks
     /// panel's Assign and the reader's Assign Bookmark so both behave alike.
     public func assignBookmark(_ bookmark: Bookmark,
-                               testament: Int, book: Int, chapter: Int) {
+                               testament: Int, book: Int, chapter: Int,
+                               verse: Int? = nil) {
         updateBookmark(bookmark.moved(testament: testament, book: book,
-                                      chapter: chapter))
+                                      chapter: chapter, verse: verse))
     }
 
     /// Removes the bookmark with the same id.
@@ -757,10 +758,11 @@ public final class PersonalData: ObservableObject {
     /// editor stores it with `saveBookmark` when the user taps Save; cancelling
     /// the editor just drops the draft.
     public func makeBookmarkDraft(name: String, testament: Int, book: Int,
-                                  chapter: Int) -> Bookmark {
+                                  chapter: Int, verse: Int? = nil) -> Bookmark {
         let c = Bookmark.paletteColor(at: bookmarks.count)
         return Bookmark(name: name, red: c.red, green: c.green, blue: c.blue,
-                        testament: testament, book: book, chapter: chapter)
+                        testament: testament, book: book, chapter: chapter,
+                        verse: verse)
     }
 
     /// Stores a bookmark: replaces the one with the same id, or appends a
