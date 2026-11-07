@@ -125,18 +125,14 @@ struct ReaderView: View {
                                                 if let heading = headings[v.verse] {
                                                     headingRow(heading)
                                                 }
-                                                HStack(alignment: .top, spacing: 0) {
-                                                    verseRowMarks(verse: v.verse)
-                                                    Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
-                                                        .font(.system(size: personalData.fontSize, design: .serif))
-                                                        .lineSpacing(6)
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, hasRowMarks(verse: v.verse) ? 5 : 0)
-                                                        // Swallow long-press so the empty-area
-                                                        // menu doesn't fire on text.
-                                                        .onLongPressGesture { }
-                                                }
-                                                .id("v\(v.verse)")
+                                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                    .id("v\(v.verse)")
+                                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                                    .lineSpacing(6)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    // Swallow long-press so the empty-area
+                                                    // menu doesn't fire on text.
+                                                    .onLongPressGesture { }
                                             }
                                         }
                                     } else {
@@ -145,16 +141,12 @@ struct ReaderView: View {
                                                 if let heading = headings[v.verse] {
                                                     headingRow(heading)
                                                 }
-                                                HStack(alignment: .top, spacing: 0) {
-                                                    verseRowMarks(verse: v.verse)
-                                                    Text(attributedVerse(number: v.verse, text: v.text))
-                                                        .font(.system(size: personalData.fontSize, design: .serif))
-                                                        .lineSpacing(6)
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, hasRowMarks(verse: v.verse) ? 5 : 0)
-                                                        .onLongPressGesture { }
-                                                }
-                                                .id("v\(v.verse)")
+                                                Text(attributedVerse(number: v.verse, text: v.text))
+                                                    .id("v\(v.verse)")
+                                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                                    .lineSpacing(6)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .onLongPressGesture { }
                                             }
                                         }
                                     }
@@ -272,16 +264,14 @@ struct ReaderView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .padding(.bottom, 90)
             }
-            // Ribbons for chapter-level bookmarks pointing at the
-            // chapter being read (REQ-BM-3). Verse-level bookmarks
-            // render next to their verse number instead
-            // (REQ-BM-12). Nothing shows when the current chapter
-            // has no chapter-level bookmark.
+            // Ribbons for the bookmarks pointing at the chapter
+            // being read (REQ-BM-3) — chapter-level and verse-level
+            // alike; every bookmark shows at the top-right corner.
+            // Nothing shows when the current chapter has none.
             let currentMarks = personalData.bookmarks.filter {
-                $0.verse == nil
-                    && $0.isAt(testament: history.testament,
-                               book: history.book,
-                               chapter: history.chapter)
+                $0.isAt(testament: history.testament,
+                        book: history.book,
+                        chapter: history.chapter)
             }
             if !currentMarks.isEmpty {
                 BookmarkRibbonsRow(history: history,
@@ -639,23 +629,15 @@ struct ReaderView: View {
         history.chapter = c
     }
 
-    private func attributedVerse(number: Int, text: String,
-                                 inlineMarks: Bool = false) -> AttributedString {
+    private func attributedVerse(number: Int, text: String) -> AttributedString {
         var out = attributedVerseNumber(number)
         if hasNote(verse: number) {
-            // The number links to the note (REQ-NT-6); the
-            // indicator itself is the sticky-note icon next to
-            // the number (REQ-NT-5), not a background.
+            // Yellow background highlights the verse number; tapping it opens the note.
+            // (backgroundColor isn't overridden by link styling, unlike foregroundColor.)
             let numRange = out.startIndex..<out.endIndex
+            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
             out[numRange].link = URL(string: "note://\(number)")
             out[numRange].underlineStyle = []
-        }
-        if inlineMarks {
-            // Paragraph mode only (REQ-NT-5, REQ-BM-12): small
-            // markers right after the number. Verse-by-verse
-            // rows draw the real icon/ribbon views instead.
-            out += noteGlyphRun(verse: number)
-            out += bookmarkGlyphRun(verse: number)
         }
         out += AttributedString(" ")
         out += AttributedString(text)
@@ -697,8 +679,7 @@ struct ReaderView: View {
                 out += attributedHeading(heading)
                 out += AttributedString("\n")
             } else if i > 0 { out += AttributedString(" ") }
-            out += attributedVerse(number: v.verse, text: v.text,
-                                   inlineMarks: true)
+            out += attributedVerse(number: v.verse, text: v.text)
         }
         return out
     }
@@ -718,19 +699,14 @@ struct ReaderView: View {
     /// Verse text from segments, with Strong's numbers after the segment
     /// they belong to. Segments concatenate directly (they already carry
     /// their spacing); numbers render small and raised.
-    private func attributedVerseTokens(number: Int, tokens: [WordToken],
-                                       inlineMarks: Bool = false) -> AttributedString {
+    private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
         var out = attributedVerseNumber(number)
         if hasNote(verse: number) {
-            // The number links to the note (REQ-NT-6); the
-            // indicator is the sticky-note icon (REQ-NT-5).
+            // Yellow background highlights the verse number; tapping it opens the note.
             let numRange = out.startIndex..<out.endIndex
+            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
             out[numRange].link = URL(string: "note://\(number)")
             out[numRange].underlineStyle = []
-        }
-        if inlineMarks {
-            out += noteGlyphRun(verse: number)
-            out += bookmarkGlyphRun(verse: number)
         }
         out += AttributedString(" ")
         // Character ranges of the Jesus-speech tokens, for the
@@ -782,8 +758,7 @@ struct ReaderView: View {
                 out += attributedHeading(heading)
                 out += AttributedString("\n")
             } else if i > 0 { out += AttributedString(" ") }
-            out += attributedVerseTokens(number: v.verse, tokens: v.tokens,
-                                         inlineMarks: true)
+            out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
         }
         return out
     }
@@ -968,86 +943,6 @@ struct ReaderView: View {
             personalData.deleteBookmark(mark)
         }
         selectedVerses = []
-    }
-
-    /// Verse-level bookmarks pointing into the chapter being
-    /// read, grouped by verse (REQ-BM-12). Chapter-level
-    /// bookmarks (no verse) are the top-right ribbons instead.
-    private var verseBookmarksInChapter: [Int: [Bookmark]] {
-        var grouped: [Int: [Bookmark]] = [:]
-        for mark in personalData.bookmarks {
-            guard let verse = mark.verse,
-                  mark.isAt(testament: history.testament,
-                            book: history.book,
-                            chapter: history.chapter)
-            else { continue }
-            grouped[verse, default: []].append(mark)
-        }
-        return grouped
-    }
-
-    /// The marks standing next to a verse number at the head of
-    /// its row: the verse's bookmark ribbons (REQ-BM-12) — same
-    /// ribbon shape and translucency (0.55) as the chapter-level
-    /// ribbons, just smaller, top-aligned with the verse number —
-    /// then the sticky-note icon when the verse has a note
-    /// (REQ-NT-5); tapping the icon opens the note, like tapping
-    /// the number. Renders nothing for an unmarked verse.
-    @ViewBuilder
-    private func verseRowMarks(verse: Int) -> some View {
-        let marks = verseBookmarksInChapter[verse] ?? []
-        if !marks.isEmpty || hasNote(verse: verse) {
-            HStack(alignment: .top, spacing: 3) {
-                ForEach(marks) { mark in
-                    RibbonShape()
-                        .fill(mark.color.opacity(0.55))
-                        .frame(width: personalData.fontSize * 0.6,
-                               height: personalData.fontSize * 1.05)
-                }
-                if hasNote(verse: verse) {
-                    StickyNoteIcon(size: personalData.fontSize * 0.82)
-                        .onTapGesture { openNoteEditor(for: verse) }
-                }
-            }
-            .padding(.top, 2)
-        }
-    }
-
-    /// Whether the verse carries any row mark (a bookmark ribbon
-    /// or the note icon) — the row's text indents to make room.
-    private func hasRowMarks(verse: Int) -> Bool {
-        !(verseBookmarksInChapter[verse] ?? []).isEmpty
-            || hasNote(verse: verse)
-    }
-
-    /// Paragraph mode's note marker (REQ-NT-5): a small bright
-    /// yellow square — a mini sticky note — right after the
-    /// verse number, at the ribbons' 0.55 translucency.
-    private func noteGlyphRun(verse: Int) -> AttributedString {
-        guard hasNote(verse: verse) else { return AttributedString("") }
-        var glyph = AttributedString("■")
-        glyph.font = .system(size: personalData.fontSize * 0.55,
-                             design: .serif)
-        glyph.foregroundColor = Color(red: 1.0, green: 0.85, blue: 0.0)
-            .opacity(0.55)
-        return glyph
-    }
-
-    /// Paragraph mode's verse-bookmark marker (REQ-BM-12): one
-    /// small "▼" per bookmark at the verse, in the bookmark's
-    /// color, placed right after the verse number. (In
-    /// verse-by-verse mode the row draws real ribbon views next
-    /// to the number instead; a flowing paragraph has no rows.)
-    private func bookmarkGlyphRun(verse: Int) -> AttributedString {
-        var out = AttributedString("")
-        for mark in verseBookmarksInChapter[verse] ?? [] {
-            var glyph = AttributedString("▼")
-            glyph.font = .system(size: personalData.fontSize * 0.6,
-                                 design: .serif)
-            glyph.foregroundColor = mark.color.opacity(0.55)
-            out += glyph
-        }
-        return out
     }
 
     private func toggleSelection(_ verse: Int) {
