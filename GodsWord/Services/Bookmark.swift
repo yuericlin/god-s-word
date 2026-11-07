@@ -1,5 +1,7 @@
 // Bookmark.swift — named, colored ribbon bookmarks.
-// Each bookmark points at a testament/book/chapter (1-based).
+// Each bookmark points at a testament/book/chapter (1-based) and
+// optionally at a verse within the chapter (REQ-BM-12): no verse
+// means the bookmark marks the chapter as a whole.
 // Persisted in PersonalData (UserDefaults) and included in Drive backups.
 
 import Foundation
@@ -16,6 +18,11 @@ public struct Bookmark: Codable, Identifiable, Sendable {
     public var testament: Int  // 1 = OT, 2 = NT
     public var book: Int       // 1-based within testament
     public var chapter: Int
+    /// The marked verse (1-based), or nil for a chapter-level
+    /// bookmark (REQ-BM-12). Optional in the payload, so bookmarks
+    /// stored before verse-level bookmarks existed decode as
+    /// chapter-level.
+    public var verse: Int?
     /// When the bookmark was created and last changed (REQ-BM-10),
     /// stamped by PersonalData on save/assign. Nil in bookmarks
     /// written before timestamps existed.
@@ -25,6 +32,7 @@ public struct Bookmark: Codable, Identifiable, Sendable {
     public init(id: UUID = UUID(), name: String,
                 red: Double, green: Double, blue: Double,
                 testament: Int = 1, book: Int = 1, chapter: Int = 1,
+                verse: Int? = nil,
                 createdAt: Date? = nil, updatedAt: Date? = nil) {
         self.id = id
         self.name = name
@@ -34,6 +42,7 @@ public struct Bookmark: Codable, Identifiable, Sendable {
         self.testament = testament
         self.book = book
         self.chapter = chapter
+        self.verse = verse
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -51,17 +60,30 @@ public struct Bookmark: Codable, Identifiable, Sendable {
         BookLocation.overallIndex(testament: testament, book: book)
     }
 
-    /// Whether the bookmark points at exactly this chapter.
+    /// Whether the bookmark points at this chapter (any verse,
+    /// or none).
     func isAt(testament: Int, book: Int, chapter: Int) -> Bool {
         self.testament == testament && self.book == book && self.chapter == chapter
     }
 
-    /// A copy pointing at another chapter (name, color, and id unchanged).
-    func moved(testament: Int, book: Int, chapter: Int) -> Bookmark {
+    /// Whether the bookmark points at exactly this target: the
+    /// chapter, and exactly this verse — where a nil verse
+    /// matches chapter-level bookmarks only (REQ-BM-12).
+    func isAt(testament: Int, book: Int, chapter: Int, verse: Int?) -> Bool {
+        isAt(testament: testament, book: book, chapter: chapter)
+            && self.verse == verse
+    }
+
+    /// A copy pointing at another location (name, color, and id
+    /// unchanged). Without a verse the copy is chapter-level:
+    /// assigning a bookmark to a chapter clears its verse.
+    func moved(testament: Int, book: Int, chapter: Int,
+               verse: Int? = nil) -> Bookmark {
         var copy = self
         copy.testament = testament
         copy.book = book
         copy.chapter = chapter
+        copy.verse = verse
         return copy
     }
 
