@@ -226,7 +226,11 @@ struct ReaderView: View {
             if !selectedVerses.isEmpty {
                 HStack(spacing: 24) {
                     Button("Copy") { copySelectedVerses() }
-                    Button("Highlight") { highlightSelection() }
+                    if selectionFullyHighlighted {
+                        Button("Unhighlight") { unhighlightSelection() }
+                    } else {
+                        Button("Highlight") { highlightSelection() }
+                    }
                     Button("Notes") { openNoteEditorForSelection() }
                     Button("Compare") { showingCompare = true }
                     Button {
@@ -812,6 +816,25 @@ struct ReaderView: View {
                                   chapter: history.chapter,
                                   verses: selectedVerses,
                                   version: history.version.id)
+        selectedVerses = []
+    }
+
+    /// Whether every selected verse already carries a highlight:
+    /// the selection bar then offers Unhighlight instead of
+    /// Highlight (REQ-HL-1).
+    private var selectionFullyHighlighted: Bool {
+        !selectedVerses.isEmpty
+            && selectedVerses.isSubset(of: highlightedInChapter)
+    }
+
+    /// The selection bar's Unhighlight action (REQ-HL-1): removes
+    /// the selected verses from the chapter's highlights — spans
+    /// shrink or split as needed — then clears the selection.
+    private func unhighlightSelection() {
+        personalData.removeHighlight(testament: history.testament,
+                                     book: history.book,
+                                     chapter: history.chapter,
+                                     verses: selectedVerses)
         selectedVerses = []
     }
 

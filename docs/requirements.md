@@ -818,6 +818,13 @@ Multiple (KJV Gen 1:1-2):
   offers a **Highlight** action before Notes (Copy / Highlight /
   Notes / Compare). Tapping it records the selected verses as
   highlights and clears the selection, so the highlight shows.
+  When every selected verse already carries a highlight, the
+  action reads **Unhighlight** instead: tapping it removes
+  exactly the selected verses from the chapter's highlights
+  (spans shrink or split as needed,
+  `HighlightLogic.subtracting`, unit-tested) and clears the
+  selection. A partially highlighted selection still offers
+  Highlight, which adds the missing verses.
 - **REQ-HL-2:** A highlighted verse's text renders with a
   bright yellow background in **every** version — highlights
   belong to the passage, not to a version (like bookmarks,

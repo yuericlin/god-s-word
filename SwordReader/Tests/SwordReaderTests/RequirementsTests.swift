@@ -1642,6 +1642,57 @@ final class HighlightRequirementsTests: XCTestCase {
                        [a, b])
     }
 
+    // REQ-HL-1: unhighlighting removes exactly the chosen verses:
+    // a covered span disappears, an edge overlap shrinks the span,
+    // a middle cut splits it in two, and other chapters and
+    // untouched spans are left alone.
+    func testSubtractingVerses() {
+        // Full coverage removes the highlight.
+        XCTAssertEqual(
+            HighlightLogic.subtracting(verses: [2, 3], testament: 2,
+                                       book: 1, chapter: 3,
+                                       from: [highlight(2, 3, at: t0)]),
+            [])
+        // Edge overlaps shrink.
+        var out = HighlightLogic.subtracting(
+            verses: [1, 2], testament: 2, book: 1, chapter: 3,
+            from: [highlight(1, 4, at: t0)])
+        XCTAssertEqual(out.map { $0.verses }, [3 ... 4])
+        out = HighlightLogic.subtracting(
+            verses: [4, 5], testament: 2, book: 1, chapter: 3,
+            from: [highlight(1, 4, at: t0)])
+        XCTAssertEqual(out.map { $0.verses }, [1 ... 3])
+        // A middle cut splits; both pieces keep version and time,
+        // and the earlier piece keeps the original id.
+        let original = highlight(1, 5, version: "ChiUns", at: t0)
+        out = HighlightLogic.subtracting(
+            verses: [3], testament: 2, book: 1, chapter: 3,
+            from: [original])
+        XCTAssertEqual(out.map { $0.verses }, [1 ... 2, 4 ... 5])
+        XCTAssertEqual(out[0].id, original.id)
+        XCTAssertTrue(out.allSatisfy {
+            $0.version == "ChiUns" && $0.createdAt == t0
+        })
+        // No overlap and an empty removal set change nothing; a
+        // removal aimed at another chapter leaves this one alone
+        // and shrinks only its own target.
+        let other = highlight(7, 8, chapter: 4, at: t0)
+        let list = [original, other]
+        XCTAssertEqual(
+            HighlightLogic.subtracting(verses: [10], testament: 2,
+                                       book: 1, chapter: 3, from: list),
+            list)
+        XCTAssertEqual(
+            HighlightLogic.subtracting(verses: [], testament: 2,
+                                       book: 1, chapter: 3, from: list),
+            list)
+        XCTAssertEqual(
+            HighlightLogic.subtracting(verses: [8], testament: 2,
+                                       book: 1, chapter: 4, from: list)
+                .map { $0.verses },
+            [1 ... 5, 7 ... 7])
+    }
+
     // REQ-HL-1: a selection becomes one highlight per contiguous
     // run.
     func testRunsOfSelection() {
