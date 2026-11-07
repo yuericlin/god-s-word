@@ -953,17 +953,14 @@ struct ReaderView: View {
                                           testament: history.testament,
                                           book: history.book,
                                           chapter: history.chapter)
-            if history.dwellMode {
-                // Bookmark jump: record only after a 60-second dwell.
-                // Turning chapters restarts the timer; quick flips are skipped.
-                startDwellTimer(for: chapterKey)
-            } else {
-                personalData.recordHistory(moduleID: history.version.id,
-                                            bookName: history.bookTitle,
-                                            testament: history.testament,
-                                            book: history.book,
-                                            chapter: history.chapter)
-            }
+            // Recents records a chapter only after it has been
+            // read for 60 seconds (REQ-HI-1): the dwell timer
+            // records the visit if the user is still on this
+            // chapter when it fires, and turning chapters restarts
+            // it, so chapters flipped through quickly are never
+            // recorded. Bookmark jumps follow the same rule
+            // (REQ-HI-6).
+            startDwellTimer(for: chapterKey)
         } catch {
             loadError = error.localizedDescription
         }
@@ -994,8 +991,9 @@ struct ReaderView: View {
         scrollTargetVerse = verse
     }
 
-    /// Records a history entry only if the user is still on the same
-    /// chapter after 60 seconds, then leaves dwell mode.
+    /// Records a history entry only if the user is still on the
+    /// same chapter after 60 seconds (REQ-HI-1's reading-time
+    /// rule), then leaves dwell mode.
     private func startDwellTimer(for key: String) {
         dwellTask?.cancel()
         dwellTask = Task {
