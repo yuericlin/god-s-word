@@ -102,18 +102,13 @@ Multiple (KJV Gen 1:1-2):
   creates a chapter-level note (REQ-NT-15).
 
 ### Indicator
-- **REQ-NT-5:** A verse with a note shows a **sticky-note icon** next to
-  its verse number: a small sticky-note shape (square with a
-  folded corner) in bright yellow (1.0, 0.85, 0.0) at 0.55
-  translucency — the same treatment as the bookmark ribbons.
-  In verse-by-verse mode (plain and Strong's) the icon stands
-  at the head of the verse's row, beside any bookmark ribbons
-  for that verse; in paragraph mode a small bright-yellow
-  square at the same translucency sits right after the number
-  in the flowing text. (Until Nov 7, 2026 the indicator was a
-  pale-yellow background on the number itself.)
-- **REQ-NT-6:** Tapping the verse number — or the sticky-note
-  icon — opens the note editor.
+- **REQ-NT-5:** A verse with a note shows a yellow background highlight on its
+  verse number (`UIColor(1.0, 0.9, 0.45, alpha 0.55)`). (A
+  sticky-note icon beside the number was tried on Nov 7, 2026
+  and reverted to this background the same day.)
+- **REQ-NT-6:** Tapping the highlighted verse number opens the note editor.
+  (The highlight uses `backgroundColor`, which — unlike `foregroundColor` — is
+  not overridden by link styling.)
 
 - **REQ-NT-7:** The note editor auto-focuses on appear: cursor shows and the
   keyboard comes up (via `@FocusState` with a 0.4s delay after the sheet
@@ -346,9 +341,11 @@ Multiple (KJV Gen 1:1-2):
   3 light purple (0.79,0.66,0.91), 4 light silver (0.83,0.83,0.83), 5 light
   green (0.56,0.93,0.56).
 - **REQ-BM-3:** While reading, small vertical ribbons show at the top-right
-  corner, but ONLY for **chapter-level** bookmarks pointing at the chapter
-  being read (verse-level bookmarks render at their verse instead,
-  REQ-BM-12). Unmarked chapters show nothing.
+  corner, but ONLY for bookmarks pointing at the chapter being read —
+  chapter-level and verse-level alike (REQ-BM-12): a bookmark always
+  shows at the top-right corner, never at its verse. The ribbons are
+  80% of the original size (19.2×35.2, at 0.55 translucency).
+  Unmarked chapters show nothing.
 - **REQ-BM-4:** The bookmarks panel shows small translucent ribbons at its
   top-right corner, one per bookmark.
 - **REQ-BM-5:** Single tap on a bookmark jumps to its chapter; a
@@ -394,19 +391,18 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-BM-12:** A bookmark may carry a **verse** (1-based within
   its chapter). With no verse set it marks the chapter as a whole
   (the original behavior); bookmarks stored before this feature
-  have no verse and stay chapter-level. A verse-level bookmark
-  renders **next to its verse number**: in verse-by-verse mode
-  (plain and Strong's) a ribbon in the bookmark's color — the
-  same ribbon shape and translucency (0.55) as the chapter-level
-  ribbons (REQ-BM-3), just smaller; one per bookmark at that
-  verse — stands at the head of the verse's row, its top
-  aligned with the verse number (and the note icon beside it). Paragraph mode has no rows, so the marker is a
-  small "▼" in the bookmark's color at the same translucency
-  right after the verse number in the flowing text. The bookmark editor gains a
-  Verse picker ("Chapter only", or a verse of the chosen
-  chapter) so a bookmark's level can be set or cleared by hand,
-  and reference labels show "Book chapter:verse" for verse-level
+  have no verse and stay chapter-level. The verse is a property
+  of the bookmark's target, not a separate rendering: in the
+  reader a verse-level bookmark shows at the top-right corner
+  with the chapter's other bookmarks (REQ-BM-3), and jumping to
+  it from the panel lands on its verse (REQ-BM-5). (Per-verse
+  ribbons/icons next to the verse number were tried and
+  reverted on Nov 7, 2026.) The bookmark editor gains a Verse
+  picker ("Chapter only", or a verse of the chosen chapter) so
+  a bookmark's level can be set or cleared by hand, and
+  reference labels show "Book chapter:verse" for verse-level
   bookmarks (panel ribbons, Assign list).
+
 - **REQ-BM-13:** While verses are selected, the selection bar
   offers a **Bookmark** action (bar order: Copy / Bookmark /
   Marker / Note / Compare). It opens the Assign sheet
@@ -875,7 +871,7 @@ Multiple (KJV Gen 1:1-2):
   belong to the passage, not to a version (like bookmarks,
   REQ-BM-11). The rendering applies in verse-by-verse,
   paragraph, and Strong's modes; the verse number keeps its
-  own styling (a note's sticky-note icon beside it stays visible),
+  own styling (a note's pale-yellow number stays visible),
   and the selection's sky blue covers the yellow while the
   verse is selected. Where a highlighted verse's text is
   Jesus's speech and red letters are on, the speech spans

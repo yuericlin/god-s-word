@@ -24,54 +24,6 @@ struct RibbonShape: Shape {
     }
 }
 
-/// A sticky note silhouette: a square with the bottom-right
-/// corner folded up. The reader's note indicator (REQ-NT-5).
-struct StickyNoteShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let fold = min(rect.width, rect.height) * 0.4
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - fold))
-        p.addLine(to: CGPoint(x: rect.maxX - fold, y: rect.maxY))
-        p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        p.closeSubpath()
-        return p
-    }
-}
-
-/// The sticky note's fold flap: the small triangle in its
-/// bottom-right corner.
-struct StickyNoteFoldShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let fold = min(rect.width, rect.height) * 0.4
-        var p = Path()
-        p.move(to: CGPoint(x: rect.maxX - fold, y: rect.maxY - fold))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - fold))
-        p.addLine(to: CGPoint(x: rect.maxX - fold, y: rect.maxY))
-        p.closeSubpath()
-        return p
-    }
-}
-
-/// A small translucent sticky-note icon in bright yellow —
-/// the indicator shown next to a noted verse's number
-/// (REQ-NT-5), with the same 0.55 translucency as the
-/// bookmark ribbons.
-struct StickyNoteIcon: View {
-    var size: CGFloat = 14
-
-    var body: some View {
-        ZStack {
-            StickyNoteShape()
-                .fill(Color(red: 1.0, green: 0.85, blue: 0.0).opacity(0.55))
-            StickyNoteFoldShape()
-                .fill(Color(red: 0.85, green: 0.65, blue: 0.0).opacity(0.55))
-        }
-        .frame(width: size, height: size)
-    }
-}
-
 /// A ribbon laid horizontally: rectangle with a V notch cut out of the right end.
 struct HorizontalRibbonShape: Shape {
     func path(in rect: CGRect) -> Path {
@@ -151,11 +103,12 @@ struct BookmarkRibbonsRow: View {
         }
     }
 
-    /// Small vertical ribbon, color only.
+    /// Small vertical ribbon, color only — 80% of the original
+    /// 24×44 (Nov 7, 2026).
     private func miniRibbon(for bookmark: Bookmark) -> some View {
         RibbonShape()
             .fill(bookmark.color.opacity(0.55))
-            .frame(width: 24, height: 44)
+            .frame(width: 19.2, height: 35.2)
             .contentShape(RibbonShape())
             .onTapGesture { onJump(bookmark) }
             .onLongPressGesture(minimumDuration: 1.0) {
