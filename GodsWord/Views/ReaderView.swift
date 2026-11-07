@@ -125,18 +125,17 @@ struct ReaderView: View {
                                                 if let heading = headings[v.verse] {
                                                     headingRow(heading)
                                                 }
-                                                HStack(alignment: .top, spacing: 0) {
-                                                    verseRowMarks(verse: v.verse)
-                                                    Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
-                                                        .font(.system(size: personalData.fontSize, design: .serif))
-                                                        .lineSpacing(6)
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, hasRowMarks(verse: v.verse) ? 5 : 0)
-                                                        // Swallow long-press so the empty-area
-                                                        // menu doesn't fire on text.
-                                                        .onLongPressGesture { }
-                                                }
-                                                .id("v\(v.verse)")
+                                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                    .id("v\(v.verse)")
+                                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                                    .lineSpacing(6)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    // Swallow long-press so the empty-area
+                                                    // menu doesn't fire on text.
+                                                    .onLongPressGesture { }
+                                                    .overlay(alignment: .topLeading) {
+                                                        verseOverlayMarks(verse: v.verse)
+                                                    }
                                             }
                                         }
                                     } else {
@@ -145,16 +144,15 @@ struct ReaderView: View {
                                                 if let heading = headings[v.verse] {
                                                     headingRow(heading)
                                                 }
-                                                HStack(alignment: .top, spacing: 0) {
-                                                    verseRowMarks(verse: v.verse)
-                                                    Text(attributedVerse(number: v.verse, text: v.text))
-                                                        .font(.system(size: personalData.fontSize, design: .serif))
-                                                        .lineSpacing(6)
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(.leading, hasRowMarks(verse: v.verse) ? 5 : 0)
-                                                        .onLongPressGesture { }
-                                                }
-                                                .id("v\(v.verse)")
+                                                Text(attributedVerse(number: v.verse, text: v.text))
+                                                    .id("v\(v.verse)")
+                                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                                    .lineSpacing(6)
+                                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                                    .onLongPressGesture { }
+                                                    .overlay(alignment: .topLeading) {
+                                                        verseOverlayMarks(verse: v.verse)
+                                                    }
                                             }
                                         }
                                     }
@@ -237,24 +235,28 @@ struct ReaderView: View {
                     })
                 }
             }
-            // Copy/Highlight/Notes/Compare bar while verses are selected.
+            // Copy/Bookmark/Marker/Note/Compare bar while verses are
+            // selected. The buttons name the thing they act on
+            // (nouns), not the verb: Bookmark and Marker keep the
+            // same label whether tapping applies or removes the
+            // mark (Nov 7, 2026).
             if !selectedVerses.isEmpty {
                 HStack(spacing: 24) {
                     Button("Copy") { copySelectedVerses() }
-                    if selectionFullyHighlighted {
-                        Button("Unhighlight") { unhighlightSelection() }
-                    } else {
-                        Button("Highlight") { highlightSelection() }
-                    }
-                    Button("Notes") { openNoteEditorForSelection() }
                     if selectionBookmarked {
-                        Button("Unmark") { unmarkSelection() }
+                        Button("Bookmark") { unmarkSelection() }
                     } else {
                         Button("Bookmark") {
                             assignVerse = selectionTargetVerse
                             showingAssignBookmark = true
                         }
                     }
+                    if selectionFullyHighlighted {
+                        Button("Marker") { unhighlightSelection() }
+                    } else {
+                        Button("Marker") { highlightSelection() }
+                    }
+                    Button("Note") { openNoteEditorForSelection() }
                     Button("Compare") { showingCompare = true }
                     Button {
                         selectedVerses = []
@@ -903,7 +905,7 @@ struct ReaderView: View {
         }
     }
 
-    /// The selection bar's Highlight action (REQ-HL-1): records
+    /// The selection bar's Marker action (REQ-HL-1): records
     /// the selected verses as highlights made in the version
     /// being read, then clears the selection so the yellow shows.
     private func highlightSelection() {
@@ -916,14 +918,15 @@ struct ReaderView: View {
     }
 
     /// Whether every selected verse already carries a highlight:
-    /// the selection bar then offers Unhighlight instead of
-    /// Highlight (REQ-HL-1).
+    /// the bar's Marker then removes instead of adding (the
+    /// label stays "Marker" in both states, REQ-HL-1).
     private var selectionFullyHighlighted: Bool {
         !selectedVerses.isEmpty
             && selectedVerses.isSubset(of: highlightedInChapter)
     }
 
-    /// The selection bar's Unhighlight action (REQ-HL-1): removes
+    /// The selection bar's Marker action on a fully highlighted
+    /// selection (REQ-HL-1): removes
     /// the selected verses from the chapter's highlights — spans
     /// shrink or split as needed — then clears the selection.
     private func unhighlightSelection() {
@@ -934,7 +937,7 @@ struct ReaderView: View {
         selectedVerses = []
     }
 
-    /// The target of the selection bar's Bookmark/Unmark action
+    /// The target of the selection bar's Bookmark action
     /// (REQ-BM-13): the single selected verse, or nil — the
     /// chapter as a whole — for a multi-verse selection.
     private var selectionTargetVerse: Int? {
@@ -942,7 +945,8 @@ struct ReaderView: View {
     }
 
     /// Whether a bookmark already sits exactly at the selection's
-    /// target: the bar then offers Unmark instead of Bookmark.
+    /// target: tapping the bar's Bookmark then removes it (the
+    /// label stays "Bookmark" in both states).
     private var selectionBookmarked: Bool {
         personalData.bookmarks.contains {
             $0.isAt(testament: history.testament, book: history.book,
@@ -950,9 +954,10 @@ struct ReaderView: View {
         }
     }
 
-    /// The selection bar's Unmark action (REQ-BM-13): deletes the
-    /// bookmark(s) at the selection's target, then clears the
-    /// selection (mirrors Unhighlight).
+    /// The selection bar's Bookmark action on an already
+    /// bookmarked target (REQ-BM-13): deletes the bookmark(s)
+    /// there, then clears the selection (mirrors Marker's
+    /// removal tap).
     private func unmarkSelection() {
         for mark in personalData.bookmarks where
             mark.isAt(testament: history.testament, book: history.book,
@@ -979,38 +984,38 @@ struct ReaderView: View {
         return grouped
     }
 
-    /// The marks standing next to a verse number at the head of
-    /// its row: the verse's bookmark ribbons (REQ-BM-12) — same
-    /// ribbon shape and translucency (0.55) as the chapter-level
-    /// ribbons, just smaller, top-aligned with the verse number —
-    /// then the sticky-note icon when the verse has a note
-    /// (REQ-NT-5); tapping the icon opens the note, like tapping
-    /// the number. Renders nothing for an unmarked verse.
+    /// The marks overlaid next to a verse number (REQ-BM-12,
+    /// REQ-NT-5): they float at the head of the verse's first
+    /// line, beside the number — the reading text itself is
+    /// untouched and never indents. The bookmark ribbon is the
+    /// chapter-level ribbon itself (24×44, the bookmark's color
+    /// at 0.55 translucency), one per bookmark at the verse.
+    /// When the verse has both a note and a bookmark, the note
+    /// icon comes first (above), then the ribbon(s). Tapping
+    /// the note icon opens the note, like tapping the number.
+    /// Renders nothing for an unmarked verse.
     @ViewBuilder
-    private func verseRowMarks(verse: Int) -> some View {
+    private func verseOverlayMarks(verse: Int) -> some View {
         let marks = verseBookmarksInChapter[verse] ?? []
         if !marks.isEmpty || hasNote(verse: verse) {
-            HStack(alignment: .top, spacing: 3) {
-                ForEach(marks) { mark in
-                    RibbonShape()
-                        .fill(mark.color.opacity(0.55))
-                        .frame(width: personalData.fontSize * 0.6,
-                               height: personalData.fontSize * 1.05)
-                }
+            VStack(alignment: .trailing, spacing: 3) {
                 if hasNote(verse: verse) {
-                    StickyNoteIcon(size: personalData.fontSize * 0.82)
+                    StickyNoteIcon(size: 16)
                         .onTapGesture { openNoteEditor(for: verse) }
                 }
+                if !marks.isEmpty {
+                    HStack(alignment: .top, spacing: 2) {
+                        ForEach(marks) { mark in
+                            RibbonShape()
+                                .fill(mark.color.opacity(0.55))
+                                .frame(width: 24, height: 44)
+                        }
+                    }
+                }
             }
-            .padding(.top, 2)
+            .frame(width: 27, alignment: .trailing)
+            .offset(x: -30)
         }
-    }
-
-    /// Whether the verse carries any row mark (a bookmark ribbon
-    /// or the note icon) — the row's text indents to make room.
-    private func hasRowMarks(verse: Int) -> Bool {
-        !(verseBookmarksInChapter[verse] ?? []).isEmpty
-            || hasNote(verse: verse)
     }
 
     /// Paragraph mode's note marker (REQ-NT-5): a small bright
