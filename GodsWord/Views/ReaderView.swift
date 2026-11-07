@@ -991,30 +991,29 @@ struct ReaderView: View {
     /// chapter-level ribbon itself (24×44, the bookmark's color
     /// at 0.55 translucency), one per bookmark at the verse.
     /// When the verse has both a note and a bookmark, the note
-    /// icon comes first (above), then the ribbon(s). Tapping
-    /// the note icon opens the note, like tapping the number.
-    /// Renders nothing for an unmarked verse.
+    /// icon comes first and the ribbon(s) next to it, side by
+    /// side. The cluster starts at the screen's edge: it is
+    /// wider than the 16pt margin, so its translucent marks
+    /// overlap the number's left edge slightly (the same way
+    /// the chapter ribbon overlaps the page's corner).
+    /// Tapping the note icon opens the note, like tapping the
+    /// number. Renders nothing for an unmarked verse.
     @ViewBuilder
     private func verseOverlayMarks(verse: Int) -> some View {
         let marks = verseBookmarksInChapter[verse] ?? []
         if !marks.isEmpty || hasNote(verse: verse) {
-            VStack(alignment: .trailing, spacing: 3) {
+            HStack(alignment: .top, spacing: 3) {
                 if hasNote(verse: verse) {
                     StickyNoteIcon(size: 16)
                         .onTapGesture { openNoteEditor(for: verse) }
                 }
-                if !marks.isEmpty {
-                    HStack(alignment: .top, spacing: 2) {
-                        ForEach(marks) { mark in
-                            RibbonShape()
-                                .fill(mark.color.opacity(0.55))
-                                .frame(width: 24, height: 44)
-                        }
-                    }
+                ForEach(marks) { mark in
+                    RibbonShape()
+                        .fill(mark.color.opacity(0.55))
+                        .frame(width: 24, height: 44)
                 }
             }
-            .frame(width: 27, alignment: .trailing)
-            .offset(x: -30)
+            .offset(x: -13)
         }
     }
 

@@ -108,8 +108,8 @@ Multiple (KJV Gen 1:1-2):
   translucency — the same treatment as the bookmark ribbons.
   In verse-by-verse mode (plain and Strong's) the icon is
   overlaid beside the verse number at the head of the verse's
-  first line, above any bookmark ribbons for that verse (note
-  first, then bookmark); in paragraph mode a small bright-yellow
+  first line, next to any bookmark ribbons for that verse
+  (note first, then bookmark, side by side); in paragraph mode a small bright-yellow
   square at the same translucency sits right after the number
   in the flowing text. (Until Nov 7, 2026 the indicator was a
   pale-yellow background on the number itself.)
@@ -402,8 +402,8 @@ Multiple (KJV Gen 1:1-2):
   that verse) is **overlaid** beside the verse number at the
   head of the verse's first line — the reading text is untouched
   and never indents for a mark. When the verse also has a note,
-  the note icon (REQ-NT-5) is overlaid first (above), then the
-  ribbon(s). Paragraph mode has no rows to overlay, so the
+  the note icon (REQ-NT-5) is overlaid first and the ribbon(s)
+  next to it, side by side. Paragraph mode has no rows to overlay, so the
   marker is a small "▼" in the bookmark's color at the same
   translucency right after the verse number in the flowing
   text. The bookmark editor gains a Verse picker ("Chapter
