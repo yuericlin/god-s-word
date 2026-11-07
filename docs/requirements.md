@@ -821,7 +821,11 @@ Multiple (KJV Gen 1:1-2):
   paragraph, and Strong's modes; the verse number keeps its
   own styling (a note's pale-yellow number stays visible),
   and the selection's sky blue covers the yellow while the
-  verse is selected.
+  verse is selected. Where a highlighted verse's text is
+  Jesus's speech and red letters are on, the speech spans
+  render on a blue-gray background instead of the yellow —
+  red on bright yellow is low-contrast. This applies in the
+  same three modes (in Strong's mode, per speech token).
 - **REQ-HL-3:** A highlight records the time it was made, the
   chapter, the verse range, and the version it was made in
   (`Highlight` in SwordReader). A multi-run selection becomes

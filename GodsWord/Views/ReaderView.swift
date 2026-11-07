@@ -621,6 +621,7 @@ struct ReaderView: View {
         applyVerseLink(to: &out, verse: number)
         applyRedLetters(to: &out, verse: number)
         applyHighlight(to: &out, verse: number)
+        applyRedLetterHighlight(to: &out, verse: number)
         applySelectionHighlight(to: &out, verse: number)
         return out
     }
@@ -682,20 +683,40 @@ struct ReaderView: View {
             out[numRange].underlineStyle = []
         }
         out += AttributedString(" ")
+        // Character ranges of the Jesus-speech tokens, for the
+        // blue-gray highlight background (REQ-HL-2): the Strong's
+        // numbers interspersed below shift the plain-text span
+        // coordinates, so the ranges are tracked as the string is
+        // built instead of read from jesusSpans.
+        var jesusRanges: [(start: Int, end: Int)] = []
+        var cursor = out.characters.count
         for token in tokens {
             var seg = AttributedString(token.text)
             if personalData.showRedLetters, token.isJesusSpeech {
                 seg.foregroundColor = Self.redLetterColor
                 seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+                jesusRanges.append((start: cursor,
+                                    end: cursor + token.text.count))
             }
             out += seg
+            cursor += token.text.count
             for key in token.strongs {
                 out += attributedStrongsNumber(key)
+                cursor += " \(key)".count
             }
         }
         // Verse link skips the Strong's numbers and the verse number (already linked).
         applyVerseLink(to: &out, verse: number)
         applyHighlight(to: &out, verse: number)
+        if highlightedInChapter.contains(number) {
+            for range in jesusRanges {
+                guard range.start < range.end,
+                      range.end <= out.characters.count else { continue }
+                let r = out.index(out.startIndex, offsetByCharacters: range.start)
+                    ..< out.index(out.startIndex, offsetByCharacters: range.end)
+                out[r].backgroundColor = Self.redLetterHighlightColor
+            }
+        }
         applySelectionHighlight(to: &out, verse: number)
         return out
     }
@@ -768,6 +789,17 @@ struct ReaderView: View {
             : UIColor(red: 0.76, green: 0.09, blue: 0.07, alpha: 1)
     })
 
+    /// Background for Jesus's words inside a highlighted verse
+    /// (REQ-HL-2): a blue-gray instead of the verse's bright
+    /// yellow — red on that yellow is low-contrast. Light on
+    /// light backgrounds, deeper on dark, in the same dynamic
+    /// pattern as redLetterColor.
+    private static let redLetterHighlightColor = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.16, green: 0.23, blue: 0.38, alpha: 0.95)
+            : UIColor(red: 0.78, green: 0.86, blue: 0.99, alpha: 0.9)
+    }
+
     /// Paints the verse's Jesus-speech spans red and bold
     /// (REQ-RL-3). Spans are character offsets into the verse text;
     /// the number prefix is skipped exactly as in applyHighlight.
@@ -801,6 +833,27 @@ struct ReaderView: View {
         let start = attr.index(attr.startIndex, offsetByCharacters: prefix)
         attr[start ..< attr.endIndex].backgroundColor =
             UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
+    }
+
+    /// Repaints the background of a highlighted verse's
+    /// Jesus-speech spans with redLetterHighlightColor (REQ-HL-2),
+    /// over the yellow applyHighlight laid down. Same span
+    /// coordinates applyRedLetters uses. No-op when the verse is
+    /// not highlighted, red letters are off, or the verse carries
+    /// no speech spans.
+    private func applyRedLetterHighlight(to attr: inout AttributedString, verse: Int) {
+        guard highlightedInChapter.contains(verse),
+              personalData.showRedLetters,
+              let spans = jesusSpans[verse] else { return }
+        let prefix = "\(verse) ".count + 1
+        for span in spans {
+            let start = prefix + span.start
+            let end = prefix + span.end
+            guard start < end, end <= attr.characters.count else { continue }
+            let r = attr.index(attr.startIndex, offsetByCharacters: start)
+                ..< attr.index(attr.startIndex, offsetByCharacters: end)
+            attr[r].backgroundColor = Self.redLetterHighlightColor
+        }
     }
 
     /// The selection bar's Highlight action (REQ-HL-1): records
