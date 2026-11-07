@@ -318,6 +318,44 @@ public enum HighlightLogic {
         list.filter { $0.id != id }
     }
 
+    /// Removes the given verses from one chapter's highlights
+    /// (the reader's Unhighlight action): a highlight fully
+    /// covered by the removed verses disappears, one overlapped
+    /// at an edge shrinks, and one cut in the middle splits —
+    /// the earlier piece keeps the original's id, version, and
+    /// createdAt; a split-off later piece keeps the version and
+    /// createdAt under a fresh id. Highlights in other chapters
+    /// and verses outside the removed set are untouched.
+    public static func subtracting(verses removed: Set<Int>,
+                                   testament: Int, book: Int,
+                                   chapter: Int,
+                                   from list: [Highlight]) -> [Highlight] {
+        guard !removed.isEmpty else { return list }
+        var out: [Highlight] = []
+        for h in list {
+            guard h.isAt(testament: testament, book: book,
+                         chapter: chapter) else {
+                out.append(h)
+                continue
+            }
+            let remaining = runs(of: Set(h.verses).subtracting(removed))
+            guard let first = remaining.first else { continue }
+            var head = h
+            head.startVerse = first.lowerBound
+            head.endVerse = first.upperBound
+            out.append(head)
+            for run in remaining.dropFirst() {
+                out.append(Highlight(testament: h.testament,
+                                     book: h.book, chapter: h.chapter,
+                                     startVerse: run.lowerBound,
+                                     endVerse: run.upperBound,
+                                     version: h.version,
+                                     createdAt: h.createdAt))
+            }
+        }
+        return out
+    }
+
     /// The active book's highlights grouped by chapter
     /// (REQ-HL-4): chapters ascending, each chapter's highlights
     /// ordered by verse — the Highlights tab's Book sub-tab.

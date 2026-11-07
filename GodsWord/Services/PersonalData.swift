@@ -318,6 +318,19 @@ public final class PersonalData: ObservableObject {
         highlights = list
     }
 
+    /// Removes the given verses of one chapter from the
+    /// highlights (the reader's Unhighlight action on a fully
+    /// highlighted selection): spans shrink or split as needed
+    /// (HighlightLogic.subtracting).
+    public func removeHighlight(testament: Int, book: Int, chapter: Int,
+                                verses: Set<Int>) {
+        guard !verses.isEmpty else { return }
+        highlights = HighlightLogic.subtracting(verses: verses,
+                                                testament: testament,
+                                                book: book, chapter: chapter,
+                                                from: highlights)
+    }
+
     /// Removes one highlight (the Highlights tab's swipe-delete).
     public func removeHighlight(id: UUID) {
         highlights = HighlightLogic.removing(id: id, from: highlights)
