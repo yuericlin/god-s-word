@@ -237,24 +237,28 @@ struct ReaderView: View {
                     })
                 }
             }
-            // Copy/Highlight/Notes/Compare bar while verses are selected.
+            // Copy/Bookmark/Marker/Note/Compare bar while verses are
+            // selected. The buttons name the thing they act on
+            // (nouns), not the verb: Bookmark and Marker keep the
+            // same label whether tapping applies or removes the
+            // mark (Nov 7, 2026).
             if !selectedVerses.isEmpty {
                 HStack(spacing: 24) {
                     Button("Copy") { copySelectedVerses() }
-                    if selectionFullyHighlighted {
-                        Button("Unhighlight") { unhighlightSelection() }
-                    } else {
-                        Button("Highlight") { highlightSelection() }
-                    }
-                    Button("Notes") { openNoteEditorForSelection() }
                     if selectionBookmarked {
-                        Button("Unmark") { unmarkSelection() }
+                        Button("Bookmark") { unmarkSelection() }
                     } else {
                         Button("Bookmark") {
                             assignVerse = selectionTargetVerse
                             showingAssignBookmark = true
                         }
                     }
+                    if selectionFullyHighlighted {
+                        Button("Marker") { unhighlightSelection() }
+                    } else {
+                        Button("Marker") { highlightSelection() }
+                    }
+                    Button("Note") { openNoteEditorForSelection() }
                     Button("Compare") { showingCompare = true }
                     Button {
                         selectedVerses = []
@@ -903,7 +907,7 @@ struct ReaderView: View {
         }
     }
 
-    /// The selection bar's Highlight action (REQ-HL-1): records
+    /// The selection bar's Marker action (REQ-HL-1): records
     /// the selected verses as highlights made in the version
     /// being read, then clears the selection so the yellow shows.
     private func highlightSelection() {
@@ -916,14 +920,15 @@ struct ReaderView: View {
     }
 
     /// Whether every selected verse already carries a highlight:
-    /// the selection bar then offers Unhighlight instead of
-    /// Highlight (REQ-HL-1).
+    /// the bar's Marker then removes instead of adding (the
+    /// label stays "Marker" in both states, REQ-HL-1).
     private var selectionFullyHighlighted: Bool {
         !selectedVerses.isEmpty
             && selectedVerses.isSubset(of: highlightedInChapter)
     }
 
-    /// The selection bar's Unhighlight action (REQ-HL-1): removes
+    /// The selection bar's Marker action on a fully highlighted
+    /// selection (REQ-HL-1): removes
     /// the selected verses from the chapter's highlights — spans
     /// shrink or split as needed — then clears the selection.
     private func unhighlightSelection() {
@@ -934,7 +939,7 @@ struct ReaderView: View {
         selectedVerses = []
     }
 
-    /// The target of the selection bar's Bookmark/Unmark action
+    /// The target of the selection bar's Bookmark action
     /// (REQ-BM-13): the single selected verse, or nil — the
     /// chapter as a whole — for a multi-verse selection.
     private var selectionTargetVerse: Int? {
@@ -942,7 +947,8 @@ struct ReaderView: View {
     }
 
     /// Whether a bookmark already sits exactly at the selection's
-    /// target: the bar then offers Unmark instead of Bookmark.
+    /// target: tapping the bar's Bookmark then removes it (the
+    /// label stays "Bookmark" in both states).
     private var selectionBookmarked: Bool {
         personalData.bookmarks.contains {
             $0.isAt(testament: history.testament, book: history.book,
@@ -950,9 +956,10 @@ struct ReaderView: View {
         }
     }
 
-    /// The selection bar's Unmark action (REQ-BM-13): deletes the
-    /// bookmark(s) at the selection's target, then clears the
-    /// selection (mirrors Unhighlight).
+    /// The selection bar's Bookmark action on an already
+    /// bookmarked target (REQ-BM-13): deletes the bookmark(s)
+    /// there, then clears the selection (mirrors Marker's
+    /// removal tap).
     private func unmarkSelection() {
         for mark in personalData.bookmarks where
             mark.isAt(testament: history.testament, book: history.book,
