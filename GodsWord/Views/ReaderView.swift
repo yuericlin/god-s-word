@@ -33,6 +33,8 @@ struct ReaderView: View {
     @State private var availableVersions: [BibleVersion] = []
     @State private var viewSize: CGSize = .zero
     @State private var bottomRowWidth: CGFloat = 0
+    @ScaledMetric(relativeTo: .body) private var bottomIconSize: CGFloat = 19
+    @ScaledMetric(relativeTo: .body) private var bottomRowHeight: CGFloat = 28
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
@@ -896,9 +898,12 @@ struct ReaderView: View {
     /// because the material alone still reads as a solid bar
     /// over the page, while full transparency left the controls
     /// with too little contrast against the text showing
-    /// through. The row's height is fixed, so the capsule
-    /// does not change height when the selection actions appear
-    /// (Nov 9, 2026).
+    /// through. The capsule does not change height when the
+    /// selection actions appear — the row height is constant
+    /// for a given Text Size — and the icons and row height
+    /// scale with the phone's Text Size via ScaledMetric
+    /// (19pt icons in a 28pt row at the default size), not
+    /// hard-coded constants (Nov 9, 2026).
     private var bottomControl: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -952,13 +957,13 @@ struct ReaderView: View {
                     if !selectedVerses.isEmpty {
                         Rectangle()
                             .fill(Color.secondary.opacity(0.4))
-                            .frame(width: 1, height: 22)
+                            .frame(width: 1, height: bottomRowHeight * 22 / 28)
                         selectionActionButtons
                             .id("selectionActions")
                     }
                 }
-                .font(.system(size: 19))
-                .frame(height: 28)
+                .font(.system(size: bottomIconSize))
+                .frame(height: bottomRowHeight)
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) {
                     bottomRowWidth = $0
                 }
