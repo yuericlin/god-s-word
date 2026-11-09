@@ -892,10 +892,11 @@ struct ReaderView: View {
     /// measured as the row lays out and capped at the screen
     /// width — so an unselected chapter shows a small centered
     /// pill instead of a full-width bar with empty space. Its
-    /// ultra-thin-material background is drawn at 35% opacity,
+    /// ultra-thin-material background is drawn at 55% opacity,
     /// because the material alone still reads as a solid bar
-    /// over the page; at reduced opacity the text genuinely
-    /// shows through. The row's height is fixed, so the capsule
+    /// over the page, while full transparency left the controls
+    /// with too little contrast against the text showing
+    /// through. The row's height is fixed, so the capsule
     /// does not change height when the selection actions appear
     /// (Nov 9, 2026).
     private var bottomControl: some View {
@@ -918,11 +919,17 @@ struct ReaderView: View {
                                 Text("\(history.chapter) / \(history.chapterCount)")
                                 Image(systemName: "chevron.down")
                             }
-                            .font(.caption).foregroundStyle(.secondary)
+                            // The buttons' accent blue, a little
+                            // dimmer (Nov 9, 2026) — the secondary
+                            // gray washed out against the text
+                            // showing through the capsule.
+                            .font(.caption)
+                            .foregroundStyle(Color.accentColor.opacity(0.75))
                         }
                     } else {
                         Text("\(history.chapter) / \(history.chapterCount)")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption)
+                            .foregroundStyle(Color.accentColor.opacity(0.75))
                     }
                     Button { turnChapter(by: 1) } label: {
                         Label("Next", systemImage: "chevron.right")
@@ -956,7 +963,7 @@ struct ReaderView: View {
             .background {
                 Capsule()
                     .fill(.ultraThinMaterial)
-                    .opacity(0.35)
+                    .opacity(0.55)
             }
             .overlay {
                 Capsule()
