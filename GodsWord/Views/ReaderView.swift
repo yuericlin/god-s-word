@@ -33,6 +33,8 @@ struct ReaderView: View {
     @State private var availableVersions: [BibleVersion] = []
     @State private var viewSize: CGSize = .zero
     @State private var bottomRowWidth: CGFloat = 0
+    @ScaledMetric(relativeTo: .body) private var bottomIconSize: CGFloat = 19
+    @ScaledMetric(relativeTo: .body) private var bottomRowHeight: CGFloat = 28
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
@@ -892,12 +894,16 @@ struct ReaderView: View {
     /// measured as the row lays out and capped at the screen
     /// width — so an unselected chapter shows a small centered
     /// pill instead of a full-width bar with empty space. Its
-    /// ultra-thin-material background is drawn at 35% opacity,
+    /// ultra-thin-material background is drawn at 75% opacity,
     /// because the material alone still reads as a solid bar
-    /// over the page; at reduced opacity the text genuinely
-    /// shows through. The row's height is fixed, so the capsule
-    /// does not change height when the selection actions appear
-    /// (Nov 9, 2026).
+    /// over the page, while full transparency left the controls
+    /// with too little contrast against the text showing
+    /// through. The capsule does not change height when the
+    /// selection actions appear — the row height is constant
+    /// for a given Text Size — and the icons and row height
+    /// scale with the phone's Text Size via ScaledMetric
+    /// (19pt icons in a 28pt row at the default size), not
+    /// hard-coded constants (Nov 9, 2026).
     private var bottomControl: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -918,11 +924,23 @@ struct ReaderView: View {
                                 Text("\(history.chapter) / \(history.chapterCount)")
                                 Image(systemName: "chevron.down")
                             }
-                            .font(.caption).foregroundStyle(.secondary)
+                            // The buttons' accent blue, a little
+                            // dimmer (Nov 9, 2026) — the secondary
+                            // gray washed out against the text
+                            // showing through the capsule. The
+                            // chapter numbers use the callout
+                            // style — 16pt at the default Text
+                            // Size, up from caption — and, like
+                            // caption, it scales with the phone's
+                            // Text Size rather than a hard-coded
+                            // number.
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(Color.accentColor.opacity(0.75))
                         }
                     } else {
                         Text("\(history.chapter) / \(history.chapterCount)")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.callout.weight(.medium))
+                            .foregroundStyle(Color.accentColor.opacity(0.75))
                     }
                     Button { turnChapter(by: 1) } label: {
                         Label("Next", systemImage: "chevron.right")
@@ -939,13 +957,13 @@ struct ReaderView: View {
                     if !selectedVerses.isEmpty {
                         Rectangle()
                             .fill(Color.secondary.opacity(0.4))
-                            .frame(width: 1, height: 22)
+                            .frame(width: 1, height: bottomRowHeight * 22 / 28)
                         selectionActionButtons
                             .id("selectionActions")
                     }
                 }
-                .font(.system(size: 19))
-                .frame(height: 28)
+                .font(.system(size: bottomIconSize))
+                .frame(height: bottomRowHeight)
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) {
                     bottomRowWidth = $0
                 }
@@ -956,7 +974,7 @@ struct ReaderView: View {
             .background {
                 Capsule()
                     .fill(.ultraThinMaterial)
-                    .opacity(0.35)
+                    .opacity(0.75)
             }
             .overlay {
                 Capsule()
