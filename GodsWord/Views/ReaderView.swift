@@ -892,7 +892,7 @@ struct ReaderView: View {
     /// measured as the row lays out and capped at the screen
     /// width — so an unselected chapter shows a small centered
     /// pill instead of a full-width bar with empty space. Its
-    /// ultra-thin-material background is drawn at 70% opacity,
+    /// ultra-thin-material background is drawn at 75% opacity,
     /// because the material alone still reads as a solid bar
     /// over the page, while full transparency left the controls
     /// with too little contrast against the text showing
@@ -965,7 +965,7 @@ struct ReaderView: View {
             .background {
                 Capsule()
                     .fill(.ultraThinMaterial)
-                    .opacity(0.70)
+                    .opacity(0.75)
             }
             .overlay {
                 Capsule()
