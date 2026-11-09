@@ -891,9 +891,13 @@ struct ReaderView: View {
     /// actions into view. The capsule hugs the row's width —
     /// measured as the row lays out and capped at the screen
     /// width — so an unselected chapter shows a small centered
-    /// pill instead of a full-width bar with empty space, and
-    /// its material is the see-through ultra-thin one, so the
-    /// text stays visible behind it (Nov 9, 2026).
+    /// pill instead of a full-width bar with empty space. Its
+    /// ultra-thin-material background is drawn at 35% opacity,
+    /// because the material alone still reads as a solid bar
+    /// over the page; at reduced opacity the text genuinely
+    /// shows through. The row's height is fixed, so the capsule
+    /// does not change height when the selection actions appear
+    /// (Nov 9, 2026).
     private var bottomControl: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -941,6 +945,7 @@ struct ReaderView: View {
                     }
                 }
                 .font(.system(size: 19))
+                .frame(height: 28)
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) {
                     bottomRowWidth = $0
                 }
@@ -948,7 +953,15 @@ struct ReaderView: View {
                 .padding(.vertical, 10)
             }
             .frame(width: bottomCapsuleWidth)
-            .background(.ultraThinMaterial, in: Capsule())
+            .background {
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.35)
+            }
+            .overlay {
+                Capsule()
+                    .strokeBorder(Color.primary.opacity(0.10), lineWidth: 0.5)
+            }
             .padding(.top, 6)
             .padding(.bottom, 6)
             .onChange(of: selectedVerses.isEmpty) {
