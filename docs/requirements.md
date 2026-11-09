@@ -404,8 +404,9 @@ Multiple (KJV Gen 1:1-2):
   bookmarks (panel ribbons, Assign list).
 
 - **REQ-BM-13:** While verses are selected, the selection
-  action row offers a **Bookmark** action (row order: Copy /
-  Bookmark / Marker / Note / Compare). It opens the Assign sheet
+  actions in the bottom control's scrollable row offer a
+  **Bookmark** action (order: Copy / Bookmark / Marker /
+  Note / Compare). It opens the Assign sheet
   (REQ-BM-8) targeted at the selection: a single selected verse
   targets that verse (the sheet's new-bookmark draft and any
   chosen bookmark land at "Book chapter:verse"); a multi-verse
@@ -555,11 +556,15 @@ Multiple (KJV Gen 1:1-2):
 ## 14. Compare
 
 ### Action
-- **REQ-CM-1:** The selection action row (appended above the
-  chapter navigation in the bottom bar while verses are
-  selected) has a **Compare** action — the split-rectangle
-  glyph — last before the close button (row order: Copy /
-  Bookmark / Marker / Note / Compare).
+- **REQ-CM-1:** While verses are selected, the selection
+  actions are appended to the chapter navigation in the
+  bottom control's single horizontally scrollable row
+  (Nov 9, 2026: the control is a custom capsule, not the
+  system toolbar — the toolbar's height is fixed and it
+  cannot scroll, so a second row spilled out of it). The
+  **Compare** action — the split-rectangle glyph — is last
+  before the close button (order: Copy / Bookmark / Marker /
+  Note / Compare).
 - **REQ-CM-2:** Compare opens a panel titled with the reference
   (`Book Chapter:Verses`, ranges compressed as in REQ-CP-5) showing the
   selected verses in each version, one section per version (short label plus
@@ -858,8 +863,9 @@ Multiple (KJV Gen 1:1-2):
 ## 18. Highlights
 
 - **REQ-HL-1:** While verses are selected, the selection
-  action row offers a **Marker** action (row order: Copy /
-  Bookmark / Marker / Note / Compare). Tapping it records the selected
+  actions in the bottom control's scrollable row offer a
+  **Marker** action (order: Copy / Bookmark / Marker /
+  Note / Compare). Tapping it records the selected
   verses as highlights and clears the selection, so the
   highlight shows. When every selected verse already carries
   a highlight, tapping Marker again removes exactly the
