@@ -229,41 +229,6 @@ struct ReaderView: View {
                     })
                 }
             }
-            // Copy/Bookmark/Marker/Note/Compare bar while verses are
-            // selected. The buttons name the thing they act on
-            // (nouns), not the verb: Bookmark and Marker keep the
-            // same label whether tapping applies or removes the
-            // mark (Nov 7, 2026).
-            if !selectedVerses.isEmpty {
-                HStack(spacing: 24) {
-                    Button("Copy") { copySelectedVerses() }
-                    if selectionBookmarked {
-                        Button("Bookmark") { unmarkSelection() }
-                    } else {
-                        Button("Bookmark") {
-                            assignVerse = selectionTargetVerse
-                            showingAssignBookmark = true
-                        }
-                    }
-                    if selectionFullyHighlighted {
-                        Button("Marker") { unhighlightSelection() }
-                    } else {
-                        Button("Marker") { highlightSelection() }
-                    }
-                    Button("Note") { openNoteEditorForSelection() }
-                    Button("Compare") { showingCompare = true }
-                    Button {
-                        selectedVerses = []
-                    } label: {
-                        Image(systemName: "xmark")
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .padding(.bottom, 90)
-            }
             // Ribbons for the bookmarks pointing at the chapter
             // being read (REQ-BM-3) — chapter-level and verse-level
             // alike; every bookmark shows at the top-right corner.
@@ -348,41 +313,51 @@ struct ReaderView: View {
                 }
             }
             ToolbarItem(placement: .bottomBar) {
-                HStack {
-                    Button { turnChapter(by: -1) } label: {
-                        Label("Previous", systemImage: "chevron.left")
+                VStack(spacing: 8) {
+                    // Selection actions append as their own row
+                    // above the chapter navigation while verses are
+                    // selected (Nov 9, 2026); the navigation row
+                    // below is never replaced or altered.
+                    if !selectedVerses.isEmpty {
+                        selectionActionRow
                     }
-                    Spacer()
-                    if history.chapterCount > 0 {
-                        Menu {
-                            Picker("Chapter", selection: chapterPickerSelection) {
-                                ForEach(1...history.chapterCount, id: \.self) { c in
-                                    Text("\(c)").tag(c)
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("\(history.chapter) / \(history.chapterCount)")
-                                Image(systemName: "chevron.down")
-                            }
-                            .font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Button { turnChapter(by: -1) } label: {
+                            Label("Previous", systemImage: "chevron.left")
                         }
-                    } else {
-                        Text("\(history.chapter) / \(history.chapterCount)")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button { turnChapter(by: 1) } label: {
-                        Label("Next", systemImage: "chevron.right")
-                    }
-                    // Auxiliary panel toggle, next to the chapter
-                    // controls (REQ-AP-1): an up arrow when the panel
-                    // is collapsed, a down arrow when it is open.
-                    Button { panelCollapsed.toggle() } label: {
-                        Label(panelCollapsed ? "Show Panel" : "Hide Panel",
-                              systemImage: panelCollapsed ? "chevron.up" : "chevron.down")
+                        Spacer()
+                        if history.chapterCount > 0 {
+                            Menu {
+                                Picker("Chapter", selection: chapterPickerSelection) {
+                                    ForEach(1...history.chapterCount, id: \.self) { c in
+                                        Text("\(c)").tag(c)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("\(history.chapter) / \(history.chapterCount)")
+                                    Image(systemName: "chevron.down")
+                                }
+                                .font(.caption).foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text("\(history.chapter) / \(history.chapterCount)")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button { turnChapter(by: 1) } label: {
+                            Label("Next", systemImage: "chevron.right")
+                        }
+                        // Auxiliary panel toggle, next to the chapter
+                        // controls (REQ-AP-1): an up arrow when the panel
+                        // is collapsed, a down arrow when it is open.
+                        Button { panelCollapsed.toggle() } label: {
+                            Label(panelCollapsed ? "Show Panel" : "Hide Panel",
+                                  systemImage: panelCollapsed ? "chevron.up" : "chevron.down")
+                        }
                     }
                 }
+                .animation(.easeInOut(duration: 0.2), value: selectedVerses.isEmpty)
             }
         }
         .gesture(
@@ -943,6 +918,63 @@ struct ReaderView: View {
             personalData.deleteBookmark(mark)
         }
         selectedVerses = []
+    }
+
+    /// Icon actions for the current verse selection, appended as
+    /// an extra row above the chapter navigation in the bottom
+    /// bar (Nov 9, 2026). The row is icon-only — state is carried
+    /// by the glyphs: a filled bookmark when a bookmark already
+    /// sits at the selection's target, a yellow highlighter when
+    /// every selected verse already carries a highlight. Tapping
+    /// toggles, exactly as the old text bar did; VoiceOver keeps
+    /// the actions' names.
+    @ViewBuilder
+    private var selectionActionRow: some View {
+        HStack(spacing: 30) {
+            Button { copySelectedVerses() } label: {
+                Image(systemName: "square.on.square")
+            }
+            .accessibilityLabel("Copy")
+            if selectionBookmarked {
+                Button { unmarkSelection() } label: {
+                    Image(systemName: "bookmark.fill")
+                }
+                .accessibilityLabel("Bookmark")
+            } else {
+                Button {
+                    assignVerse = selectionTargetVerse
+                    showingAssignBookmark = true
+                } label: {
+                    Image(systemName: "bookmark")
+                }
+                .accessibilityLabel("Bookmark")
+            }
+            if selectionFullyHighlighted {
+                Button { unhighlightSelection() } label: {
+                    Image(systemName: "highlighter")
+                        .foregroundStyle(Color.yellow)
+                }
+                .accessibilityLabel("Marker")
+            } else {
+                Button { highlightSelection() } label: {
+                    Image(systemName: "highlighter")
+                }
+                .accessibilityLabel("Marker")
+            }
+            Button { openNoteEditorForSelection() } label: {
+                Image(systemName: "note.text")
+            }
+            .accessibilityLabel("Note")
+            Button { showingCompare = true } label: {
+                Image(systemName: "rectangle.split.2x1")
+            }
+            .accessibilityLabel("Compare")
+            Button { selectedVerses = [] } label: {
+                Image(systemName: "xmark")
+            }
+            .accessibilityLabel("Close")
+        }
+        .font(.system(size: 19))
     }
 
     private func toggleSelection(_ verse: Int) {

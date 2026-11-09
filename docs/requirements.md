@@ -403,18 +403,20 @@ Multiple (KJV Gen 1:1-2):
   reference labels show "Book chapter:verse" for verse-level
   bookmarks (panel ribbons, Assign list).
 
-- **REQ-BM-13:** While verses are selected, the selection bar
-  offers a **Bookmark** action (bar order: Copy / Bookmark /
-  Marker / Note / Compare). It opens the Assign sheet
+- **REQ-BM-13:** While verses are selected, the selection
+  action row offers a **Bookmark** action (row order: Copy /
+  Bookmark / Marker / Note / Compare). It opens the Assign sheet
   (REQ-BM-8) targeted at the selection: a single selected verse
   targets that verse (the sheet's new-bookmark draft and any
   chosen bookmark land at "Book chapter:verse"); a multi-verse
   selection targets the chapter as a whole. When a bookmark
   already sits exactly at the selection's target, tapping
   Bookmark again deletes the bookmark(s) at that target and
-  clears the selection (mirrors Marker, REQ-HL-1). The label
-  reads "Bookmark" in both states — the bar's buttons name the
-  thing they act on, not the verb (Nov 7, 2026). The reading
+  clears the selection (mirrors Marker, REQ-HL-1). The button
+  shows the bookmark glyph in both states (Nov 9, 2026: the
+  row is icon-only, superseding the Nov 7, 2026 noun labels) —
+  filled when a bookmark already sits at the target, outline
+  otherwise; VoiceOver keeps the name "Bookmark". The reading
   area's long-press Assign Bookmark keeps targeting the
   chapter.
 ## 9. Two-level book/chapter picker
@@ -553,9 +555,11 @@ Multiple (KJV Gen 1:1-2):
 ## 14. Compare
 
 ### Action
-- **REQ-CM-1:** The selection bar (shown while verses are selected) has a
-  **Compare** action, last before the close button (bar order:
-  Copy / Bookmark / Marker / Note / Compare).
+- **REQ-CM-1:** The selection action row (appended above the
+  chapter navigation in the bottom bar while verses are
+  selected) has a **Compare** action — the split-rectangle
+  glyph — last before the close button (row order: Copy /
+  Bookmark / Marker / Note / Compare).
 - **REQ-CM-2:** Compare opens a panel titled with the reference
   (`Book Chapter:Verses`, ranges compressed as in REQ-CP-5) showing the
   selected verses in each version, one section per version (short label plus
@@ -853,9 +857,9 @@ Multiple (KJV Gen 1:1-2):
 
 ## 18. Highlights
 
-- **REQ-HL-1:** While verses are selected, the selection bar
-  offers a **Marker** action (bar order: Copy / Bookmark /
-  Marker / Note / Compare). Tapping it records the selected
+- **REQ-HL-1:** While verses are selected, the selection
+  action row offers a **Marker** action (row order: Copy /
+  Bookmark / Marker / Note / Compare). Tapping it records the selected
   verses as highlights and clears the selection, so the
   highlight shows. When every selected verse already carries
   a highlight, tapping Marker again removes exactly the
@@ -863,9 +867,12 @@ Multiple (KJV Gen 1:1-2):
   or split as needed, `HighlightLogic.subtracting`,
   unit-tested) and clears the selection. A partially
   highlighted selection's tap adds the missing verses. The
-  label reads "Marker" in both states: since Nov 7, 2026 the
-  bar's buttons name the thing they act on (nouns), not the
-  verb — Marker replaced the Highlight/Unhighlight pair.
+  button shows the highlighter glyph in both states (Nov 9,
+  2026: the row is icon-only, superseding the Nov 7, 2026
+  noun labels that had replaced the Highlight/Unhighlight
+  verb pair), tinted yellow when every selected verse
+  already carries a highlight; VoiceOver keeps the name
+  "Marker".
 - **REQ-HL-2:** A highlighted verse's text renders with a
   bright yellow background in **every** version — highlights
   belong to the passage, not to a version (like bookmarks,
