@@ -892,7 +892,7 @@ struct ReaderView: View {
     /// measured as the row lays out and capped at the screen
     /// width — so an unselected chapter shows a small centered
     /// pill instead of a full-width bar with empty space. Its
-    /// ultra-thin-material background is drawn at 55% opacity,
+    /// ultra-thin-material background is drawn at 70% opacity,
     /// because the material alone still reads as a solid bar
     /// over the page, while full transparency left the controls
     /// with too little contrast against the text showing
@@ -922,13 +922,15 @@ struct ReaderView: View {
                             // The buttons' accent blue, a little
                             // dimmer (Nov 9, 2026) — the secondary
                             // gray washed out against the text
-                            // showing through the capsule.
-                            .font(.caption)
+                            // showing through the capsule. The
+                            // chapter numbers are 16pt, up from
+                            // caption, for legibility.
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.accentColor.opacity(0.75))
                         }
                     } else {
                         Text("\(history.chapter) / \(history.chapterCount)")
-                            .font(.caption)
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.accentColor.opacity(0.75))
                     }
                     Button { turnChapter(by: 1) } label: {
@@ -963,7 +965,7 @@ struct ReaderView: View {
             .background {
                 Capsule()
                     .fill(.ultraThinMaterial)
-                    .opacity(0.55)
+                    .opacity(0.70)
             }
             .overlay {
                 Capsule()
