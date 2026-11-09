@@ -923,14 +923,18 @@ struct ReaderView: View {
                             // dimmer (Nov 9, 2026) — the secondary
                             // gray washed out against the text
                             // showing through the capsule. The
-                            // chapter numbers are 16pt, up from
-                            // caption, for legibility.
-                            .font(.system(size: 16, weight: .medium))
+                            // chapter numbers use the callout
+                            // style — 16pt at the default Text
+                            // Size, up from caption — and, like
+                            // caption, it scales with the phone's
+                            // Text Size rather than a hard-coded
+                            // number.
+                            .font(.callout.weight(.medium))
                             .foregroundStyle(Color.accentColor.opacity(0.75))
                         }
                     } else {
                         Text("\(history.chapter) / \(history.chapterCount)")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.callout.weight(.medium))
                             .foregroundStyle(Color.accentColor.opacity(0.75))
                     }
                     Button { turnChapter(by: 1) } label: {
