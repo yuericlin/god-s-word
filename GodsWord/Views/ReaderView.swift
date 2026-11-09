@@ -32,6 +32,7 @@ struct ReaderView: View {
     @State private var dwellTask: Task<Void, Never>?
     @State private var availableVersions: [BibleVersion] = []
     @State private var viewSize: CGSize = .zero
+    @State private var bottomRowWidth: CGFloat = 0
     /// Verse picker: tap a verse to select it (light sky blue highlight).
     /// Selection is by verse number, so it survives version changes.
     @State private var selectedVerses: Set<Int> = []
@@ -887,7 +888,12 @@ struct ReaderView: View {
     /// of it, and it cannot scroll): as a custom safe-area inset
     /// the row holds every control at once and scrolls the
     /// overflow. When a selection appears, the row scrolls the
-    /// actions into view.
+    /// actions into view. The capsule hugs the row's width —
+    /// measured as the row lays out and capped at the screen
+    /// width — so an unselected chapter shows a small centered
+    /// pill instead of a full-width bar with empty space, and
+    /// its material is the see-through ultra-thin one, so the
+    /// text stays visible behind it (Nov 9, 2026).
     private var bottomControl: some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -896,7 +902,6 @@ struct ReaderView: View {
                         Label("Previous", systemImage: "chevron.left")
                     }
                     .labelStyle(.iconOnly)
-                    Spacer(minLength: 4)
                     if history.chapterCount > 0 {
                         Menu {
                             Picker("Chapter", selection: chapterPickerSelection) {
@@ -915,7 +920,6 @@ struct ReaderView: View {
                         Text("\(history.chapter) / \(history.chapterCount)")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                    Spacer(minLength: 4)
                     Button { turnChapter(by: 1) } label: {
                         Label("Next", systemImage: "chevron.right")
                     }
@@ -937,12 +941,14 @@ struct ReaderView: View {
                     }
                 }
                 .font(.system(size: 19))
-                .frame(minWidth: max(0, viewSize.width - 60))
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) {
+                    bottomRowWidth = $0
+                }
                 .padding(.horizontal, 18)
                 .padding(.vertical, 10)
             }
-            .background(.regularMaterial, in: Capsule())
-            .padding(.horizontal, 12)
+            .frame(width: bottomCapsuleWidth)
+            .background(.ultraThinMaterial, in: Capsule())
             .padding(.top, 6)
             .padding(.bottom, 6)
             .onChange(of: selectedVerses.isEmpty) {
@@ -953,6 +959,18 @@ struct ReaderView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity)
+        .animation(.easeInOut(duration: 0.25), value: selectedVerses.isEmpty)
+    }
+
+    /// The capsule's width: the row's measured width plus its
+    /// horizontal padding (18 + 18), capped at the screen width
+    /// minus margins — the capsule hugs its content and only
+    /// stops growing at the point where the row must scroll.
+    /// Nil until the row has been measured (no constraint).
+    private var bottomCapsuleWidth: CGFloat? {
+        guard bottomRowWidth > 0, viewSize.width > 0 else { return nil }
+        return min(bottomRowWidth + 36, viewSize.width - 24)
     }
 
     /// The selection action buttons (Copy / Bookmark / Marker /
