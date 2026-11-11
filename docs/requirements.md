@@ -298,6 +298,15 @@ Multiple (KJV Gen 1:1-2):
   same turn, so they cross and wrap identically, and are never
   disabled: with the wrap, every chapter has a previous and a
   next).
+- **REQ-GS-2:** A reader swipe's action is decided by where it
+  starts (`ReaderSwipeZones` in SwordReader, unit-tested): a
+  swipe starting in the left 20pt edge zone belongs to the
+  settings drawer only (and the drawer opens only on a rightward
+  pull from that edge, never on an edge-start vertical scroll),
+  a swipe starting in the right 20pt edge zone belongs to the
+  edge navigation only (at the reader, the bookmarks panel), and
+  only a swipe starting in the middle turns a chapter — the
+  chapter-turn gesture ignores edge-zone starts entirely.
 
 ---
 

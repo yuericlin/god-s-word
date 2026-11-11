@@ -331,10 +331,13 @@ struct ReaderView: View {
                     // Swipes starting on the bottom control scroll
                     // its row; they never turn chapters.
                     guard value.startLocation.y < viewSize.height - 80 else { return }
-                    // Middle swipes turn chapters. Edge swipes are handled by
-                    // the drawer (left) and the navigation overlay (right).
-                    let inRightEdge = viewSize.width > 0 && value.startLocation.x > viewSize.width - 20
-                    guard !inRightEdge else { return }
+                    // A swipe's action is decided by where it starts
+                    // (REQ-GS-2): only middle swipes turn chapters.
+                    // Edge swipes belong to the drawer (left) and the
+                    // navigation overlay (right).
+                    guard ReaderSwipeZones.zone(startX: value.startLocation.x,
+                                                viewWidth: viewSize.width) == .middle
+                    else { return }
                     if value.translation.width < -60 {
                         turnChapter(by: 1)
                     } else if value.translation.width > 60 {
