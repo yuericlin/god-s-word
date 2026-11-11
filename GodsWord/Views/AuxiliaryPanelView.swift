@@ -24,6 +24,11 @@ struct AuxiliaryPanelView: View {
     /// bottom bar, next to the chapter controls (REQ-AP-1). When
     /// collapsed, the panel renders nothing at all.
     @Binding var collapsed: Bool
+    /// The reader view's total height, passed by ReaderView: the
+    /// expanded panel — tab bar plus content — is one third of it.
+    /// Zero until ReaderView's first measurement lands (and in
+    /// previews), where the content keeps its old fixed height.
+    var totalHeight: CGFloat = 0
 
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
@@ -50,6 +55,9 @@ struct AuxiliaryPanelView: View {
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
+    /// Measured height of the tab bar, so the content can take the
+    /// rest of the panel's third of the total height.
+    @State private var tabBarHeight: CGFloat = 49
 
     enum PanelTab: String, CaseIterable {
         case notes = "Notes"
@@ -152,11 +160,23 @@ struct AuxiliaryPanelView: View {
         }
     }
 
+    /// Height of the tab content: the whole expanded panel — divider,
+    /// tab bar, and content — is one third of the total height. Before
+    /// ReaderView's first measurement lands (totalHeight still zero),
+    /// the content keeps the old fixed 264.
+    private var contentHeight: CGFloat {
+        guard totalHeight > 0 else { return 264 }
+        return max(totalHeight / 3 - tabBarHeight - 1, 80)
+    }
+
     /// The expanded panel: the tab bar plus the selected tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
             panelTabBar
+                .onGeometryChange(for: CGFloat.self, of: \.size.height) {
+                    tabBarHeight = $0
+                }
 
             Group {
                 switch tab {
@@ -167,7 +187,7 @@ struct AuxiliaryPanelView: View {
                 case .highlights: highlightsTab
                 }
             }
-            .frame(height: 264)
+            .frame(height: contentHeight)
         }
         .background(.regularMaterial)
         .simultaneousGesture(collapseGesture)
