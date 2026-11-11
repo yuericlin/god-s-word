@@ -250,7 +250,10 @@ Multiple (KJV Gen 1:1-2):
   KJV and ChiUns both support it.
 - **REQ-ST-2:** Strong's numbers default to hidden.
 - **REQ-ST-3:** When enabled, tappable Strong's numbers appear after words in
-  both paragraph and verse-by-verse modes.
+  both paragraph and verse-by-verse modes. The numbers render
+  blue and underlined — the same link treatment as commentary
+  references (REQ-AP-19) — in the reader and in the panel's
+  Strong's tab.
 - **REQ-ST-4:** Tapping a number downloads the Strong's Hebrew/Greek lexicon
   from CrossWire on first use, then shows the dictionary entry.
 - **REQ-ST-5:** ChiUns-specific numbers H9001–H9004 (Hebrew inseparable
@@ -748,6 +751,32 @@ Multiple (KJV Gen 1:1-2):
   also start at or above the bottom of the panel's tab bar: a
   swipe that starts in a tab's content is scrolling, never a
   collapse, however committed it is.
+- **REQ-AP-19:** Scripture references inside a commentary entry
+  are tappable links, rendered blue and underlined (the same
+  treatment as Strong's numbers, REQ-ST-3). For ThML commentaries
+  the references come from the entry's `<scripRef>` elements,
+  parsed from the raw entry by `ScriptureReferences` in
+  SwordReader (unit-tested against real TSK entries): each
+  semicolon-separated item is its own link, including
+  continuations that omit the book or chapter (they continue
+  from the item before them, starting at the entry's own book
+  and chapter), verse lists ("Ps 33:6,9"), ranges ("ge 3:1-2"),
+  and the chapter-outline entries whose reference sits in the
+  element's `passage` attribute. A range crossing into a later
+  chapter targets its starting chapter with the verses it
+  covers there. Items that do not parse (margin markers such as
+  "*marg:", malformed data) stay plain text — a reference is
+  never guessed — and the entry's wording never changes.
+  Commentaries without scripRef markup render as plain text,
+  as before.
+- **REQ-AP-20:** Tapping a commentary reference opens a sheet
+  showing the reference's whole chapter in the version being
+  read, with every referenced verse highlighted the way a
+  selection is highlighted in the reader, scrolled so the first
+  referenced verse is in view. "Done" dismisses back to the
+  commentary; "Read Chapter" dismisses and moves the main
+  reader to that chapter, landing on the first referenced
+  verse.
 
 ## 16. Module sources
 

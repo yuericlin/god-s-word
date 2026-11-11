@@ -66,4 +66,30 @@ public struct CommentaryModule: Identifiable, Equatable, Sendable {
         return mod.chapter(testament: testament, book: book, chapter: chapter)
             .filter { !$0.text.isEmpty }
     }
+
+    /// One chapter's entries with their scripture-reference segments
+    /// (REQ-AP-19): the same rows `loadChapter` returns, each with
+    /// the segments `ScriptureReferences` finds in the entry's raw
+    /// markup. Modules without scripRef markup get a single text
+    /// segment per entry, so callers can render uniformly.
+    public func loadChapterSegments(testament: Int, book: Int, chapter: Int)
+        async throws
+        -> [(verse: Int, text: String,
+             segments: [ScriptureReferences.Segment])]
+    {
+        let mod = try await ModuleLoader.shared.module(for: installed)
+        let raws = Dictionary(
+            uniqueKeysWithValues: mod.chapterRaw(testament: testament,
+                                                 book: book, chapter: chapter)
+                .map { ($0.verse, $0.raw) })
+        return mod.chapter(testament: testament, book: book, chapter: chapter)
+            .filter { !$0.text.isEmpty }
+            .map { row in
+                (verse: row.verse, text: row.text,
+                 segments: ScriptureReferences.segments(
+                     plain: row.text,
+                     raw: raws[row.verse] ?? "",
+                     testament: testament, book: book, chapter: chapter))
+            }
+    }
 }

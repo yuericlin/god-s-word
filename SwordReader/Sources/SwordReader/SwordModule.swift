@@ -305,6 +305,27 @@ public final class SwordModule: @unchecked Sendable {
         return out
     }
 
+    /// All verses of a chapter as (verseNumber, rawMarkup), skipping
+    /// empty entries — the same entries `chapter(...)` renders, before
+    /// plain-text conversion, for callers that need the markup (the
+    /// commentary reference scanner, REQ-AP-19).
+    public func chapterRaw(testament: Int, book: Int, chapter: Int)
+        -> [(verse: Int, raw: String)]
+    {
+        guard let count = versification.verseCount(testament: testament, book: book, chapter: chapter)
+        else { return [] }
+        var out = [(verse: Int, raw: String)]()
+        out.reserveCapacity(count)
+        for v in 1 ... count {
+            if let r = rawVerse(testament: testament, book: book, chapter: chapter, verse: v),
+               !r.isEmpty
+            {
+                out.append((verse: v, raw: r))
+            }
+        }
+        return out
+    }
+
     /// Word tokens with Strong's numbers for one verse, or nil when the
     /// module has no entry for the verse. Section headings are excluded
     /// from the tokens, as in `verse(...)` (REQ-RS-5).

@@ -41,6 +41,23 @@ struct AuxiliaryPanelView: View {
     @State private var showingCommentaryInfo = false
     @State private var commentaryChapter: [CommentaryGrouping.Entry] = []
     @State private var commentaryBook: [BookSection] = []
+    /// Reference segments (REQ-AP-19) for the chapter scope's
+    /// grouped entries, keyed by the entry's start verse.
+    @State private var commentarySegments: [Int: [ScriptureReferences.Segment]] = [:]
+    /// Book scope: chapter -> start verse -> reference segments.
+    @State private var commentaryBookSegments: [Int: [Int: [ScriptureReferences.Segment]]] = [:]
+    /// A reference tapped in a commentary entry, for the reference
+    /// chapter sheet (REQ-AP-20).
+    @State private var referenceLink: ReferenceLink?
+
+    /// Identifiable wrapper around a tapped reference target.
+    private struct ReferenceLink: Identifiable {
+        let target: ScriptureReferenceTarget
+        var id: String {
+            "\(target.testament)-\(target.book)-\(target.chapter)-"
+                + target.verses.map(String.init).joined(separator: ",")
+        }
+    }
 
     /// One chapter's grouped commentary entries, for the Book scope.
     private struct BookSection: Identifiable {
@@ -243,6 +260,16 @@ struct AuxiliaryPanelView: View {
                                                 source: history.version.id)
                 }
             }
+        }
+        .sheet(item: $referenceLink) { link in
+            ReferenceChapterView(version: history.version,
+                                 target: link.target) {
+                jumpTo(testament: link.target.testament,
+                       book: link.target.book,
+                       chapter: link.target.chapter)
+                history.pendingVerse = link.target.verses.first
+            }
+            .environmentObject(personalData)
         }
         .sheet(isPresented: $showingCommentaryDownload, onDismiss: {
             commentaries = CommentaryModule.allInstalled(in: store)
@@ -839,6 +866,15 @@ struct AuxiliaryPanelView: View {
             }
         }
         .task(id: commentaryLoadKey) { await loadCommentary() }
+        // Reference links in commentary entries (REQ-AP-19) open
+        // the reference chapter sheet instead of a browser.
+        .environment(\.openURL, OpenURLAction { url in
+            if let target = refTarget(from: url) {
+                referenceLink = ReferenceLink(target: target)
+                return .handled
+            }
+            return .systemAction
+        })
     }
 
     @ViewBuilder
@@ -851,7 +887,8 @@ struct AuxiliaryPanelView: View {
                 if let entry = CommentaryGrouping.entry(in: commentaryChapter,
                                                           covering: anchorVerse) {
                     ScrollView {
-                        commentaryEntry(entry, reference: "\(history.bookTitle) \(history.chapter)")
+                        commentaryEntry(entry, reference: "\(history.bookTitle) \(history.chapter)",
+                                        segments: commentarySegments[entry.startVerse])
                             .padding(.horizontal)
                             .padding(.bottom, 8)
                     }
@@ -865,7 +902,8 @@ struct AuxiliaryPanelView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
                             ForEach(commentaryChapter, id: \.startVerse) { entry in
-                                commentaryEntry(entry, reference: "\(history.bookTitle) \(history.chapter)")
+                                commentaryEntry(entry, reference: "\(history.bookTitle) \(history.chapter)",
+                                                segments: commentarySegments[entry.startVerse])
                             }
                         }
                         .padding(.horizontal)
@@ -899,7 +937,8 @@ struct AuxiliaryPanelView: View {
                                     if expandedBookChapters.contains(section.chapter) {
                                         VStack(alignment: .leading, spacing: 12) {
                                             ForEach(section.entries, id: \.startVerse) { entry in
-                                                commentaryEntry(entry, reference: "\(history.bookTitle) \(section.chapter)")
+                                                commentaryEntry(entry, reference: "\(history.bookTitle) \(section.chapter)",
+                                                                segments: commentaryBookSegments[section.chapter]?[entry.startVerse])
                                             }
                                         }
                                         .padding(.bottom, 8)
@@ -915,20 +954,90 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// One commentary entry with its verse-range reference.
+    /// One commentary entry with its verse-range reference. When
+    /// the entry's segments carry scripture references (REQ-AP-19),
+    /// they render blue and underlined and open the reference
+    /// chapter sheet; the wording is the entry's plain text either
+    /// way.
     private func commentaryEntry(_ entry: CommentaryGrouping.Entry,
-                                 reference: String) -> some View {
+                                 reference: String,
+                                 segments: [ScriptureReferences.Segment]? = nil)
+        -> some View
+    {
         VStack(alignment: .leading, spacing: 4) {
             Text(entry.startVerse == entry.endVerse
                  ? "\(reference):\(entry.startVerse)"
                  : "\(reference):\(entry.startVerse)-\(entry.endVerse)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(entry.text)
-                .font(.system(size: personalData.fontSize, design: .serif))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
+            if let segments, segments.contains(where: hasReference) {
+                Text(attributedCommentary(segments))
+                    .font(.system(size: personalData.fontSize, design: .serif))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                Text(entry.text)
+                    .font(.system(size: personalData.fontSize, design: .serif))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
         }
+    }
+
+    private func hasReference(_ segment: ScriptureReferences.Segment) -> Bool {
+        if case .reference = segment { return true }
+        return false
+    }
+
+    /// A commentary entry's segments as an attributed string:
+    /// references are blue, underlined links (REQ-AP-19); the rest
+    /// is the entry's plain text unchanged.
+    private func attributedCommentary(_ segments: [ScriptureReferences.Segment])
+        -> AttributedString
+    {
+        var out = AttributedString("")
+        for segment in segments {
+            switch segment {
+            case .text(let s):
+                out += AttributedString(s)
+            case .reference(let display, let target):
+                var run = AttributedString(display)
+                run.foregroundColor = .blue
+                run.underlineStyle = .single
+                if let url = refURL(for: target) {
+                    run.link = url
+                }
+                out += run
+            }
+        }
+        return out
+    }
+
+    /// The link a reference segment carries; the panel's openURL
+    /// interception turns it back into a target.
+    private func refURL(for target: ScriptureReferenceTarget) -> URL? {
+        URL(string: "ref://target?t=\(target.testament)&b=\(target.book)"
+            + "&c=\(target.chapter)"
+            + "&v=\(target.verses.map(String.init).joined(separator: ","))")
+    }
+
+    /// Inverse of `refURL(for:)`; nil for any other URL.
+    private func refTarget(from url: URL) -> ScriptureReferenceTarget? {
+        guard url.scheme == "ref",
+              let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                  .queryItems
+        else { return nil }
+        func value(_ name: String) -> String? {
+            items.first { $0.name == name }?.value
+        }
+        guard let t = value("t").flatMap({ Int($0) }),
+              let b = value("b").flatMap({ Int($0) }),
+              let c = value("c").flatMap({ Int($0) }),
+              let v = value("v")
+        else { return nil }
+        let verses = v.split(separator: ",").compactMap { Int($0) }
+        guard !verses.isEmpty else { return nil }
+        return ScriptureReferenceTarget(testament: t, book: b,
+                                        chapter: c, verses: verses)
     }
 
     private func emptyCommentary(_ message: String) -> some View {
@@ -954,26 +1063,35 @@ struct AuxiliaryPanelView: View {
         do {
             switch commentaryScope {
             case .verse, .chapter:
-                let rows = try await mod.loadChapter(testament: history.testament,
-                                                     book: history.book,
-                                                     chapter: history.chapter)
-                commentaryChapter = CommentaryGrouping.group(rows)
+                let rows = try await mod.loadChapterSegments(
+                    testament: history.testament,
+                    book: history.book,
+                    chapter: history.chapter)
+                commentaryChapter = CommentaryGrouping.group(
+                    rows.map { (verse: $0.verse, text: $0.text) })
+                commentarySegments = segmentsByEntry(rows: rows,
+                                                     entries: commentaryChapter)
             case .book:
                 let count = mod.chapterCount(testament: history.testament,
                                               book: history.book)
                 let chapters = count > 0 ? count : history.chapterCount
                 var sections: [BookSection] = []
+                var bookSegments: [Int: [Int: [ScriptureReferences.Segment]]] = [:]
                 if chapters > 0 {
                     for c in 1 ... chapters {
-                        let rows = try await mod.loadChapter(testament: history.testament,
-                                                             book: history.book,
-                                                             chapter: c)
-                        sections.append(BookSection(
-                            chapter: c,
-                            entries: CommentaryGrouping.group(rows)))
+                        let rows = try await mod.loadChapterSegments(
+                            testament: history.testament,
+                            book: history.book,
+                            chapter: c)
+                        let grouped = CommentaryGrouping.group(
+                            rows.map { (verse: $0.verse, text: $0.text) })
+                        sections.append(BookSection(chapter: c, entries: grouped))
+                        bookSegments[c] = segmentsByEntry(rows: rows,
+                                                          entries: grouped)
                     }
                 }
                 commentaryBook = sections
+                commentaryBookSegments = bookSegments
             }
             commentaryError = nil
         } catch {
@@ -982,10 +1100,30 @@ struct AuxiliaryPanelView: View {
             // (REQ-AP-13).
             commentaryChapter = []
             commentaryBook = []
+            commentarySegments = [:]
+            commentaryBookSegments = [:]
             commentaryError = "The \(mod.shortLabel) module couldn't be opened. "
                 + "It may be damaged or missing — re-downloading it from the "
                 + "repository usually fixes this. (\(error.localizedDescription))"
         }
+    }
+
+    /// Reference segments for each grouped entry, keyed by the
+    /// entry's start verse. Grouped entries repeat one module entry
+    /// across their verses, so the first row's segments serve the
+    /// whole group.
+    private func segmentsByEntry(
+        rows: [(verse: Int, text: String,
+                segments: [ScriptureReferences.Segment])],
+        entries: [CommentaryGrouping.Entry]
+    ) -> [Int: [ScriptureReferences.Segment]] {
+        var out: [Int: [ScriptureReferences.Segment]] = [:]
+        for entry in entries {
+            if let row = rows.first(where: { $0.verse == entry.startVerse }) {
+                out[entry.startVerse] = row.segments
+            }
+        }
+        return out
     }
 
     // MARK: - Strong's tab
@@ -1093,9 +1231,9 @@ struct AuxiliaryPanelView: View {
             for key in token.strongs {
                 var n = AttributedString(" \(key)")
                 n.font = .system(size: personalData.fontSize * 0.55, design: .serif)
-                n.foregroundColor = .secondary
+                n.foregroundColor = .blue
                 n.baselineOffset = personalData.fontSize * 0.22
-                n.underlineStyle = []
+                n.underlineStyle = .single
                 n.link = URL(string: "strongs://\(key)")
                 out += n
             }
@@ -1745,5 +1883,92 @@ struct DictionarySettingsView: View {
             personalData.dictionaryGreekID = ""
         }
         reload()
+    }
+}
+
+/// The chapter a commentary reference points to (REQ-AP-20):
+/// the whole chapter in the version being read, with the
+/// referenced verses highlighted like a selection in the reader
+/// and scrolled into view. "Done" returns to the commentary;
+/// "Read Chapter" moves the main reader to the chapter (at the
+/// first referenced verse) and dismisses.
+private struct ReferenceChapterView: View {
+    let version: BibleVersion
+    let target: ScriptureReferenceTarget
+    let onReadChapter: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var personalData: PersonalData
+    @State private var rows: [VerseRow] = []
+
+    private struct VerseRow: Identifiable {
+        let verse: Int
+        let text: String
+        var id: Int { verse }
+    }
+
+    private var title: String {
+        "\(version.bookName(overall: target.overallBook)) \(target.chapter)"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(rows) { row in
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text("\(row.verse)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 28, alignment: .trailing)
+                                Text(row.text)
+                                    .font(.system(size: personalData.fontSize,
+                                                  design: .serif))
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 6)
+                            .background(target.verses.contains(row.verse)
+                                        ? Color(red: 0.53, green: 0.81, blue: 0.98)
+                                            .opacity(0.55)
+                                        : Color.clear)
+                            .id(row.verse)
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: rows.count) {
+                    if let first = target.verses.first {
+                        proxy.scrollTo(first, anchor: .center)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    onReadChapter()
+                    dismiss()
+                } label: {
+                    Text("Read Chapter")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding()
+            }
+            .task {
+                let loaded = (try? await version.loadChapter(
+                    testament: target.testament,
+                    book: target.book,
+                    chapter: target.chapter)) ?? []
+                rows = loaded.map { VerseRow(verse: $0.verse, text: $0.text) }
+            }
+        }
     }
 }
