@@ -64,7 +64,7 @@ final class ScriptureReferencesTests: XCTestCase {
             target(1, 19, 33, [6, 9]),
             target(1, 19, 148, [5]),
             target(2, 1, 8, [3]),
-            target(2, 3, 11, [43]),
+            target(2, 4, 11, [43]),
         ])
     }
 
