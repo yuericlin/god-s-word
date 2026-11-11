@@ -188,7 +188,9 @@ struct ReaderView: View {
                             // Long-press on empty reading area (margins, gaps)
                             // offers to take a chapter-level note.
                             .contextMenu {
-                                Button("Take Notes") { openChapterNoteEditor() }
+                                Button { openChapterNoteEditor() } label: {
+                                    Label("Take Notes", systemImage: "square.and.pencil")
+                                }
                                 Button("Assign Bookmark") {
                                     assignVerse = nil
                                     showingAssignBookmark = true
@@ -1051,7 +1053,7 @@ struct ReaderView: View {
             .accessibilityLabel("Marker")
         }
         Button { openNoteEditorForSelection() } label: {
-            Image(systemName: "note.text")
+            Image(systemName: "square.and.pencil")
         }
         .accessibilityLabel("Note")
         Button { showingCompare = true } label: {
