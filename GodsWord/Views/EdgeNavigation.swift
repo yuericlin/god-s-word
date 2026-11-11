@@ -1,7 +1,9 @@
 // EdgeNavigation.swift — edge swipe navigation.
 // Right edge: swipe left goes forward (versions -> books -> chapters -> reading),
 //             swipe right goes backward (reading -> chapters -> books -> versions).
-// Left edge (on the reader): opens the settings/history drawer.
+// Left edge (on the reader): the settings/history drawer's zone. The
+// reader's own swipe handling opens it (REQ-GS-2); this file only
+// keeps the system's back-swipe out of the reader.
 
 import SwiftUI
 import UIKit
@@ -39,35 +41,30 @@ extension View {
     }
 }
 
-/// Gives the settings/history drawer a hard claim on the left edge while
-/// reading. Installs a dedicated screen-edge pan recognizer on the navigation
+/// Keeps the system's back-swipe out of the reader while reading.
+/// Installs a dedicated screen-edge pan recognizer on the navigation
 /// controller's view and makes the system's back-swipe wait for it
-/// (`require(toFail:)`), so a left-edge swipe reliably opens the drawer.
-/// Everything is installed on appear and torn down on disappear, so other
-/// screens keep their swipe-back. Backward navigation on the reader uses the
-/// right edge instead.
+/// (`require(toFail:)`), and disables the back-swipe outright, so a
+/// left-edge swipe on the reader is never a navigation pop. The
+/// recognizer itself decides nothing: the system's edge zone is
+/// wider than the app's 20pt zone (REQ-GS-2), and when it opened
+/// the drawer itself, swipes starting well inside the view — which
+/// the user counts as middle swipes that should turn chapters —
+/// brought the drawer out instead. The reader's own drag gesture
+/// now makes every swipe decision by start zone. Everything is
+/// installed on appear and torn down on disappear, so other screens
+/// keep their swipe-back. Backward navigation on the reader uses
+/// the right edge instead.
 struct DrawerEdgeGesture: UIViewControllerRepresentable {
-    var onOpen: () -> Void
-
     func makeUIViewController(context: Context) -> UIViewController {
-        EdgeGestureViewController(onOpen: onOpen)
+        EdgeGestureViewController()
     }
 
-    func updateUIViewController(_ vc: UIViewController, context: Context) {
-        (vc as? EdgeGestureViewController)?.onOpen = onOpen
-    }
+    func updateUIViewController(_ vc: UIViewController, context: Context) {}
 
     final class EdgeGestureViewController: UIViewController {
-        var onOpen: () -> Void
         private weak var navView: UIView?
         private var edgePan: UIScreenEdgePanGestureRecognizer?
-
-        init(onOpen: @escaping () -> Void) {
-            self.onOpen = onOpen
-            super.init(nibName: nil, bundle: nil)
-        }
-
-        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
         override func viewDidAppear(_ animated: Bool) {
             super.viewDidAppear(animated)
@@ -75,7 +72,7 @@ struct DrawerEdgeGesture: UIViewControllerRepresentable {
                   let navView = navigationController?.view,
                   let pop = navController.interactivePopGestureRecognizer else { return }
             if edgePan == nil {
-                let pan = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleEdgePan(_:)))
+                let pan = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(ignoreEdgePan(_:)))
                 pan.edges = .left
                 // The drawer wins the left edge; backward navigation uses the right edge.
                 pop.require(toFail: pan)
@@ -96,16 +93,10 @@ struct DrawerEdgeGesture: UIViewControllerRepresentable {
             navigationController?.interactivePopGestureRecognizer?.isEnabled = true
         }
 
-        @objc private func handleEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {
-            if recognizer.state == .ended {
-                // Only a rightward pull from the edge opens the drawer:
-                // a vertical scroll that happens to start at the edge
-                // merely ends here and must not pop the drawer open.
-                let t = recognizer.translation(in: recognizer.view)
-                if t.x >= 40 && t.x > abs(t.y) {
-                    onOpen()
-                }
-            }
-        }
+        /// Deliberately no action: this recognizer exists only so
+        /// the system's back-swipe has something to wait for. The
+        /// drawer is opened by the reader's start-zone decision
+        /// (REQ-GS-2), not from here.
+        @objc private func ignoreEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {}
     }
 }

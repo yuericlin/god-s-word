@@ -189,13 +189,11 @@ struct ReaderView: View {
                             // offers to take a chapter-level note.
                             .contextMenu {
                                 Button { openChapterNoteEditor() } label: {
-                                    Label("Add Note", systemImage: "square.and.pencil")
+                                    Label("Take Notes", systemImage: "square.and.pencil")
                                 }
-                                Button {
+                                Button("Assign Bookmark") {
                                     assignVerse = nil
                                     showingAssignBookmark = true
-                                } label: {
-                                    Label("Assign Bookmark", systemImage: "bookmark")
                                 }
                             }
                         }
@@ -278,7 +276,7 @@ struct ReaderView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
         .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
-        .background(DrawerEdgeGesture { showingSettings = true }.frame(width: 0, height: 0))
+        .background(DrawerEdgeGesture().frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .edgeNavigation(
             onForward: {
@@ -335,17 +333,26 @@ struct ReaderView: View {
                     // Swipes starting on the bottom control scroll
                     // its row; they never turn chapters.
                     guard value.startLocation.y < viewSize.height - 80 else { return }
-                    // A swipe's action is decided by where it starts
-                    // (REQ-GS-2): only middle swipes turn chapters.
-                    // Edge swipes belong to the drawer (left) and the
-                    // navigation overlay (right).
-                    guard ReaderSwipeZones.zone(startX: value.startLocation.x,
-                                                viewWidth: viewSize.width) == .middle
-                    else { return }
-                    if value.translation.width < -60 {
-                        turnChapter(by: 1)
-                    } else if value.translation.width > 60 {
-                        turnChapter(by: -1)
+                    // One decision for every reader swipe, made by
+                    // where the swipe starts (REQ-GS-2): the left
+                    // edge opens the drawer, the middle turns
+                    // chapters, the right edge belongs to the
+                    // navigation overlay. The system's edge-pan
+                    // recognizer no longer opens the drawer — its
+                    // edge zone is wider than the app's 20pt, so
+                    // middle swipes were opening it.
+                    switch ReaderSwipeZones.action(
+                        startX: value.startLocation.x,
+                        viewWidth: viewSize.width,
+                        translationWidth: value.translation.width,
+                        translationHeight: value.translation.height)
+                    {
+                    case .openDrawer:
+                        showingSettings = true
+                    case .turnChapter(let forward):
+                        turnChapter(by: forward ? 1 : -1)
+                    case .none:
+                        break
                     }
                 }
         )
