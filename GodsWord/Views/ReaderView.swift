@@ -33,7 +33,7 @@ struct ReaderView: View {
     @State private var availableVersions: [BibleVersion] = []
     @State private var viewSize: CGSize = .zero
     /// This view's total height, measured on the root VStack and passed
-    /// to the auxiliary panel: the expanded panel is a third of it.
+    /// to the auxiliary panel: the expanded panel is 30% of it.
     @State private var rootHeight: CGFloat = 0
     @State private var bottomRowWidth: CGFloat = 0
     @ScaledMetric(relativeTo: .body) private var bottomIconSize: CGFloat = 19
