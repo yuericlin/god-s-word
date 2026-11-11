@@ -525,6 +525,38 @@ public enum ReaderSwipeZones {
         if startX >= viewWidth - edgeWidth { return .rightEdge }
         return .middle
     }
+
+    /// What a finished reader swipe does (REQ-GS-2), decided by
+    /// where it started and how it travelled. This is the ONLY
+    /// decision for the reader's swipes: the system's own edge-pan
+    /// recognizer uses a wider, device-dependent edge zone than
+    /// the app's 20pt, so when it made the drawer decision itself,
+    /// swipes the user counts as middle swipes opened the drawer.
+    public enum Action: Equatable {
+        case none
+        case openDrawer
+        case turnChapter(forward: Bool)
+    }
+
+    public static func action(startX: CGFloat, viewWidth: CGFloat,
+                              translationWidth: CGFloat,
+                              translationHeight: CGFloat) -> Action {
+        switch zone(startX: startX, viewWidth: viewWidth) {
+        case .leftEdge:
+            // Only a predominantly horizontal rightward pull opens
+            // the drawer — never an edge-start vertical scroll.
+            return translationWidth > 60
+                && translationWidth > abs(translationHeight)
+                ? .openDrawer : .none
+        case .middle:
+            if translationWidth < -60 { return .turnChapter(forward: true) }
+            if translationWidth > 60 { return .turnChapter(forward: false) }
+            return .none
+        case .rightEdge:
+            // The right-edge navigation overlay owns these.
+            return .none
+        }
+    }
 }
 
 /// Grouping of one chapter's commentary entries (REQ-AP-5). A commentary

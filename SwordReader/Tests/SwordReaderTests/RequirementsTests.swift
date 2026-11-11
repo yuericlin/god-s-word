@@ -612,6 +612,59 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
         XCTAssertEqual(ReaderSwipeZones.zone(startX: 0, viewWidth: 0), .middle)
     }
 
+    // REQ-GS-2 (cont.): one action decision for every reader swipe.
+    // Regression: the system's edge-pan recognizer used to open the
+    // drawer itself, and its edge zone is wider than the app's
+    // 20pt — middle swipes brought the drawer out. The decision now
+    // lives here, in the reader's own drag gesture.
+    func testReaderSwipeAction() {
+        // Left edge: only a predominantly horizontal rightward pull
+        // of more than 60pt opens the drawer.
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 10, viewWidth: 400,
+                                               translationWidth: 70,
+                                               translationHeight: 10),
+                       .openDrawer)
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 10, viewWidth: 400,
+                                               translationWidth: 70,
+                                               translationHeight: 90),
+                       .none)
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 10, viewWidth: 400,
+                                               translationWidth: 30,
+                                               translationHeight: 0),
+                       .none)
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 10, viewWidth: 400,
+                                               translationWidth: -70,
+                                               translationHeight: 0),
+                       .none)
+        // Middle: past 60pt either way turns a chapter — including
+        // the rightward swipe that used to open the drawer.
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 200, viewWidth: 400,
+                                               translationWidth: 70,
+                                               translationHeight: 0),
+                       .turnChapter(forward: false))
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 200, viewWidth: 400,
+                                               translationWidth: -70,
+                                               translationHeight: 0),
+                       .turnChapter(forward: true))
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 200, viewWidth: 400,
+                                               translationWidth: 30,
+                                               translationHeight: 0),
+                       .none)
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 21, viewWidth: 400,
+                                               translationWidth: 70,
+                                               translationHeight: 0),
+                       .turnChapter(forward: false))
+        // Right edge: the navigation overlay owns these starts.
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 395, viewWidth: 400,
+                                               translationWidth: 70,
+                                               translationHeight: 0),
+                       .none)
+        XCTAssertEqual(ReaderSwipeZones.action(startX: 395, viewWidth: 400,
+                                               translationWidth: -70,
+                                               translationHeight: 0),
+                       .none)
+    }
+
     // REQ-AP-5: consecutive verses sharing one entry collapse into a
     // range; a repeated text later starts a new entry; empties skip.
     func testCommentaryGrouping() {
