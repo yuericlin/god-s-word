@@ -735,7 +735,10 @@ Multiple (KJV Gen 1:1-2):
   downward travel with a predicted end of at least 110 points
   (`PanelCollapseGesture` in SwordReader, unit-tested), so
   scrolling a tab's content — including scrolling back up toward
-  its top — never collapses the panel by accident.
+  its top — never collapses the panel by accident. The swipe must
+  also start at or above the bottom of the panel's tab bar: a
+  swipe that starts in a tab's content is scrolling, never a
+  collapse, however committed it is.
 
 ## 16. Module sources
 
