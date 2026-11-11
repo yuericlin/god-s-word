@@ -645,9 +645,9 @@ struct ReaderView: View {
     private func attributedStrongsNumber(_ key: String) -> AttributedString {
         var num = AttributedString(" \(key)")
         num.font = .system(size: personalData.fontSize * 0.55, design: .serif)
-        num.foregroundColor = .secondary
+        num.foregroundColor = .blue
         num.baselineOffset = personalData.fontSize * 0.22
-        num.underlineStyle = []
+        num.underlineStyle = .single
         num.link = URL(string: "strongs://\(key)")
         return num
     }
