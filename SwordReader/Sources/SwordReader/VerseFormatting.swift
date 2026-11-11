@@ -482,7 +482,11 @@ public enum HighlightsTabLogic {
 /// committed swipe — at least `minimumTranslation` points of
 /// downward travel and a predicted end well past the actual
 /// travel, which is what sets a flick apart from a scroll drag
-/// that merely ends while moving downward.
+/// that merely ends while moving downward. And the swipe has to
+/// START in the panel's header — at or above the bottom of the
+/// tab bar (`startY <= headerBottom`, both measured from the
+/// panel's top edge): a swipe that starts in a tab's content
+/// belongs to that content's scrolling, however committed it is.
 public enum PanelCollapseGesture {
     /// Downward travel (points) a swipe needs before it can
     /// collapse the panel.
@@ -492,8 +496,11 @@ public enum PanelCollapseGesture {
     public static let minimumPredictedEnd: CGFloat = 110
 
     public static func shouldCollapse(translation: CGFloat,
-                                      predictedEnd: CGFloat) -> Bool {
-        translation >= minimumTranslation
+                                      predictedEnd: CGFloat,
+                                      startY: CGFloat,
+                                      headerBottom: CGFloat) -> Bool {
+        startY <= headerBottom
+            && translation >= minimumTranslation
             && predictedEnd >= minimumPredictedEnd
     }
 }

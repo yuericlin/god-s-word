@@ -103,16 +103,22 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// Swipe down inside the panel to collapse it (REQ-AP-18).
+    /// Swipe down from the panel's header to collapse it (REQ-AP-18).
     /// Simultaneous, so the tabs' own scrolling and taps keep
     /// working; whether a finished drag counts as a collapse swipe
-    /// is PanelCollapseGesture's call (unit-tested).
+    /// is PanelCollapseGesture's call (unit-tested). The drag's
+    /// start location is in this panel's own coordinates, so the
+    /// header is everything from its top edge down through the
+    /// tab bar (the divider plus the measured tab-bar height); a
+    /// drag starting below that is the content's scroll.
     private var collapseGesture: some Gesture {
         DragGesture(minimumDistance: 12)
             .onEnded { value in
                 if PanelCollapseGesture.shouldCollapse(
                     translation: value.translation.height,
-                    predictedEnd: value.predictedEndTranslation.height) {
+                    predictedEnd: value.predictedEndTranslation.height,
+                    startY: value.startLocation.y,
+                    headerBottom: tabBarHeight + 1) {
                     collapsed = true
                 }
             }

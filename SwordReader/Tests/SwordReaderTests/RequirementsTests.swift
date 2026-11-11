@@ -569,21 +569,29 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
     // it (a flick). Scroll drags inside the panel, slow drags, and
     // upward swipes never collapse it.
     func testPanelCollapseGesture() {
+        // Header bottom at 50: swipes starting at or above it may
+        // collapse; the travel rules are the committed-swipe ones.
         XCTAssertTrue(PanelCollapseGesture.shouldCollapse(
-            translation: 60, predictedEnd: 200))
+            translation: 60, predictedEnd: 200, startY: 10, headerBottom: 50))
         XCTAssertTrue(PanelCollapseGesture.shouldCollapse(
-            translation: 50, predictedEnd: 110))
+            translation: 50, predictedEnd: 110, startY: 50, headerBottom: 50))
         // Too little travel, however hard the flick.
         XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
-            translation: 49, predictedEnd: 300))
+            translation: 49, predictedEnd: 300, startY: 10, headerBottom: 50))
         // A long but slow drag (predicted end close to the travel).
         XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
-            translation: 120, predictedEnd: 100))
+            translation: 120, predictedEnd: 100, startY: 10, headerBottom: 50))
         // Upward swipes and taps never collapse.
         XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
-            translation: -80, predictedEnd: -300))
+            translation: -80, predictedEnd: -300, startY: 10, headerBottom: 50))
         XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
-            translation: 0, predictedEnd: 0))
+            translation: 0, predictedEnd: 0, startY: 10, headerBottom: 50))
+        // A committed swipe that starts below the tab bar is the
+        // content's scrolling — it never collapses the panel.
+        XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
+            translation: 60, predictedEnd: 200, startY: 51, headerBottom: 50))
+        XCTAssertFalse(PanelCollapseGesture.shouldCollapse(
+            translation: 200, predictedEnd: 400, startY: 120, headerBottom: 50))
     }
 
     // REQ-AP-5: consecutive verses sharing one entry collapse into a
