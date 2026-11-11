@@ -594,6 +594,24 @@ final class AuxiliaryPanelRequirementsTests: XCTestCase {
             translation: 200, predictedEnd: 400, startY: 120, headerBottom: 50))
     }
 
+    // REQ-GS-2: a reader swipe's action is decided by where it
+    // starts — the 20pt edge zones belong to the drawer (left) and
+    // the edge navigation (right); only the middle turns chapters.
+    func testReaderSwipeZones() {
+        // In a 400pt-wide view the left zone is x <= 20.
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 0, viewWidth: 400), .leftEdge)
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 20, viewWidth: 400), .leftEdge)
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 21, viewWidth: 400), .middle)
+        // The middle runs up to the right zone at x >= 380.
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 200, viewWidth: 400), .middle)
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 379, viewWidth: 400), .middle)
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 380, viewWidth: 400), .rightEdge)
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 400, viewWidth: 400), .rightEdge)
+        // An unmeasured view treats every start as middle, matching
+        // the chapter gesture's old no-width behavior.
+        XCTAssertEqual(ReaderSwipeZones.zone(startX: 0, viewWidth: 0), .middle)
+    }
+
     // REQ-AP-5: consecutive verses sharing one entry collapse into a
     // range; a repeated text later starts a new entry; empties skip.
     func testCommentaryGrouping() {

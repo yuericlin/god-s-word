@@ -98,7 +98,13 @@ struct DrawerEdgeGesture: UIViewControllerRepresentable {
 
         @objc private func handleEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {
             if recognizer.state == .ended {
-                onOpen()
+                // Only a rightward pull from the edge opens the drawer:
+                // a vertical scroll that happens to start at the edge
+                // merely ends here and must not pop the drawer open.
+                let t = recognizer.translation(in: recognizer.view)
+                if t.x >= 40 && t.x > abs(t.y) {
+                    onOpen()
+                }
             }
         }
     }

@@ -505,6 +505,28 @@ public enum PanelCollapseGesture {
     }
 }
 
+/// Where a reader swipe starts decides what it does (REQ-GS-2):
+/// a swipe starting in the left edge zone belongs to the settings
+/// drawer, one starting in the right edge zone to the edge
+/// navigation (at the reader, the bookmarks panel), and only a
+/// swipe starting in the middle turns a chapter. The zones are
+/// `edgeWidth` points in from each side — the same 20 points the
+/// right-edge overlay strip occupies.
+public enum ReaderSwipeZones {
+    public static let edgeWidth: CGFloat = 20
+
+    public enum Zone: Equatable {
+        case leftEdge, middle, rightEdge
+    }
+
+    public static func zone(startX: CGFloat, viewWidth: CGFloat) -> Zone {
+        guard viewWidth > 0 else { return .middle }
+        if startX <= edgeWidth { return .leftEdge }
+        if startX >= viewWidth - edgeWidth { return .rightEdge }
+        return .middle
+    }
+}
+
 /// Grouping of one chapter's commentary entries (REQ-AP-5). A commentary
 /// stores a single entry covering a run of verses by repeating the same
 /// text at every verse it covers (verified against MHCC: the entry for
