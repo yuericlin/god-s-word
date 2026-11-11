@@ -66,10 +66,10 @@ public enum RedLetterDerivation {
             out.append(inside)
             switch mode {
             case .brackets:
-                let d = t.filter { $0 == "「" }.count - t.filter { $0 == "」" }.count
+                let d = t.filter({ $0 == "「" }).count - t.filter({ $0 == "」" }).count
                 if d > 0 { inside = true } else if d < 0 { inside = false }
             case .toggleQuotes:
-                if t.filter { $0 == "\"" }.count % 2 == 1 { inside.toggle() }
+                if t.filter({ $0 == "\"" }).count % 2 == 1 { inside.toggle() }
             }
         }
         return out
