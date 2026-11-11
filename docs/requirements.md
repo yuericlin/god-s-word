@@ -98,7 +98,7 @@ Multiple (KJV Gen 1:1-2):
   FIRST selected verse (lowest number). The note indicator appears only there.
 - **REQ-NT-3:** ~~A chapter note is anchored at verse 1.~~ Superseded by
   REQ-NT-15: chapter notes are their own scope, stored separately.
-- **REQ-NT-4:** Long-press on empty reading area offers "Take Notes", which
+- **REQ-NT-4:** Long-press on empty reading area offers "Add Note", which
   creates a chapter-level note (REQ-NT-15).
 
 ### Indicator
@@ -148,7 +148,7 @@ Multiple (KJV Gen 1:1-2):
   `chapterNotes.json`), and manual export/import; applying older backups
   or files never wipes them.
 - **REQ-NT-15:** Chapter notes supersede the verse-1 anchoring of the old
-  REQ-NT-3: "Take Notes" (reader long-press) and the bookmarks panel's
+  REQ-NT-3: "Add Note" (reader long-press) and the bookmarks panel's
   "Add Note" with no verse selected both edit the chapter-level note.
   With verses selected, "Add Note" still edits the verse note anchored at
   the first selected verse (REQ-NT-2). Verse notes written at verse 1
@@ -371,7 +371,7 @@ Multiple (KJV Gen 1:1-2):
 ---
 
 - **REQ-BM-8:** The reader's long-press menu (on the margins and gaps around
-  the text) has **Assign Bookmark** next to Take Notes. It opens a sheet with
+  the text) has **Assign Bookmark** next to Add Note. It opens a sheet with
   a **New Bookmark** row and the existing bookmarks. New Bookmark opens the
   editor on a new bookmark at the chapter being read (REQ-BM-9). Choosing an
   existing bookmark moves it to the chapter being read (the same as Assign,
