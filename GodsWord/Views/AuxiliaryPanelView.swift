@@ -24,6 +24,11 @@ struct AuxiliaryPanelView: View {
     /// bottom bar, next to the chapter controls (REQ-AP-1). When
     /// collapsed, the panel renders nothing at all.
     @Binding var collapsed: Bool
+    /// The reader view's total height, passed by ReaderView: the
+    /// expanded panel — tab bar plus content — is 30% of it.
+    /// Zero until ReaderView's first measurement lands (and in
+    /// previews), where the content keeps its old fixed height.
+    var totalHeight: CGFloat = 0
 
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
@@ -50,6 +55,9 @@ struct AuxiliaryPanelView: View {
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
+    /// Measured height of the tab bar, so the content can take the
+    /// rest of the panel's 30% of the total height.
+    @State private var tabBarHeight: CGFloat = 49
 
     enum PanelTab: String, CaseIterable {
         case notes = "Notes"
@@ -110,18 +118,65 @@ struct AuxiliaryPanelView: View {
             }
     }
 
+    /// The panel's tab bar: a horizontally scrollable row of pills, one
+    /// per tab, each at its label's natural width — a segmented control
+    /// squeezed all five labels into the panel width and truncated them
+    /// ("Comment..."). The selected tab scrolls into view whenever the
+    /// selection changes and when the panel opens.
+    private var panelTabBar: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(PanelTab.allCases, id: \.self) { t in
+                        Button {
+                            tab = t
+                        } label: {
+                            Text(t.rawValue)
+                                .font(.callout)
+                                .lineLimit(1)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.07))
+                                )
+                                .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(tab == t ? [.isSelected] : [])
+                        .id(t)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .padding(.vertical, 8)
+            .onAppear {
+                proxy.scrollTo(tab, anchor: .center)
+            }
+            .onChange(of: tab) { _, newTab in
+                withAnimation {
+                    proxy.scrollTo(newTab, anchor: .center)
+                }
+            }
+        }
+    }
+
+    /// Height of the tab content: the whole expanded panel — divider,
+    /// tab bar, and content — is 30% of the total height. Before
+    /// ReaderView's first measurement lands (totalHeight still zero),
+    /// the content keeps the old fixed 264.
+    private var contentHeight: CGFloat {
+        guard totalHeight > 0 else { return 264 }
+        return max(totalHeight * 0.30 - tabBarHeight - 1, 80)
+    }
+
     /// The expanded panel: the tab bar plus the selected tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
-            Picker("Panel", selection: $tab) {
-                ForEach(PanelTab.allCases, id: \.self) { t in
-                    Text(t.rawValue).tag(t)
+            panelTabBar
+                .onGeometryChange(for: CGFloat.self, of: \.size.height) {
+                    tabBarHeight = $0
                 }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
 
             Group {
                 switch tab {
@@ -132,7 +187,7 @@ struct AuxiliaryPanelView: View {
                 case .highlights: highlightsTab
                 }
             }
-            .frame(height: 264)
+            .frame(height: contentHeight)
         }
         .background(.regularMaterial)
         .simultaneousGesture(collapseGesture)
