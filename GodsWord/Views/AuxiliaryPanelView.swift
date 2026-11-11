@@ -110,18 +110,53 @@ struct AuxiliaryPanelView: View {
             }
     }
 
+    /// The panel's tab bar: a horizontally scrollable row of pills, one
+    /// per tab, each at its label's natural width — a segmented control
+    /// squeezed all five labels into the panel width and truncated them
+    /// ("Comment..."). The selected tab scrolls into view whenever the
+    /// selection changes and when the panel opens.
+    private var panelTabBar: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(PanelTab.allCases, id: \.self) { t in
+                        Button {
+                            tab = t
+                        } label: {
+                            Text(t.rawValue)
+                                .font(.callout)
+                                .lineLimit(1)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.07))
+                                )
+                                .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(tab == t ? [.isSelected] : [])
+                        .id(t)
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .padding(.vertical, 8)
+            .onAppear {
+                proxy.scrollTo(tab, anchor: .center)
+            }
+            .onChange(of: tab) { _, newTab in
+                withAnimation {
+                    proxy.scrollTo(newTab, anchor: .center)
+                }
+            }
+        }
+    }
+
     /// The expanded panel: the tab bar plus the selected tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
-            Picker("Panel", selection: $tab) {
-                ForEach(PanelTab.allCases, id: \.self) { t in
-                    Text(t.rawValue).tag(t)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            panelTabBar
 
             Group {
                 switch tab {

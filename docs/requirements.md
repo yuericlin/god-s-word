@@ -600,6 +600,10 @@ Multiple (KJV Gen 1:1-2):
   renders nothing at all — the only trace is a toggle button in the
   reader's bottom bar, next to the chapter controls: an up arrow when
   collapsed (tap to expand), a down arrow when open (tap to collapse).
+  The tab bar is a horizontally scrollable row of pills, each at its
+  label's full natural width — never a fixed-width segmented control
+  that truncates labels — and it scrolls the selected tab into view
+  when the selection changes and when the panel opens.
 - **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
   Each shows the scoped note for the book / chapter / selected verse
   being read (REQ-NT-14) with an Add/Edit action opening the note
