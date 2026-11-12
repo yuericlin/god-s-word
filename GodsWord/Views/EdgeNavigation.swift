@@ -17,7 +17,7 @@ import UIKit
 /// DIAGNOSTIC (branch diag/swipe-readout-2, never merge):
 /// a sink the reader's overlay renders.
 enum SwipeDiag {
-    static var sink: ((String) -> Void)?
+    nonisolated(unsafe) static var sink: ((String) -> Void)?
     static func add(_ s: String) { sink?(s) }
     static func cls(_ o: AnyObject?) -> String {
         guard let o else { return "nil" }
