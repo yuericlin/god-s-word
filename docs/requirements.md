@@ -789,10 +789,12 @@ Multiple (KJV Gen 1:1-2):
   reader, scrolled so the first referenced verse is in view.
   "Done" sits at the top-left (the cancellation action, where
   the Strong's dictionary view puts it) and dismisses back to
-  the commentary; a bottom "read more" button — a bottom-bar
-  Label button styled like that view's back / forward arrow
-  buttons — dismisses and moves the main reader to that
-  chapter, landing on the first referenced verse.
+  the commentary; a bottom "read more" button — a text
+  button in the bottom bar, alongside that view's back /
+  forward arrow buttons (a toolbar Label renders as an icon
+  alone; the button's words must show) — dismisses and moves
+  the main reader to that chapter, landing on the first
+  referenced verse.
 
 ## 16. Module sources
 

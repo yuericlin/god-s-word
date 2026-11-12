@@ -1897,8 +1897,8 @@ struct DictionarySettingsView: View {
 /// are drawn: no bookmarks, highlights, or notes. "Done" sits
 /// where the Strong's dictionary view puts it (top-left, the
 /// cancellation action) and returns to the commentary; the
-/// bottom "read more" button — a bottom-bar Label button
-/// styled like that view's back / forward arrow buttons —
+/// bottom "read more" button — a text button in the bottom
+/// bar, alongside that view's back / forward arrow buttons —
 /// moves the main reader to the chapter (at the first
 /// referenced verse) and dismisses.
 ///
@@ -2013,16 +2013,15 @@ private struct ReferenceChapterView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
-                // The bottom button wears the same styling as
-                // the Strong's dictionary view's back / forward
-                // arrow buttons: a Label button in the bottom
-                // bar.
+                // The bottom button sits in the bottom bar
+                // with the Strong's dictionary view's back /
+                // forward arrow buttons — but as a text button,
+                // not a Label: a toolbar Label renders as an
+                // icon alone, and this button's words must show.
                 ToolbarItem(placement: .bottomBar) {
-                    Button {
+                    Button("read more") {
                         onReadChapter()
                         dismiss()
-                    } label: {
-                        Label("read more", systemImage: "chevron.right")
                     }
                 }
             }
