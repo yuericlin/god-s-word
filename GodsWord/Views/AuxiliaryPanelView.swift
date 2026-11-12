@@ -2016,16 +2016,13 @@ private struct ReferenceChapterView: View {
                 // The bottom button wears the same styling as
                 // the Strong's dictionary view's back / forward
                 // arrow buttons: a Label button in the bottom
-                // bar, leading-aligned.
+                // bar.
                 ToolbarItem(placement: .bottomBar) {
-                    HStack {
-                        Button {
-                            onReadChapter()
-                            dismiss()
-                        } label: {
-                            Label("read more", systemImage: "chevron.right")
-                        }
-                        Spacer()
+                    Button {
+                        onReadChapter()
+                        dismiss()
+                    } label: {
+                        Label("read more", systemImage: "chevron.right")
                     }
                 }
             }
