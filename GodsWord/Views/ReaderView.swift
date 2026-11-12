@@ -36,6 +36,7 @@ struct ReaderView: View {
     /// reports window coordinates; this is what converts them into
     /// the reader's own start zones (REQ-GS-2).
     @State private var readerFrame: CGRect = .zero
+    @State private var diagLines: [String] = []
     /// This view's total height, measured on the root VStack and passed
     /// to the auxiliary panel: the expanded panel is 30% of it.
     @State private var rootHeight: CGFloat = 0
@@ -122,7 +123,15 @@ struct ReaderView: View {
         // clears it when it leaves, so reports never reach a
         // reader that is not there. (On the body, not on
         // readerContent — see the factoring note there.)
-        .onAppear { SwipeBackGuard.shared.onSwipe = handleReaderSwipe }
+        .onAppear {
+            SwipeBackGuard.shared.onSwipe = handleReaderSwipe
+            SwipeDiag.sink = { line in
+                diagLines.append(line)
+                if diagLines.count > 20 { diagLines.removeFirst(diagLines.count - 20) }
+            }
+            SwipeDiag.add("READER APPEAR")
+        }
+        .onChange(of: showingSettings) { SwipeDiag.add("SETTINGS -> \(showingSettings)") }
         .onDisappear { SwipeBackGuard.shared.onSwipe = nil }
     }
 
@@ -337,6 +346,7 @@ struct ReaderView: View {
         .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { readerFrame = $0 }
         .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe).frame(width: 0, height: 0))
+        .overlay { diagOverlay }
         .navigationBarTitleDisplayMode(.inline)
         .edgeNavigation(onForward: {
             // Right-edge swipe left: open the bookmarks panel.
@@ -496,19 +506,21 @@ struct ReaderView: View {
     /// reader (the auxiliary panel, the navigation bar) are not
     /// reader swipes at all.
     private func handleReaderSwipe(start: CGPoint, translation: CGSize) {
-        guard !showingSettings && !showingBookmarks else { return }
-        guard readerFrame.width > 0 else { return }
+        SwipeDiag.add("REPORT start=\(Int(start.x)),\(Int(start.y)) t=\(Int(translation.width)),\(Int(translation.height)) frame=\(Int(readerFrame.minX)),\(Int(readerFrame.minY)) \(Int(readerFrame.width))x\(Int(readerFrame.height))")
+        guard !showingSettings && !showingBookmarks else { SwipeDiag.add("DROP panels-open"); return }
+        guard readerFrame.width > 0 else { SwipeDiag.add("DROP frame-zero"); return }
         let localX = start.x - readerFrame.minX
         let localY = start.y - readerFrame.minY
         guard localX >= 0, localX <= readerFrame.width,
               localY >= 0, localY < readerFrame.height - 80
-        else { return }
-        switch ReaderSwipeZones.action(
+        else { SwipeDiag.add("DROP outside local=\(Int(localX)),\(Int(localY))"); return }
+        let decision = ReaderSwipeZones.action(
             startX: localX,
             viewWidth: readerFrame.width,
             translationWidth: translation.width,
             translationHeight: translation.height)
-        {
+        SwipeDiag.add("DECISION \(decision)")
+        switch decision {
         case .openDrawer:
             showingSettings = true
         case .turnChapter(let forward):
@@ -516,6 +528,17 @@ struct ReaderView: View {
         case .none:
             break
         }
+    }
+
+    /// DIAGNOSTIC overlay (never merge).
+    private var diagOverlay: some View {
+        Text(diagLines.joined(separator: "\n"))
+            .font(.system(size: 8.5, design: .monospaced))
+            .foregroundStyle(.black)
+            .padding(4)
+            .background(Color.yellow.opacity(0.85))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .allowsHitTesting(false)
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.

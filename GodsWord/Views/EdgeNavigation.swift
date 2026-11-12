@@ -14,6 +14,17 @@
 import SwiftUI
 import UIKit
 
+/// DIAGNOSTIC (branch diag/swipe-readout-2, never merge):
+/// a sink the reader's overlay renders.
+enum SwipeDiag {
+    static var sink: ((String) -> Void)?
+    static func add(_ s: String) { sink?(s) }
+    static func cls(_ o: AnyObject?) -> String {
+        guard let o else { return "nil" }
+        return String(describing: type(of: o))
+    }
+}
+
 /// Right-edge strip: a leftward swipe goes forward. There is no
 /// backward swipe (Nov 11, 2026): swiping back is disabled.
 struct RightEdgeNavigation: ViewModifier {
@@ -156,6 +167,11 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
         else { return }
         installed = true
         popRecognizer = pop
+        SwipeDiag.add("INSTALL from \(SwipeDiag.cls(vc))")
+        for r in navView.gestureRecognizers ?? [] {
+            SwipeDiag.add("NAVREC \(SwipeDiag.cls(r)) en=\(r.isEnabled)")
+        }
+        SwipeDiag.add("POP class=\(SwipeDiag.cls(pop))")
         // The veto's core: the guard becomes the pop
         // recognizer's delegate PERMANENTLY (never restored —
         // see gestureRecognizerShouldBegin). In PR #82 this
@@ -194,7 +210,9 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
     /// Every other recognizer the guard delegates for (the
     /// observing pan) may always begin.
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        gestureRecognizer !== popRecognizer
+        let answer = gestureRecognizer !== popRecognizer
+        SwipeDiag.add("SHOULD-BEGIN \(SwipeDiag.cls(gestureRecognizer)) -> \(answer)")
+        return answer
     }
 
     /// The observing pan must never block the scroll view, the
@@ -214,6 +232,7 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
         case .began:
             swipeStart = pan.location(in: navView)
             swipeIsScroll = false
+            SwipeDiag.add("PAN began at \(Int(swipeStart.x)),\(Int(swipeStart.y)) popEn=\(popRecognizer?.isEnabled ?? true) popDel=\(SwipeDiag.cls(popRecognizer?.delegate))")
             // Re-assert the disable on every drag: the
             // framework may have turned the recognizer back on
             // since installation. (The failure requirements
@@ -227,10 +246,13 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
                 swipeIsScroll = true
             }
         case .ended:
+            let t = pan.translation(in: navView)
+            SwipeDiag.add("PAN ended t=\(Int(t.x)),\(Int(t.y)) scroll=\(swipeIsScroll) armed=\(onSwipe != nil)")
             if !swipeIsScroll {
-                let t = pan.translation(in: navView)
                 onSwipe?(swipeStart, CGSize(width: t.x, height: t.y))
             }
+        case .cancelled, .failed:
+            SwipeDiag.add("PAN \(pan.state == .cancelled ? "CANCELLED" : "FAILED")")
         default:
             break
         }
