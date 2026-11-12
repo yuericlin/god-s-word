@@ -321,16 +321,28 @@ Multiple (KJV Gen 1:1-2):
   only to keep the system back-swipe out) nor a SwiftUI drag
   gesture (whose reported start location still classified
   middle swipes as edge starts on device) makes the decision.
-  The system's interactive back gesture is vetoed while the
-  reader is visible — disabled and delegate-vetoed: on
-  current iOS it begins from anywhere on screen, so a middle
-  rightward swipe popped back to the chapter picker, which
-  slides in from the left and was three times reported as
-  the settings drawer opening (Nov 11, 2026; the drawer's
-  own decision was never wrong). The same veto is installed
-  on the books and chapters screens, and right-edge swipe
-  right no longer goes back anywhere: swiping back is
-  disabled (see §6).
+  The system's interactive back gesture is vetoed on every
+  drill-down screen: on current iOS it begins from anywhere
+  on screen, so a middle rightward swipe popped back to the
+  chapter picker, which slides in from the left and was
+  three times reported as the settings drawer opening
+  (Nov 11, 2026; the drawer's own decision was never wrong).
+  The observing recognizer and the veto are owned by a
+  permanent guard (`SwipeBackGuard`), installed once and
+  never torn down: they used to be installed and removed
+  with a background view controller's appearance, and that
+  lifecycle is unreliable under SwiftUI view rebuilds —
+  showing and hiding the bookmarks panel fired the teardown
+  with no balancing reinstall, leaving the drawer and
+  chapter turns dead and the back gesture re-enabled (the
+  Nov 11, 2026 reproduction). The veto binds the pop
+  recognizer by failure requirements to recognizers that
+  never fail mid-touch — the inert left-edge pan and the
+  observing pan — and disables it besides. A delegate veto
+  (PR #82) is not used: it stopped the pop at the price of
+  the left-edge drawer swipe. Right-edge swipe right no
+  longer goes back anywhere: swiping back is disabled
+  (see §6).
 
 ---
 

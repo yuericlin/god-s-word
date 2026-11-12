@@ -284,13 +284,23 @@ struct ReaderView: View {
         .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { readerFrame = $0 }
         .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe).frame(width: 0, height: 0))
+        // The swipe guard (EdgeNavigation) is permanent; the
+        // reader arms its handler while it is on screen and
+        // clears it when it leaves, so reports never reach a
+        // reader that is not there.
+        .onAppear { SwipeBackGuard.shared.onSwipe = handleReaderSwipe }
+        .onDisappear { SwipeBackGuard.shared.onSwipe = nil }
         .navigationBarTitleDisplayMode(.inline)
-        .edgeNavigation(onForward: {
-            // Right-edge swipe left: open the bookmarks panel.
-            // (No right-edge swipe right: swiping back is
-            // disabled, Nov 11, 2026.)
-            showingBookmarks = true
-        })
+        .edgeNavigation(
+            onForward: {
+                // Right-edge swipe left: open the bookmarks panel.
+                showingBookmarks = true
+            },
+            onBackward: {
+                // Right-edge swipe right: back to the chapter picker.
+                if !path.isEmpty { path.removeLast() }
+            }
+        )
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {
