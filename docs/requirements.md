@@ -302,19 +302,22 @@ Multiple (KJV Gen 1:1-2):
   disabled: with the wrap, every chapter has a previous and a
   next).
 - **REQ-GS-2:** A reader swipe's action is decided by where it
-  starts (`ReaderSwipeZones.action` in SwordReader, unit-tested),
-  in the reader's own drag gesture — the single decision for
-  every reader swipe: a swipe starting in the left 20pt edge
-  zone opens the settings drawer only on a predominantly
-  horizontal rightward pull past 60pt (never on an edge-start
-  vertical scroll), a swipe starting in the right 20pt edge
-  zone belongs to the edge navigation only (at the reader, the
-  bookmarks panel), and only a swipe starting in the middle
-  turns a chapter. The system's screen-edge pan recognizer
-  never opens the drawer: its edge zone is wider than the app's
-  20pt, so when it made the decision, middle swipes brought
-  the drawer out; it is installed on the reader only to keep
-  the system back-swipe out.
+  starts (`ReaderSwipeZones.action` in SwordReader, unit-tested)
+  — the single decision for every reader swipe: a swipe starting
+  in the left 20pt edge zone opens the settings drawer only on a
+  predominantly horizontal rightward pull past 60pt (never on an
+  edge-start vertical scroll), a swipe starting in the right
+  20pt edge zone belongs to the edge navigation only (at the
+  reader, the bookmarks panel), and only a swipe starting in the
+  middle turns a chapter. The decision is fed by an observing
+  UIKit pan recognizer that reports the touch's start in window
+  coordinates, converted into the reader's frame: neither the
+  system's screen-edge pan recognizer (its edge zone is wider
+  than the app's 20pt, so when it made the decision, middle
+  swipes brought the drawer out; it is installed on the reader
+  only to keep the system back-swipe out) nor a SwiftUI drag
+  gesture (whose reported start location still classified
+  middle swipes as edge starts on device) makes the decision.
 
 ---
 

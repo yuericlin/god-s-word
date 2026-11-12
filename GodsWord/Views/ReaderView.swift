@@ -32,6 +32,10 @@ struct ReaderView: View {
     @State private var dwellTask: Task<Void, Never>?
     @State private var availableVersions: [BibleVersion] = []
     @State private var viewSize: CGSize = .zero
+    /// The reader's frame in window coordinates. The swipe observer
+    /// reports window coordinates; this is what converts them into
+    /// the reader's own start zones (REQ-GS-2).
+    @State private var readerFrame: CGRect = .zero
     /// This view's total height, measured on the root VStack and passed
     /// to the auxiliary panel: the expanded panel is 30% of it.
     @State private var rootHeight: CGFloat = 0
@@ -276,7 +280,8 @@ struct ReaderView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
         .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
-        .background(DrawerEdgeGesture().frame(width: 0, height: 0))
+        .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { readerFrame = $0 }
+        .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe).frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .edgeNavigation(
             onForward: {
@@ -326,36 +331,10 @@ struct ReaderView: View {
         .safeAreaInset(edge: .bottom) {
             bottomControl
         }
-        .gesture(
-            DragGesture(minimumDistance: 40, coordinateSpace: .local)
-                .onEnded { value in
-                    guard !showingSettings && !showingBookmarks else { return }
-                    // Swipes starting on the bottom control scroll
-                    // its row; they never turn chapters.
-                    guard value.startLocation.y < viewSize.height - 80 else { return }
-                    // One decision for every reader swipe, made by
-                    // where the swipe starts (REQ-GS-2): the left
-                    // edge opens the drawer, the middle turns
-                    // chapters, the right edge belongs to the
-                    // navigation overlay. The system's edge-pan
-                    // recognizer no longer opens the drawer — its
-                    // edge zone is wider than the app's 20pt, so
-                    // middle swipes were opening it.
-                    switch ReaderSwipeZones.action(
-                        startX: value.startLocation.x,
-                        viewWidth: viewSize.width,
-                        translationWidth: value.translation.width,
-                        translationHeight: value.translation.height)
-                    {
-                    case .openDrawer:
-                        showingSettings = true
-                    case .turnChapter(let forward):
-                        turnChapter(by: forward ? 1 : -1)
-                    case .none:
-                        break
-                    }
-                }
-        )
+        // Reader swipes are decided by handleReaderSwipe from the
+        // swipe observer in the background above (REQ-GS-2) — not by
+        // a SwiftUI drag gesture, whose reported start location
+        // proved unreliable on device.
         .task(id: chapterKey) {
             await load()
             applyPendingVerse()
@@ -453,6 +432,38 @@ struct ReaderView: View {
                 personalData.setChapterNote(text, forKey: currentChapterNoteKey,
                                             source: history.version.id)
             }
+        }
+    }
+
+    /// One decision for every reader swipe (REQ-GS-2), fed by the
+    /// UIKit swipe observer: `start` is the touch's start point in
+    /// window coordinates — where the finger actually landed — and
+    /// converting it into the reader's frame is what keeps a middle
+    /// swipe out of the drawer's 20pt zone. Swipes starting on the
+    /// bottom control (the reader's bottom 80pt) scroll its row;
+    /// they never turn chapters, and swipes starting outside the
+    /// reader (the auxiliary panel, the navigation bar) are not
+    /// reader swipes at all.
+    private func handleReaderSwipe(start: CGPoint, translation: CGSize) {
+        guard !showingSettings && !showingBookmarks else { return }
+        guard readerFrame.width > 0 else { return }
+        let localX = start.x - readerFrame.minX
+        let localY = start.y - readerFrame.minY
+        guard localX >= 0, localX <= readerFrame.width,
+              localY >= 0, localY < readerFrame.height - 80
+        else { return }
+        switch ReaderSwipeZones.action(
+            startX: localX,
+            viewWidth: readerFrame.width,
+            translationWidth: translation.width,
+            translationHeight: translation.height)
+        {
+        case .openDrawer:
+            showingSettings = true
+        case .turnChapter(let forward):
+            turnChapter(by: forward ? 1 : -1)
+        case .none:
+            break
         }
     }
 
