@@ -464,7 +464,7 @@ struct ReaderView: View {
                             initialText: item.initialText,
                             seedText: item.seedText,
                             sourceModuleID: history.version.id,
-                            onJump: {
+                            onReadChapter: {
                                 if let p = NoteKey.parse(item.id) {
                                     history.testament = p.testament
                                     history.book = p.book
@@ -477,8 +477,7 @@ struct ReaderView: View {
         .sheet(isPresented: $showingChapterNoteEditor) {
             ScopedNoteEditor(
                 reference: "\(history.bookTitle) \(history.chapter)",
-                initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? "",
-                onJump: {}
+                initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? ""
             ) { text in
                 personalData.setChapterNote(text, forKey: currentChapterNoteKey,
                                             source: history.version.id)

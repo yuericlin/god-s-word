@@ -236,7 +236,7 @@ struct AuxiliaryPanelView: View {
                                 initialText: personalData.verseNote(forKey: key) ?? "",
                                 seedText: "\(history.bookTitle) \(history.chapter)\n",
                                 sourceModuleID: history.version.id,
-                                onJump: {
+                                onReadChapter: {
                                     if let p = NoteKey.parse(key) {
                                         jumpTo(testament: p.testament,
                                                book: p.book,
@@ -248,7 +248,7 @@ struct AuxiliaryPanelView: View {
             case .book(let key, let reference):
                 ScopedNoteEditor(reference: reference,
                                  initialText: personalData.bookNote(forKey: key) ?? "",
-                                 onJump: {
+                                 onReadChapter: {
                                      if let p = BookNoteKey.parse(key) {
                                          jumpTo(testament: p.testament,
                                                 book: p.book, chapter: 1)
@@ -260,7 +260,7 @@ struct AuxiliaryPanelView: View {
             case .chapter(let key, let reference):
                 ScopedNoteEditor(reference: reference,
                                  initialText: personalData.chapterNote(forKey: key) ?? "",
-                                 onJump: {
+                                 onReadChapter: {
                                      if let p = ChapterNoteKey.parse(key) {
                                          jumpTo(testament: p.testament,
                                                 book: p.book,
@@ -490,10 +490,22 @@ struct AuxiliaryPanelView: View {
     /// source, date) is a jump button — tapping it takes the reader
     /// to the note's passage (REQ-NT-21) — while the note's text is
     /// the editor button. Swipe offers Delete (REQ-NT-20).
+    /// Tapping a note row — title line or note text alike —
+    /// opens its editor (REQ-NT-21): rows only edit, they
+    /// never navigate. Reading the note's chapter is the
+    /// editor's Read Chapter button's job.
+    private func openNoteEditor(_ row: NoteRow) {
+        switch row.kind {
+        case .book: editorItem = .book(key: row.key, reference: row.reference)
+        case .chapter: editorItem = .chapter(key: row.key, reference: row.reference)
+        case .verse: editorItem = .verse(key: row.key, reference: row.reference)
+        }
+    }
+
     private func noteRowView(_ row: NoteRow) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Button {
-                jumpToNote(row)
+                openNoteEditor(row)
             } label: {
                 Text(row.reference + sourceSuffix(row.source)
                      + noteDateSuffix(row.updated))
@@ -502,11 +514,7 @@ struct AuxiliaryPanelView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             Button {
-                switch row.kind {
-                case .book: editorItem = .book(key: row.key, reference: row.reference)
-                case .chapter: editorItem = .chapter(key: row.key, reference: row.reference)
-                case .verse: editorItem = .verse(key: row.key, reference: row.reference)
-                }
+                openNoteEditor(row)
             } label: {
                 Text(row.text)
                     .font(.system(size: personalData.fontSize, design: .serif))
@@ -565,27 +573,11 @@ struct AuxiliaryPanelView: View {
         .listStyle(.plain)
     }
 
-    /// The Book sub-tab: an add-book-note entry when the book has no
-    /// book note yet, then every note in the book.
+    /// The Book sub-tab: every note in the book. (Adding the
+    /// book note is the header Add Note button's job — it
+    /// follows the active sub-tab.)
     private var bookNotesContent: some View {
         List {
-            if personalData.bookNote(forKey: bookNoteKey) == nil {
-                Button {
-                    editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
-                } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Label("Add Book Note", systemImage: "plus.circle")
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom, 11)
-                        rowHairline
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 11, leading: 16,
-                                  bottom: 0, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-            }
             ForEach(bookNoteRows) { row in
                 noteRowView(row)
             }
@@ -593,33 +585,65 @@ struct AuxiliaryPanelView: View {
         .listStyle(.plain)
     }
 
+    /// The header's one Add Note button follows the current
+    /// context (Nov 12, 2026): the Book sub-tab edits the book
+    /// note, the Chapter sub-tab the chapter note; anywhere
+    /// else it edits the selected verses' note (anchored at
+    /// the first selected verse), or the chapter note when no
+    /// verses are selected. The Book and Chapter sub-tabs' own
+    /// add entries are gone — this button is the only one.
+    private func openAddNote() {
+        switch effectiveNotesTab {
+        case .book:
+            editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
+        case .chapter:
+            editorItem = .chapter(
+                key: chapterNoteKey,
+                reference: "\(history.bookTitle) \(history.chapter)")
+        default:
+            if selectedVerses.isEmpty {
+                editorItem = .chapter(
+                    key: chapterNoteKey,
+                    reference: "\(history.bookTitle) \(history.chapter)")
+            } else {
+                editorItem = .verse(key: verseNoteKey, reference: verseReference)
+            }
+        }
+    }
+
+    /// The Notes tab's header row: the sub-tab picker plus the
+    /// one Add Note button. Factored out of notesTab — the
+    /// combined expression strained the type checker.
+    private var notesHeader: some View {
+        HStack(spacing: 8) {
+            if !visibleNotesTabs.isEmpty {
+                Picker("Notes", selection: notesTabSelection) {
+                    ForEach(visibleNotesTabs, id: \.self) { t in
+                        Text(t.label).tag(t)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+            Spacer()
+            // The one add-note entry point: always available,
+            // even when there are no notes at all (REQ-NT-18).
+            // It follows the current context (see openAddNote).
+            // Always "Add Note" — editing an existing note is
+            // what tapping the note itself does (REQ-NT-21).
+            Button {
+                openAddNote()
+            } label: {
+                Label("Add Note", systemImage: "square.and.pencil")
+                    .font(.subheadline)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+    }
+
     private var notesTab: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                if !visibleNotesTabs.isEmpty {
-                    Picker("Notes", selection: notesTabSelection) {
-                        ForEach(visibleNotesTabs, id: \.self) { t in
-                            Text(t.label).tag(t)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                Spacer()
-                // The add-note entry point: always available, even
-                // when the Verse sub-tab is hidden or there are no
-                // notes at all (REQ-NT-18). It edits the anchor
-                // verse's note — adding one when there is none.
-                Button {
-                    editorItem = .verse(key: verseNoteKey, reference: verseReference)
-                } label: {
-                    Label(personalData.verseNote(forKey: verseNoteKey) == nil
-                          ? "Add Note" : "Edit Note",
-                          systemImage: "square.and.pencil")
-                        .font(.subheadline)
-                }
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
+            notesHeader
 
             if let effectiveNotesTab {
                 switch effectiveNotesTab {
@@ -648,28 +672,30 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// One scoped note: its text (scrollable) and an Edit/Add button.
+    /// One scoped note (the Verse sub-tab): its reference line
+    /// and its text (scrollable). No Add/Edit button — tapping
+    /// the text, or the empty state, opens the editor
+    /// (REQ-NT-21).
     private func scopedNote(reference: String, text: String?,
                             emptyText: String,
                             updated: Date? = nil,
                             edit: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(reference + noteDateSuffix(updated)).font(.subheadline).foregroundStyle(.secondary)
-                Spacer()
-                Button(text == nil ? "Add" : "Edit") { edit() }
-                    .font(.subheadline)
-            }
+            Text(reference + noteDateSuffix(updated)).font(.subheadline).foregroundStyle(.secondary)
             if let text {
                 ScrollView {
                     Text(text)
                         .font(.system(size: personalData.fontSize, design: .serif))
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
+                        .contentShape(Rectangle())
                 }
+                .onTapGesture { edit() }
             } else {
                 Text(emptyText).foregroundStyle(.secondary)
-                Spacer()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity,
+                           alignment: .topLeading)
+                    .contentShape(Rectangle())
+                    .onTapGesture { edit() }
             }
         }
         .padding(.horizontal)
@@ -708,32 +734,14 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The Chapter sub-tab: the legacy verse-1 presentation when it
-    /// applies (REQ-NT-16), an add-chapter-note entry when the
-    /// chapter has no chapter note, and the chapter's notes in
-    /// reading order.
+    /// applies (REQ-NT-16), and the chapter's notes in reading
+    /// order. (Adding the chapter note is the header Add Note
+    /// button's job — it follows the active sub-tab.)
     private var chapterNotesContent: some View {
         List {
             if personalData.chapterNote(forKey: chapterNoteKey) == nil,
                let legacy = personalData.verseNote(forKey: verse1NoteKey) {
                 legacyChapterNote(legacy)
-            } else if personalData.chapterNote(forKey: chapterNoteKey) == nil {
-                Button {
-                    editorItem = .chapter(
-                        key: chapterNoteKey,
-                        reference: "\(history.bookTitle) \(history.chapter)")
-                } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Label("Add Chapter Note", systemImage: "plus.circle")
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom, 11)
-                        rowHairline
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 11, leading: 16,
-                                  bottom: 0, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
             }
             ForEach(chapterNoteRows) { row in
                 noteRowView(row)
@@ -1524,17 +1532,6 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// Title-line tap on a note row or a note editor's title
-    /// (REQ-NT-21): jump to the note's passage (a book note lands
-    /// on its first chapter; a verse note also lands on its verse).
-    private func jumpToNote(_ row: NoteRow) {
-        jumpTo(testament: row.testament, book: row.book,
-              chapter: row.chapter)
-        if let verse = row.verse {
-            history.pendingVerse = verse
-        }
-    }
-
     // MARK: - Shared
 
     private func scopePicker(selection: Binding<PanelScope>) -> some View {
@@ -1555,9 +1552,12 @@ struct AuxiliaryPanelView: View {
 /// caller decides which scoped store the note belongs to.
 struct ScopedNoteEditor: View {
     let reference: String
-    /// When set, the title is a button: tapping it jumps the
-    /// reader to the note's passage, then dismisses (REQ-NT-21).
-    let onJump: (() -> Void)?
+    /// When set, a bottom-bar "Read Chapter" button (the
+    /// reference chapter sheet's pattern, REQ-AP-20) moves the
+    /// reader to the note's chapter, then dismisses
+    /// (REQ-NT-21). The editor itself only edits — its title
+    /// is never a jump target.
+    let onReadChapter: (() -> Void)?
     private let originalText: String
     private let onSave: (String?) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -1566,11 +1566,11 @@ struct ScopedNoteEditor: View {
     @State private var showingDeleteConfirm = false
 
     init(reference: String, initialText: String,
-         onJump: (() -> Void)? = nil,
+         onReadChapter: (() -> Void)? = nil,
          onSave: @escaping (String?) -> Void) {
         self.reference = reference
         self.originalText = initialText
-        self.onJump = onJump
+        self.onReadChapter = onReadChapter
         self.onSave = onSave
         _text = State(initialValue: initialText)
     }
@@ -1580,18 +1580,17 @@ struct ScopedNoteEditor: View {
             TextEditor(text: $text)
                 .focused($isFocused)
                 .padding()
-                .navigationTitle(onJump == nil ? reference : "")
+                .navigationTitle(reference)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if let onJump {
-                        ToolbarItem(placement: .principal) {
-                            Button {
-                                onJump()
+                    if let onReadChapter {
+                        // A plain text button, like the
+                        // reference sheet's Read More: a toolbar
+                        // Label would render as an icon alone.
+                        ToolbarItem(placement: .bottomBar) {
+                            Button("Read Chapter") {
+                                onReadChapter()
                                 dismiss()
-                            } label: {
-                                Text(reference)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
                             }
                         }
                     }

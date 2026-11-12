@@ -12,9 +12,12 @@ struct VerseNoteEditor: View {
     /// The version being read when the editor opened; recorded as
     /// the note's source (REQ-NT-19) when the note is first saved.
     let sourceModuleID: String
-    /// When set, the title is a button: tapping it jumps the
-    /// reader to the note's passage, then dismisses (REQ-NT-21).
-    let onJump: (() -> Void)?
+    /// When set, a bottom-bar "Read Chapter" button (the
+    /// reference chapter sheet's pattern, REQ-AP-20) moves the
+    /// reader to the note's chapter, then dismisses
+    /// (REQ-NT-21). The editor itself only edits — its title
+    /// is never a jump target.
+    let onReadChapter: (() -> Void)?
     /// The note text when the editor opened; Save is disabled while unchanged.
     private let originalText: String
     @EnvironmentObject private var personalData: PersonalData
@@ -25,11 +28,11 @@ struct VerseNoteEditor: View {
 
     init(reference: String, noteKey: String, initialText: String,
          seedText: String = "", sourceModuleID: String = "",
-         onJump: (() -> Void)? = nil) {
+         onReadChapter: (() -> Void)? = nil) {
         self.reference = reference
         self.noteKey = noteKey
         self.sourceModuleID = sourceModuleID
-        self.onJump = onJump
+        self.onReadChapter = onReadChapter
         self.originalText = initialText
         // A brand-new note (no saved text) opens pre-filled with the seed
         // (the selected verses' text, or book + chapter); `originalText`
@@ -42,18 +45,17 @@ struct VerseNoteEditor: View {
             TextEditor(text: $text)
                 .focused($isFocused)
                 .padding()
-                .navigationTitle(onJump == nil ? reference : "")
+                .navigationTitle(reference)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if let onJump {
-                        ToolbarItem(placement: .principal) {
-                            Button {
-                                onJump()
+                    if let onReadChapter {
+                        // A plain text button, like the
+                        // reference sheet's Read More: a toolbar
+                        // Label would render as an icon alone.
+                        ToolbarItem(placement: .bottomBar) {
+                            Button("Read Chapter") {
+                                onReadChapter()
                                 dismiss()
-                            } label: {
-                                Text(reference)
-                                    .font(.headline)
-                                    .foregroundStyle(.primary)
                             }
                         }
                     }
