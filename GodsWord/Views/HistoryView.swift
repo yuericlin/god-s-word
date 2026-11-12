@@ -1,5 +1,5 @@
-// HistoryView.swift — full reading history log. Tapping an entry jumps
-// back to that location. An entry combines the visits to one chapter within
+// HistoryView.swift — full reading history log. Tapping an entry reports
+// it through onSelect. An entry combines the visits to one chapter within
 // 24 hours: it shows the earliest visit and every version read. Only the
 // latest 20 entries are listed, followed by "…".
 
@@ -48,15 +48,13 @@ struct HistoryView: View {
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if !personalData.historyLog.isEmpty {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Clear", role: .destructive) {
-                        personalData.clearHistory()
-                    }
-                }
-            }
-        }
+        // No toolbar of its own: this list is embedded in the
+        // reader's auxiliary panel, inside the reader's
+        // navigation stack, so a toolbar Clear here surfaced
+        // in the READER's navigation bar — top-right, beside
+        // the version and chapter dropdowns (removed Nov 12,
+        // 2026). Clearing the log lives in the hosting tab's
+        // header (REQ-AP-11).
     }
 
     /// The entry's earliest visit as a date and time; the year only when
