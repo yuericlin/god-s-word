@@ -315,12 +315,15 @@ Multiple (KJV Gen 1:1-2):
   middle turns a chapter. The decision is fed by an observing
   UIKit pan recognizer that reports the touch's start in window
   coordinates, converted into the reader's frame. The reported
-  start is the true touch-down point — the location at
-  recognition minus the translation accumulated by then:
-  the raw location at recognition sits the threshold's
-  travel (10-25pt) inside the drag, which pushed genuine
-  edge starts outside the 20pt zones and made the drawer
-  unreachable (diagnostic, Nov 12, 2026). Neither the
+  start is the true touch-down point, recorded by the
+  observing recognizer itself at touchesBegan: the raw
+  location at recognition sits the threshold's travel
+  (10-25pt) inside the drag (and arithmetic on the
+  translation at that moment proved no more reliable on
+  device), which pushed genuine edge starts outside the
+  20pt zones — the drawer hard to open, and right-edge
+  swipes decided as chapter turns on top of opening the
+  bookmarks panel (diagnostic, Nov 12, 2026). Neither the
   system's screen-edge pan recognizer (its edge zone is wider
   than the app's 20pt, so when it made the decision, middle
   swipes brought the drawer out; it is installed on the reader

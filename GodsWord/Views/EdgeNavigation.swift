@@ -94,6 +94,24 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
     }
 }
 
+/// A pan recognizer that remembers where the finger actually
+/// landed: the first touch's location, recorded in
+/// touchesBegan — before any recognition threshold or
+/// translation bookkeeping can shift it. The start-zone
+/// decision (REQ-GS-2) is only as good as this point.
+private final class TouchStartPanGestureRecognizer: UIPanGestureRecognizer {
+    /// The first touch's location in the recognizer's view,
+    /// recorded at touch-down.
+    private(set) var touchDownLocation: CGPoint = .zero
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        if let touch = touches.first, let view {
+            touchDownLocation = touch.location(in: view)
+        }
+        super.touchesBegan(touches, with: event)
+    }
+}
+
 /// The one owner of the reader's swipe recognizers and the
 /// back-gesture veto (REQ-GS-2). Installed ONCE, the first time
 /// any drill-down screen appears, and never torn down.
@@ -127,9 +145,8 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
 /// with everything else (scrolling, taps, the edge strips),
 /// ignores a drag as soon as the drag proves to be a vertical
 /// scroll, and on end reports the touch's start in the
-/// navigation view — reconstructed as the location at
-/// recognition minus the translation accumulated by then,
-/// i.e. the true touch-down point — which the reader
+/// navigation view — the true touch-down point, recorded
+/// by the recognizer at touchesBegan — which the reader
 /// converts into its own frame and classifies with
 /// `ReaderSwipeZones.action`.
 final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
@@ -141,7 +158,7 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
 
     private var installed = false
     private weak var popRecognizer: UIGestureRecognizer?
-    private var swipePan: UIPanGestureRecognizer?
+    private var swipePan: TouchStartPanGestureRecognizer?
     /// Every transition recognizer the sweep has vetoed
     /// (see sweepTransitionRecognizers).
     private var vetoedRecognizers = Set<ObjectIdentifier>()
@@ -178,7 +195,7 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
             pop.require(toFail: edgePan)
             navView.addGestureRecognizer(edgePan)
 
-            let pan = UIPanGestureRecognizer(
+            let pan = TouchStartPanGestureRecognizer(
                 target: self, action: #selector(handleSwipePan(_:)))
             pan.cancelsTouchesInView = false
             pan.delegate = self
@@ -240,23 +257,21 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
     /// the system's back-swipe has something to wait for.
     @objc private func ignoreEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {}
 
-    @objc private func handleSwipePan(_ pan: UIPanGestureRecognizer) {
+    @objc private func handleSwipePan(_ pan: TouchStartPanGestureRecognizer) {
         guard let navView = pan.view else { return }
         switch pan.state {
         case .began:
-            // The reported start is the true touch-down
-            // point: the location at recognition is already
-            // the recognition threshold's travel (10-25pt)
-            // inside the drag, which pushed genuine edge
-            // starts outside the 20pt edge zones and made
-            // the drawer unreachable (diagnostic, Nov 12,
-            // 2026: a left-edge swipe reported x=26).
-            // Subtracting the accumulated translation
-            // reconstructs where the finger landed.
-            let location = pan.location(in: navView)
-            let travel = pan.translation(in: navView)
-            swipeStart = CGPoint(x: location.x - travel.x,
-                                 y: location.y - travel.y)
+            // The reported start is where the finger actually
+            // landed, recorded at touch-down by the recognizer
+            // itself. (The location at recognition — and
+            // arithmetic on the translation at that moment —
+            // proved unreliable on device: both sit some
+            // travel inside the drag, which pushed genuine
+            // edge starts outside the 20pt zones, so the
+            // drawer stayed hard to open and right-edge
+            // swipes could be decided as chapter turns on top
+            // of opening the bookmarks panel.)
+            swipeStart = pan.touchDownLocation
             swipeIsScroll = false
             // Re-assert the veto on every drag, in case a
             // transition recognizer was created or re-enabled
