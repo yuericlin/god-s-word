@@ -1897,9 +1897,10 @@ struct DictionarySettingsView: View {
 /// are drawn: no bookmarks, highlights, or notes. "Done" sits
 /// where the Strong's dictionary view puts it (top-left, the
 /// cancellation action) and returns to the commentary; the
-/// bottom "read more" button — sized to its text, on a
-/// transparent background — moves the main reader to the
-/// chapter (at the first referenced verse) and dismisses.
+/// bottom "read more" button — a bottom-bar Label button
+/// styled like that view's back / forward arrow buttons —
+/// moves the main reader to the chapter (at the first
+/// referenced verse) and dismisses.
 ///
 /// The rendering builders below mirror ReaderView's, minus
 /// the marks: keeping them local is simpler than extracting a
@@ -2012,16 +2013,21 @@ private struct ReferenceChapterView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    onReadChapter()
-                    dismiss()
-                } label: {
-                    Text("read more")
+                // The bottom button wears the same styling as
+                // the Strong's dictionary view's back / forward
+                // arrow buttons: a Label button in the bottom
+                // bar, leading-aligned.
+                ToolbarItem(placement: .bottomBar) {
+                    HStack {
+                        Button {
+                            onReadChapter()
+                            dismiss()
+                        } label: {
+                            Label("read more", systemImage: "chevron.right")
+                        }
+                        Spacer()
+                    }
                 }
-                .buttonStyle(.plain)
-                .padding()
             }
             .environment(\.openURL, OpenURLAction { url in
                 // Tapping a Strong's number opens its dictionary
