@@ -335,14 +335,21 @@ Multiple (KJV Gen 1:1-2):
   showing and hiding the bookmarks panel fired the teardown
   with no balancing reinstall, leaving the drawer and
   chapter turns dead and the back gesture re-enabled (the
-  Nov 11, 2026 reproduction). The veto binds the pop
-  recognizer by failure requirements to recognizers that
-  never fail mid-touch — the inert left-edge pan and the
-  observing pan — and disables it besides. A delegate veto
-  (PR #82) is not used: it stopped the pop at the price of
-  the left-edge drawer swipe. Right-edge swipe right no
-  longer goes back anywhere: swiping back is disabled
-  (see §6).
+  Nov 11, 2026 reproduction). The veto: the guard is the
+  pop recognizer's delegate for the app's lifetime and
+  answers "never begin" — the mechanism that prohibits
+  rather than postpones. Failure requirements (to the
+  inert left-edge pan and the observing pan) and disabling
+  are kept as second layers only: a requirement merely
+  postpones the pop until the anchor fails, and a pan the
+  system cancels mid-drag fails, releasing the pop in the
+  middle of the swipe (the PR #84 build's leak). PR #82's
+  delegate veto failed for a different reason — its
+  delegate lived on a view controller the teardown stripped
+  — not because the veto itself was wrong; the drawer's
+  death in that build was the same teardown. Right-edge
+  swipe right no longer goes back anywhere: swiping back
+  is disabled (see §6).
 
 ---
 
