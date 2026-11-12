@@ -318,6 +318,14 @@ Multiple (KJV Gen 1:1-2):
   only to keep the system back-swipe out) nor a SwiftUI drag
   gesture (whose reported start location still classified
   middle swipes as edge starts on device) makes the decision.
+  The system's interactive back gesture is vetoed while the
+  reader is visible — disabled and delegate-vetoed: on
+  current iOS it begins from anywhere on screen, so a middle
+  rightward swipe popped back to the chapter picker, which
+  slides in from the left and was three times reported as
+  the settings drawer opening (Nov 11, 2026; the drawer's
+  own decision was never wrong). Backward navigation on the
+  reader is the right edge's job (REQ-GS-1).
 
 ---
 

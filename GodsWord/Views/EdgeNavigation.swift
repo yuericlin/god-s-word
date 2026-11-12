@@ -50,11 +50,15 @@ extension View {
 ///
 /// - A screen-edge pan on the left edge that decides nothing: it
 ///   exists only so the system's back-swipe has something to wait
-///   for (`require(toFail:)`), and the back-swipe is disabled
-///   outright, so a left-edge swipe on the reader is never a
-///   navigation pop. (When this recognizer made the drawer decision
-///   itself, its system edge zone — wider than the app's 20pt —
-///   turned middle swipes into drawer pulls.)
+///   for (`require(toFail:)`). The back-swipe itself is vetoed
+///   outright while the reader is visible — disabled and
+///   delegate-vetoed — because on
+///   current iOS it begins from anywhere on screen: a middle
+///   rightward swipe popped back to the chapter picker, which
+///   slides in from the left and was three times reported as the
+///   settings drawer opening. (When this recognizer made the
+///   drawer decision itself, its system edge zone — wider than
+///   the app's 20pt — turned middle swipes into drawer pulls.)
 /// - A plain pan that only OBSERVES: it never cancels touches, it
 ///   recognizes simultaneously with everything else (scrolling,
 ///   taps, the edge strips), and it ignores a drag as soon as the
@@ -89,6 +93,10 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
         private weak var navView: UIView?
         private var edgePan: UIScreenEdgePanGestureRecognizer?
         private var swipePan: UIPanGestureRecognizer?
+        /// The back gesture's own delegate, saved while the
+        /// reader's veto replaces it (restored on disappear).
+        private var savedPopDelegate: UIGestureRecognizerDelegate?
+        private var popVetoInstalled = false
         private var swipeStart: CGPoint = .zero
         /// Set once a drag proves to be a vertical scroll; its end
         /// is then never reported as a swipe.
@@ -115,6 +123,25 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
                 swipePan = pan
             }
             self.navView = navView
+            // The system's interactive back gesture must never
+            // fire while the reader is visible: on current iOS
+            // it begins from anywhere on screen, so a middle
+            // rightward swipe popped back to the chapter picker
+            // — which slides in from the left, looking for all
+            // the world like the settings drawer opening (the
+            // three "drawer" reports of Nov 11, 2026 were this
+            // pop; the drawer's own decision was never wrong).
+            // Backward navigation on the reader is the right
+            // edge's job. Setting isEnabled = false alone does
+            // not hold (the framework re-asserts it), so the
+            // veto is layered: disable it, and veto its start
+            // as its delegate (its left-edge start already has
+            // to wait on the inert edge pan above).
+            if !popVetoInstalled {
+                savedPopDelegate = pop.delegate
+                pop.delegate = self
+                popVetoInstalled = true
+            }
             navController.interactivePopGestureRecognizer?.isEnabled = false
         }
 
@@ -129,6 +156,12 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
                 swipePan = nil
             }
             navView = nil
+            if popVetoInstalled,
+               let pop = navigationController?.interactivePopGestureRecognizer {
+                pop.delegate = savedPopDelegate
+                savedPopDelegate = nil
+                popVetoInstalled = false
+            }
             navigationController?.interactivePopGestureRecognizer?.isEnabled = true
         }
 
@@ -137,6 +170,18 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             true
+        }
+
+        /// The back gesture's delegate veto (see viewDidAppear):
+        /// it may never begin while the reader is visible. Every
+        /// other recognizer this controller delegates for — the
+        /// observing pan — may always begin.
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer
+                === navigationController?.interactivePopGestureRecognizer {
+                return false
+            }
+            return true
         }
 
         /// Deliberately no action: this recognizer exists only so
