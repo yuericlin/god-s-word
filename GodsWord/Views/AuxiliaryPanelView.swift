@@ -1887,11 +1887,24 @@ struct DictionarySettingsView: View {
 }
 
 /// The chapter a commentary reference points to (REQ-AP-20):
-/// the whole chapter in the version being read, with the
-/// referenced verses highlighted like a selection in the reader
-/// and scrolled into view. "Done" returns to the commentary;
-/// "Read Chapter" moves the main reader to the chapter (at the
-/// first referenced verse) and dismisses.
+/// the whole chapter in the version being read, rendered the
+/// way the main reader renders it — the reader's mode
+/// (paragraph or verse by verse, following its setting), font,
+/// and line spacing, with section headings, red letters, and
+/// Strong's numbers where the reader would show them — and
+/// the referenced verses highlighted like a selection in the
+/// reader, scrolled into view. None of the reader's own marks
+/// are drawn: no bookmarks, highlights, or notes. "Done" sits
+/// where the Strong's dictionary view puts it (top-left, the
+/// cancellation action) and returns to the commentary; the
+/// bottom "read more" button — a bottom-bar Label button
+/// styled like that view's back / forward arrow buttons —
+/// moves the main reader to the chapter (at the first
+/// referenced verse) and dismisses.
+///
+/// The rendering builders below mirror ReaderView's, minus
+/// the marks: keeping them local is simpler than extracting a
+/// shared renderer for one sheet.
 private struct ReferenceChapterView: View {
     let version: BibleVersion
     let target: ScriptureReferenceTarget
@@ -1899,12 +1912,16 @@ private struct ReferenceChapterView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var personalData: PersonalData
-    @State private var rows: [VerseRow] = []
+    @State private var verses: [(verse: Int, text: String)] = []
+    @State private var verseTokens: [(verse: Int, tokens: [WordToken])] = []
+    @State private var jesusSpans: [Int: [(start: Int, end: Int)]] = [:]
+    @State private var headings: [Int: String] = [:]
+    @State private var strongsKey: String?
 
-    private struct VerseRow: Identifiable {
-        let verse: Int
-        let text: String
-        var id: Int { verse }
+    /// Strong's numbers show exactly when the reader would
+    /// show them for this version (the reader's own rule).
+    private var useStrongs: Bool {
+        personalData.showStrongs && version.supportsStrongs
     }
 
     private var title: String {
@@ -1913,62 +1930,285 @@ private struct ReferenceChapterView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(rows) { row in
-                            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                Text("\(row.verse)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 28, alignment: .trailing)
-                                Text(row.text)
-                                    .font(.system(size: personalData.fontSize,
-                                                  design: .serif))
+            Group {
+                if personalData.verseByVerse {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                if useStrongs {
+                                    ForEach(verseTokens, id: \.verse) { v in
+                                        Group {
+                                            if let heading = headings[v.verse] {
+                                                headingRow(heading)
+                                            }
+                                            Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                .id(v.verse)
+                                                .font(.system(size: personalData.fontSize, design: .serif))
+                                                .lineSpacing(6)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                } else {
+                                    ForEach(verses, id: \.verse) { v in
+                                        Group {
+                                            if let heading = headings[v.verse] {
+                                                headingRow(heading)
+                                            }
+                                            Text(attributedVerse(number: v.verse, text: v.text))
+                                                .id(v.verse)
+                                                .font(.system(size: personalData.fontSize, design: .serif))
+                                                .lineSpacing(6)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                    }
+                                }
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 2)
-                            .padding(.horizontal, 6)
-                            .background(target.verses.contains(row.verse)
-                                        ? Color(red: 0.53, green: 0.81, blue: 0.98)
-                                            .opacity(0.55)
-                                        : Color.clear)
-                            .id(row.verse)
+                            .padding()
+                        }
+                        .onChange(of: verses.count) {
+                            if let first = target.verses.first {
+                                proxy.scrollTo(first, anchor: .center)
+                            }
                         }
                     }
-                    .padding()
-                }
-                .onChange(of: rows.count) {
-                    if let first = target.verses.first {
-                        proxy.scrollTo(first, anchor: .center)
+                } else {
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
+                                .font(.system(size: personalData.fontSize, design: .serif))
+                                .lineSpacing(6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                // Invisible ladder of 20 equal slices
+                                // spanning the text's height: paragraph
+                                // mode has no per-verse anchors, so the
+                                // first referenced verse is reached by
+                                // its share of the chapter's text — the
+                                // reader's own approximation.
+                                .background {
+                                    GeometryReader { geo in
+                                        VStack(spacing: 0) {
+                                            ForEach(0..<20, id: \.self) { i in
+                                                Color.clear
+                                                    .id("frac-\(i)")
+                                            }
+                                        }
+                                        .frame(height: geo.size.height)
+                                        .allowsHitTesting(false)
+                                    }
+                                }
+                                .padding()
+                        }
+                        .onChange(of: verses.count) {
+                            if let first = target.verses.first,
+                               let i = paragraphAnchorIndex(for: first) {
+                                proxy.scrollTo("frac-\(i)", anchor: .center)
+                            }
+                        }
                     }
                 }
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
-            }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    onReadChapter()
-                    dismiss()
-                } label: {
-                    Text("Read Chapter")
-                        .frame(maxWidth: .infinity)
+                // The bottom button wears the same styling as
+                // the Strong's dictionary view's back / forward
+                // arrow buttons: a Label button in the bottom
+                // bar.
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        onReadChapter()
+                        dismiss()
+                    } label: {
+                        Label("read more", systemImage: "chevron.right")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .padding()
+            }
+            .environment(\.openURL, OpenURLAction { url in
+                // Tapping a Strong's number opens its dictionary
+                // entry, as in the reader.
+                if url.scheme == "strongs", let key = url.host, !key.isEmpty {
+                    strongsKey = key
+                    return .handled
+                }
+                return .systemAction
+            })
+            .sheet(isPresented: Binding(
+                get: { strongsKey != nil },
+                set: { if !$0 { strongsKey = nil } }
+            )) {
+                if let key = strongsKey {
+                    StrongsDefinitionView(key: key)
+                }
             }
             .task {
-                let loaded = (try? await version.loadChapter(
+                // Verses load last: both modes scroll on their
+                // arrival, and everything they render must
+                // already be in place by then.
+                verseTokens = await version.loadTokens(
+                    testament: target.testament,
+                    book: target.book,
+                    chapter: target.chapter)
+                jesusSpans = await version.loadJesusSpans(
+                    testament: target.testament,
+                    book: target.book,
+                    chapter: target.chapter)
+                headings = await version.loadHeadings(
+                    testament: target.testament,
+                    book: target.book,
+                    chapter: target.chapter)
+                verses = (try? await version.loadChapter(
                     testament: target.testament,
                     book: target.book,
                     chapter: target.chapter)) ?? []
-                rows = loaded.map { VerseRow(verse: $0.verse, text: $0.text) }
             }
+        }
+    }
+
+    // MARK: - Rendering (mirrors the reader's, minus its marks)
+
+    /// A section heading as its own row in verse-by-verse
+    /// mode: the reading serif, semibold.
+    private func headingRow(_ heading: String) -> some View {
+        Text(heading)
+            .font(.system(size: personalData.fontSize, design: .serif).weight(.semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A section heading as a semibold run in paragraph mode.
+    private func attributedHeading(_ heading: String) -> AttributedString {
+        var run = AttributedString(heading)
+        run.font = .system(size: personalData.fontSize, design: .serif).weight(.semibold)
+        return run
+    }
+
+    private func attributedVerse(number: Int, text: String) -> AttributedString {
+        var out = attributedVerseNumber(number)
+        out += AttributedString(" ")
+        out += AttributedString(text)
+        applyRedLetters(to: &out, verse: number)
+        applyReferencedHighlight(to: &out, verse: number)
+        return out
+    }
+
+    /// Whole chapter as one flowing paragraph (paragraph
+    /// mode), headings breaking the flow as in the reader.
+    private func attributedParagraph() -> AttributedString {
+        var out = AttributedString("")
+        for (i, v) in verses.enumerated() {
+            if let heading = headings[v.verse] {
+                if i > 0 { out += AttributedString("\n\n") }
+                out += attributedHeading(heading)
+                out += AttributedString("\n")
+            } else if i > 0 { out += AttributedString(" ") }
+            out += attributedVerse(number: v.verse, text: v.text)
+        }
+        return out
+    }
+
+    /// One Strong's number as small raised blue underlined
+    /// linked text, exactly as the reader renders it.
+    private func attributedStrongsNumber(_ key: String) -> AttributedString {
+        var num = AttributedString(" \(key)")
+        num.font = .system(size: personalData.fontSize * 0.55, design: .serif)
+        num.foregroundColor = .blue
+        num.baselineOffset = personalData.fontSize * 0.22
+        num.underlineStyle = .single
+        num.link = URL(string: "strongs://\(key)")
+        return num
+    }
+
+    /// Verse text from word tokens, with Strong's numbers
+    /// after the segment they belong to and Jesus's speech
+    /// red and bold, as in the reader.
+    private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
+        var out = attributedVerseNumber(number)
+        out += AttributedString(" ")
+        for token in tokens {
+            var seg = AttributedString(token.text)
+            if personalData.showRedLetters, token.isJesusSpeech {
+                seg.foregroundColor = Self.redLetterColor
+                seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+            }
+            out += seg
+            for key in token.strongs {
+                out += attributedStrongsNumber(key)
+            }
+        }
+        applyReferencedHighlight(to: &out, verse: number)
+        return out
+    }
+
+    /// Whole chapter as one flowing paragraph from word
+    /// tokens, headings breaking the flow as in the reader.
+    private func attributedParagraphTokens() -> AttributedString {
+        var out = AttributedString("")
+        for (i, v) in verseTokens.enumerated() {
+            if let heading = headings[v.verse] {
+                if i > 0 { out += AttributedString("\n\n") }
+                out += attributedHeading(heading)
+                out += AttributedString("\n")
+            } else if i > 0 { out += AttributedString(" ") }
+            out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
+        }
+        return out
+    }
+
+    /// The raised verse number prefix, as in the reader.
+    private func attributedVerseNumber(_ number: Int) -> AttributedString {
+        var num = AttributedString("\(number) ")
+        num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
+        num.foregroundColor = .secondary
+        num.baselineOffset = personalData.fontSize * 0.25
+        return num
+    }
+
+    /// The ladder slice a verse falls in, by its share of
+    /// the chapter's characters — the reader's own math
+    /// (REQ-NT-21's paragraph approximation).
+    private func paragraphAnchorIndex(for verse: Int) -> Int? {
+        guard verses.contains(where: { $0.verse == verse }) else { return nil }
+        var total = 0
+        var before = 0
+        for v in verses {
+            if v.verse < verse { before += v.text.count }
+            total += v.text.count
+        }
+        guard total > 0 else { return nil }
+        return min(19, Int(Double(before) / Double(total) * 20))
+    }
+
+    /// A referenced verse wears the reader's selection blue
+    /// over the whole verse, number included — the treatment
+    /// a selected verse gets in the reader.
+    private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
+        guard target.verses.contains(verse) else { return }
+        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+    }
+
+    /// Red-letter color (REQ-RL-3): deep red on light
+    /// backgrounds, brighter on dark — the reader's own.
+    private static let redLetterColor = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0, green: 0.42, blue: 0.36, alpha: 1)
+            : UIColor(red: 0.76, green: 0.09, blue: 0.07, alpha: 1)
+    })
+
+    /// Paints the verse's Jesus-speech spans red and bold
+    /// (REQ-RL-3), in the reader's span coordinates.
+    private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
+        guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
+        let prefix = "\(verse) ".count + 1
+        for span in spans {
+            let start = prefix + span.start
+            let end = prefix + span.end
+            guard start < end, end <= attr.characters.count else { continue }
+            let r = attr.index(attr.startIndex, offsetByCharacters: start)
+                ..< attr.index(attr.startIndex, offsetByCharacters: end)
+            attr[r].foregroundColor = Self.redLetterColor
+            attr[r].font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
         }
     }
 }

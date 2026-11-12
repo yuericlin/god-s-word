@@ -779,12 +779,20 @@ Multiple (KJV Gen 1:1-2):
   as before.
 - **REQ-AP-20:** Tapping a commentary reference opens a sheet
   showing the reference's whole chapter in the version being
-  read, with every referenced verse highlighted the way a
-  selection is highlighted in the reader, scrolled so the first
-  referenced verse is in view. "Done" dismisses back to the
-  commentary; "Read Chapter" dismisses and moves the main
-  reader to that chapter, landing on the first referenced
-  verse.
+  read, rendered the way the main reader renders that chapter:
+  the reader's mode (paragraph or verse by verse, following
+  its setting), font, and line spacing, with section headings,
+  red letters, and Strong's numbers where the reader would
+  show them — but none of the reader's own marks (no
+  bookmarks, highlights, or notes). Every referenced verse is
+  highlighted the way a selection is highlighted in the
+  reader, scrolled so the first referenced verse is in view.
+  "Done" sits at the top-left (the cancellation action, where
+  the Strong's dictionary view puts it) and dismisses back to
+  the commentary; a bottom "read more" button — a bottom-bar
+  Label button styled like that view's back / forward arrow
+  buttons — dismisses and moves the main reader to that
+  chapter, landing on the first referenced verse.
 
 ## 16. Module sources
 
