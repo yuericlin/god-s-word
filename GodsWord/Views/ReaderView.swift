@@ -121,172 +121,217 @@ struct ReaderView: View {
         // reader arms its handler while it is on screen and
         // clears it when it leaves, so reports never reach a
         // reader that is not there. (On the body, not on
-        // readerContent: that expression is at the type
-        // checker's limit already.)
+        // readerContent — see the factoring note there.)
         .onAppear { SwipeBackGuard.shared.onSwipe = handleReaderSwipe }
         .onDisappear { SwipeBackGuard.shared.onSwipe = nil }
     }
 
-    private var readerContent: some View {
-        ZStack(alignment: .leading) {
-            Group {
-                if let loadError {
-                    ContentUnavailableView("Couldn't open chapter", systemImage: "exclamationmark.triangle",
-                                            description: Text(loadError))
+    // MARK: - readerContent pieces
+    //
+    // readerContent used to be one giant expression and hit
+    // the compiler's type-check time limit (CI, Nov 11, 2026).
+    // It is factored into the pieces below — the same views,
+    // composed the same way, each small enough to check alone.
+
+    /// The chapter itself: the load error, or the scrolling text.
+    @ViewBuilder private var chapterPane: some View {
+        if let loadError {
+            ContentUnavailableView("Couldn't open chapter", systemImage: "exclamationmark.triangle",
+                                    description: Text(loadError))
+        } else {
+            ScrollViewReader { proxy in
+                readingScrollView(proxy: proxy)
+            }
+            .environment(\.openURL, OpenURLAction(handler: handleOpenURL))
+        }
+    }
+
+    /// Link taps inside the reading text (see chapterPane's
+    /// openURL environment).
+    private func handleOpenURL(_ url: URL) -> OpenURLAction.Result {
+        switch url.scheme {
+        case "strongs":
+            // Tapping a Strong's number opens its dictionary entry.
+            if let key = url.host, !key.isEmpty {
+                strongsKey = key
+                return .handled
+            }
+        case "verse":
+            // Tapping a verse's words toggles its selection.
+            if let host = url.host, let n = Int(host) {
+                toggleSelection(n)
+                return .handled
+            }
+        case "note":
+            // Tapping the note icon opens the verse's note.
+            if let host = url.host, let n = Int(host) {
+                openNoteEditor(for: n)
+                return .handled
+            }
+        default:
+            break
+        }
+        return .systemAction
+    }
+
+    private func readingScrollView(proxy: ScrollViewProxy) -> some View {
+        ScrollView {
+            chapterTextStack
+        }
+        .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
+        .onChange(of: scrollTargetVerse) {
+            guard let target = scrollTargetVerse else { return }
+            scrollTargetVerse = nil
+            if personalData.verseByVerse {
+                proxy.scrollTo("v\(target)", anchor: .center)
+            } else if let i = paragraphAnchorIndex(for: target) {
+                // Paragraph mode has no per-verse anchors:
+                // scroll to the ladder slice at the verse's
+                // share of the chapter's text (REQ-NT-21).
+                proxy.scrollTo("frac-\(i)", anchor: .center)
+            }
+        }
+        .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
+    }
+
+    private var chapterTextStack: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Color.clear.frame(height: 0).id("top")
+            if personalData.verseByVerse {
+                if useStrongs {
+                    tokenVerseRows
                 } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Color.clear.frame(height: 0).id("top")
-                                if personalData.verseByVerse {
-                                    if useStrongs {
-                                        ForEach(verseTokens, id: \.verse) { v in
-                                            Group {
-                                                if let heading = headings[v.verse] {
-                                                    headingRow(heading)
-                                                }
-                                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
-                                                    .id("v\(v.verse)")
-                                                    .font(.system(size: personalData.fontSize, design: .serif))
-                                                    .lineSpacing(6)
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                    // Swallow long-press so the empty-area
-                                                    // menu doesn't fire on text.
-                                                    .onLongPressGesture { }
-                                            }
-                                        }
-                                    } else {
-                                        ForEach(verses, id: \.verse) { v in
-                                            Group {
-                                                if let heading = headings[v.verse] {
-                                                    headingRow(heading)
-                                                }
-                                                Text(attributedVerse(number: v.verse, text: v.text))
-                                                    .id("v\(v.verse)")
-                                                    .font(.system(size: personalData.fontSize, design: .serif))
-                                                    .lineSpacing(6)
-                                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                                    .onLongPressGesture { }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    // Paragraph mode: no paragraph info in the modules,
-                                    // so the whole chapter flows as one paragraph.
-                                    Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
-                                        .font(.system(size: personalData.fontSize, design: .serif))
-                                        .lineSpacing(6)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .onLongPressGesture { }
-                                        // Invisible ladder of 20 equal slices
-                                        // spanning the chapter text's height:
-                                        // the approximate scroll targets for
-                                        // verse jumps in paragraph mode.
-                                        .background {
-                                            GeometryReader { geo in
-                                                VStack(spacing: 0) {
-                                                    ForEach(0..<20, id: \.self) { i in
-                                                        Color.clear
-                                                            .id("frac-\(i)")
-                                                    }
-                                                }
-                                                .frame(height: geo.size.height)
-                                                .allowsHitTesting(false)
-                                            }
-                                        }
-                                }
-                            }
-                            .padding()
-                            // Long-press on empty reading area (margins, gaps)
-                            // offers to take a chapter-level note.
-                            .contextMenu {
-                                Button { openChapterNoteEditor() } label: {
-                                    Label("Add Note", systemImage: "square.and.pencil")
-                                }
-                                Button {
-                                    assignVerse = nil
-                                    showingAssignBookmark = true
-                                } label: {
-                                    Label("Assign Bookmark", systemImage: "bookmark")
-                                }
-                            }
+                    plainVerseRows
+                }
+            } else {
+                paragraphText
+            }
+        }
+        .padding()
+        // Long-press on empty reading area (margins, gaps)
+        // offers to take a chapter-level note.
+        .contextMenu {
+            Button { openChapterNoteEditor() } label: {
+                Label("Add Note", systemImage: "square.and.pencil")
+            }
+            Button {
+                assignVerse = nil
+                showingAssignBookmark = true
+            } label: {
+                Label("Assign Bookmark", systemImage: "bookmark")
+            }
+        }
+    }
+
+    private var tokenVerseRows: some View {
+        ForEach(verseTokens, id: \.verse) { v in
+            Group {
+                if let heading = headings[v.verse] {
+                    headingRow(heading)
+                }
+                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                    .id("v\(v.verse)")
+                    .font(.system(size: personalData.fontSize, design: .serif))
+                    .lineSpacing(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Swallow long-press so the empty-area
+                    // menu doesn't fire on text.
+                    .onLongPressGesture { }
+            }
+        }
+    }
+
+    private var plainVerseRows: some View {
+        ForEach(verses, id: \.verse) { v in
+            Group {
+                if let heading = headings[v.verse] {
+                    headingRow(heading)
+                }
+                Text(attributedVerse(number: v.verse, text: v.text))
+                    .id("v\(v.verse)")
+                    .font(.system(size: personalData.fontSize, design: .serif))
+                    .lineSpacing(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onLongPressGesture { }
+            }
+        }
+    }
+
+    private var paragraphText: some View {
+        // Paragraph mode: no paragraph info in the modules,
+        // so the whole chapter flows as one paragraph.
+        Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
+            .font(.system(size: personalData.fontSize, design: .serif))
+            .lineSpacing(6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .onLongPressGesture { }
+            // Invisible ladder of 20 equal slices
+            // spanning the chapter text's height:
+            // the approximate scroll targets for
+            // verse jumps in paragraph mode.
+            .background {
+                GeometryReader { geo in
+                    VStack(spacing: 0) {
+                        ForEach(0..<20, id: \.self) { i in
+                            Color.clear
+                                .id("frac-\(i)")
                         }
-                        .onChange(of: history.chapter) { proxy.scrollTo("top", anchor: .top) }
-                        .onChange(of: scrollTargetVerse) {
-                            guard let target = scrollTargetVerse else { return }
-                            scrollTargetVerse = nil
-                            if personalData.verseByVerse {
-                                proxy.scrollTo("v\(target)", anchor: .center)
-                            } else if let i = paragraphAnchorIndex(for: target) {
-                                // Paragraph mode has no per-verse anchors:
-                                // scroll to the ladder slice at the verse's
-                                // share of the chapter's text (REQ-NT-21).
-                                proxy.scrollTo("frac-\(i)", anchor: .center)
-                            }
-                        }
-                        .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
                     }
-                    .environment(\.openURL, OpenURLAction { url in
-                        switch url.scheme {
-                        case "strongs":
-                            // Tapping a Strong's number opens its dictionary entry.
-                            if let key = url.host, !key.isEmpty {
-                                strongsKey = key
-                                return .handled
-                            }
-                        case "verse":
-                            // Tapping a verse's words toggles its selection.
-                            if let host = url.host, let n = Int(host) {
-                                toggleSelection(n)
-                                return .handled
-                            }
-                        case "note":
-                            // Tapping the note icon opens the verse's note.
-                            if let host = url.host, let n = Int(host) {
-                                openNoteEditor(for: n)
-                                return .handled
-                            }
-                        default:
-                            break
-                        }
-                        return .systemAction
-                    })
+                    .frame(height: geo.size.height)
+                    .allowsHitTesting(false)
                 }
             }
-            // Ribbons for the bookmarks pointing at the chapter
-            // being read (REQ-BM-3) — chapter-level and verse-level
-            // alike; every bookmark shows at the top-right corner.
-            // Nothing shows when the current chapter has none.
-            let currentMarks = personalData.bookmarks.filter {
-                $0.isAt(testament: history.testament,
-                        book: history.book,
-                        chapter: history.chapter)
-            }
-            if !currentMarks.isEmpty {
-                BookmarkRibbonsRow(history: history,
-                                   bookmarks: currentMarks,
-                                   style: .mini,
-                                   onJump: { _ in })
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    .padding(.trailing, 10)
-            }
-            // Slide-in bookmarks panel, opened with a right-edge swipe.
-            if showingBookmarks {
-                Color.black.opacity(0.25)
-                    .ignoresSafeArea()
-                    .onTapGesture { showingBookmarks = false }
-                BookmarksPanel(history: history, showing: $showingBookmarks)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-                    .transition(.move(edge: .trailing))
-            }
-            // Slide-in settings drawer, opened with a left-edge swipe.
-            if showingSettings {
-                Color.black.opacity(0.25)
-                    .ignoresSafeArea()
-                    .onTapGesture { showingSettings = false }
-                settingsDrawer
-                    .transition(.move(edge: .leading))
-            }
+    }
+
+    /// Ribbons for the bookmarks pointing at the chapter
+    /// being read (REQ-BM-3) — chapter-level and verse-level
+    /// alike; every bookmark shows at the top-right corner.
+    /// Nothing shows when the current chapter has none.
+    @ViewBuilder private var ribbonsOverlay: some View {
+        let currentMarks = personalData.bookmarks.filter {
+            $0.isAt(testament: history.testament,
+                    book: history.book,
+                    chapter: history.chapter)
+        }
+        if !currentMarks.isEmpty {
+            BookmarkRibbonsRow(history: history,
+                               bookmarks: currentMarks,
+                               style: .mini,
+                               onJump: { _ in })
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(.trailing, 10)
+        }
+    }
+
+    /// Slide-in bookmarks panel, opened with a right-edge swipe.
+    @ViewBuilder private var bookmarksOverlay: some View {
+        if showingBookmarks {
+            Color.black.opacity(0.25)
+                .ignoresSafeArea()
+                .onTapGesture { showingBookmarks = false }
+            BookmarksPanel(history: history, showing: $showingBookmarks)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .transition(.move(edge: .trailing))
+        }
+    }
+
+    /// Slide-in settings drawer, opened with a left-edge swipe.
+    @ViewBuilder private var settingsOverlay: some View {
+        if showingSettings {
+            Color.black.opacity(0.25)
+                .ignoresSafeArea()
+                .onTapGesture { showingSettings = false }
+            settingsDrawer
+                .transition(.move(edge: .leading))
+        }
+    }
+
+    private var readerContent: some View {
+        ZStack(alignment: .leading) {
+            chapterPane
+            ribbonsOverlay
+            bookmarksOverlay
+            settingsOverlay
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
         .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
