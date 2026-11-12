@@ -187,12 +187,17 @@ Multiple (KJV Gen 1:1-2):
   navigating), the nearest visible sub-tab takes its place (ties
   go to the earlier sub-tab; this logic is `NotesTabLogic` in
   SwordReader, unit-tested). When there are no notes at all, the
-  sub-tab bar hides and one empty state shows. An add-note entry
-  point (for the selected verse) is always available, even when
-  the Verse sub-tab is hidden; the Book and Chapter sub-tabs offer
-  their own add entry when their scoped note is missing. Tapping a
-  note row opens its editor in place. (Supersedes the Notes half
-  of REQ-AP-9.)
+  sub-tab bar hides and one empty state shows. One **Add Note**
+  button is always available — even when there are no notes at
+  all — and it follows the current context: with the Book
+  sub-tab active it edits the book note, with the Chapter
+  sub-tab active the chapter note; otherwise it edits the
+  selected verses' note (anchored at the first selected verse),
+  or the chapter note when no verses are selected. It always
+  reads "Add Note": editing an existing note is what tapping
+  the note itself does (REQ-NT-21). The Book and Chapter
+  sub-tabs have no add entries of their own. (Supersedes the
+  Notes half of REQ-AP-9.)
 - **REQ-NT-19:** Notes belong to their book/chapter/verse, not to a
   version: a note written while reading one version is visible —
   and editable — in every version (the verse highlight, all Notes
@@ -225,7 +230,7 @@ Multiple (KJV Gen 1:1-2):
 
 ---
 
-- **REQ-NT-21:** A note's title line (reference, source, date) is a jump target. In the Notes tab's lists, tapping the title line jumps the reader to the note's passage in the version being read — for a verse note, to the verse itself: the reader selects it and scrolls it into view — exactly in verse-by-verse reading, approximately in paragraph mode (to the verse's share of the chapter's text length) (a book note lands on its book's first chapter), while tapping the note's text opens its editor. The note editors (verse and scoped) show their reference as a tappable title that makes the same jump and dismisses the editor.
+- **REQ-NT-21:** Tapping a note row in the Notes tab's lists — the title line (reference, source, date) or the note text alike — opens its editor; rows never navigate. The Verse sub-tab's scoped note likewise has no Add/Edit button: tapping its text (or its empty state) opens the editor. The note editors (verse and scoped) only edit: the reference is their title, never a jump target. Instead, an editor carries a bottom-bar **Read Chapter** button (a plain text button, like the reference chapter sheet's Read More, REQ-AP-20): it dismisses the editor and moves the reader to the note's chapter in the version being read — for a verse note, landing on the verse itself (the reader selects it and scrolls it into view, exactly in verse-by-verse reading, approximately in paragraph mode, per REQ-AP-20); a book note lands on its book's first chapter. The one exception: the chapter-note editor opened from the reader for the chapter already on screen shows no Read Chapter button — it is already there. (Supersedes the earlier title-line/title-tap jump design.)
 ## 4. Bookmarks panel
 
 ### Sections
