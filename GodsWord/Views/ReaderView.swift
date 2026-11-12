@@ -36,6 +36,11 @@ struct ReaderView: View {
     /// reports window coordinates; this is what converts them into
     /// the reader's own start zones (REQ-GS-2).
     @State private var readerFrame: CGRect = .zero
+    /// DIAGNOSTIC (branch diag/swipe-readout — never merge):
+    /// the last swipe reports and drawer transitions, shown in
+    /// an on-screen readout so a device screenshot settles what
+    /// the swipe decision is actually fed.
+    @State private var swipeLog: [String] = []
     /// This view's total height, measured on the root VStack and passed
     /// to the auxiliary panel: the expanded panel is 30% of it.
     @State private var rootHeight: CGFloat = 0
@@ -277,11 +282,35 @@ struct ReaderView: View {
                 settingsDrawer
                     .transition(.move(edge: .leading))
             }
+            // DIAGNOSTIC overlay (never merge): the live reader
+            // frame and the swipe log, drawn above everything —
+            // including the drawer — so one screenshot shows
+            // what the decision was fed and what it did.
+            VStack(alignment: .leading, spacing: 2) {
+                Text("DIAG BUILD - swipe readout")
+                    .fontWeight(.bold)
+                Text(String(format: "frame now: (%.0f, %.0f) %.0f x %.0f",
+                            readerFrame.minX, readerFrame.minY,
+                            readerFrame.width, readerFrame.height))
+                ForEach(Array(swipeLog.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                }
+            }
+            .font(.caption2.monospaced())
+            .foregroundStyle(.white)
+            .padding(6)
+            .background(Color.black.opacity(0.65))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .allowsHitTesting(false)
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
         .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
+        .onChange(of: showingSettings) { open in
+            logSwipe(open ? "-> DRAWER OPENED" : "-> drawer closed")
+        }
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { readerFrame = $0 }
-        .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe).frame(width: 0, height: 0))
+        .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe,
+                                       onEvent: { logSwipe($0) }).frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
         .edgeNavigation(
             onForward: {
@@ -445,19 +474,34 @@ struct ReaderView: View {
     /// reader (the auxiliary panel, the navigation bar) are not
     /// reader swipes at all.
     private func handleReaderSwipe(start: CGPoint, translation: CGSize) {
-        guard !showingSettings && !showingBookmarks else { return }
-        guard readerFrame.width > 0 else { return }
+        // DIAGNOSTIC: record every report before any guard can
+        // drop it, with the decision the report produces.
         let localX = start.x - readerFrame.minX
         let localY = start.y - readerFrame.minY
-        guard localX >= 0, localX <= readerFrame.width,
-              localY >= 0, localY < readerFrame.height - 80
-        else { return }
-        switch ReaderSwipeZones.action(
+        let action = ReaderSwipeZones.action(
             startX: localX,
             viewWidth: readerFrame.width,
             translationWidth: translation.width,
             translationHeight: translation.height)
-        {
+        var note = ""
+        if showingSettings || showingBookmarks {
+            note = " [dropped: drawer/panel open]"
+        } else if readerFrame.width <= 0 {
+            note = " [dropped: no frame]"
+        } else if !(localX >= 0 && localX <= readerFrame.width
+                    && localY >= 0 && localY < readerFrame.height - 80) {
+            note = " [dropped: outside/bottom]"
+        }
+        logSwipe(String(format: "report start=(%.0f,%.0f) local=(%.0f,%.0f) t=(%.0f,%.0f) -> %@%@",
+                        start.x, start.y, localX, localY,
+                        translation.width, translation.height,
+                        String(describing: action), note))
+        guard !showingSettings && !showingBookmarks else { return }
+        guard readerFrame.width > 0 else { return }
+        guard localX >= 0, localX <= readerFrame.width,
+              localY >= 0, localY < readerFrame.height - 80
+        else { return }
+        switch action {
         case .openDrawer:
             showingSettings = true
         case .turnChapter(let forward):
@@ -465,6 +509,12 @@ struct ReaderView: View {
         case .none:
             break
         }
+    }
+
+    /// DIAGNOSTIC: appends a line to the on-screen swipe log.
+    private func logSwipe(_ line: String) {
+        swipeLog.append(line)
+        if swipeLog.count > 7 { swipeLog.removeFirst(swipeLog.count - 7) }
     }
 
     /// Slide-in settings panel with reading options and a link to full settings.

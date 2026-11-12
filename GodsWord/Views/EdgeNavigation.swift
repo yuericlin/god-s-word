@@ -73,6 +73,9 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
     /// Called on the main thread when a swipe ends: the start point
     /// in window coordinates and the total translation.
     var onSwipe: (CGPoint, CGSize) -> Void
+    /// DIAGNOSTIC (branch diag/swipe-readout — never merge):
+    /// lifecycle and recognizer events for the on-screen readout.
+    var onEvent: ((String) -> Void)?
 
     func makeUIViewController(context: Context) -> UIViewController {
         SwipeObserverViewController()
@@ -80,12 +83,14 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
 
     func updateUIViewController(_ vc: UIViewController, context: Context) {
         (vc as? SwipeObserverViewController)?.onSwipe = onSwipe
+        (vc as? SwipeObserverViewController)?.onEvent = onEvent
     }
 
     final class SwipeObserverViewController: UIViewController,
         UIGestureRecognizerDelegate
     {
         var onSwipe: ((CGPoint, CGSize) -> Void)?
+        var onEvent: ((String) -> Void)?
         private weak var navView: UIView?
         private var edgePan: UIScreenEdgePanGestureRecognizer?
         private var swipePan: UIPanGestureRecognizer?
@@ -116,6 +121,7 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
             }
             self.navView = navView
             navController.interactivePopGestureRecognizer?.isEnabled = false
+            onEvent?("observer appeared")
         }
 
         override func viewWillDisappear(_ animated: Bool) {
@@ -151,6 +157,7 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
             case .began:
                 swipeStart = pan.location(in: navView)
                 swipeIsScroll = false
+                onEvent?(String(format: "pan began (%.0f, %.0f)", swipeStart.x, swipeStart.y))
             case .changed:
                 // A clearly vertical drag is a scroll, not a swipe:
                 // mark it so its end is never reported.
@@ -163,6 +170,8 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
                     let t = pan.translation(in: navView)
                     onSwipe?(swipeStart, CGSize(width: t.x, height: t.y))
                 }
+            case .cancelled, .failed:
+                onEvent?("pan cancelled")
             default:
                 break
             }
