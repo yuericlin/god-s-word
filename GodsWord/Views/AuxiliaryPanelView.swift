@@ -565,32 +565,57 @@ struct AuxiliaryPanelView: View {
         .listStyle(.plain)
     }
 
-    /// The Book sub-tab: an add-book-note entry when the book has no
-    /// book note yet, then every note in the book.
+    /// The Book sub-tab: every note in the book. (Adding the
+    /// book note is the header Add Note button's job — it
+    /// follows the active sub-tab.)
     private var bookNotesContent: some View {
         List {
-            if personalData.bookNote(forKey: bookNoteKey) == nil {
-                Button {
-                    editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
-                } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Label("Add Book Note", systemImage: "plus.circle")
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom, 11)
-                        rowHairline
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 11, leading: 16,
-                                  bottom: 0, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-            }
             ForEach(bookNoteRows) { row in
                 noteRowView(row)
             }
         }
         .listStyle(.plain)
+    }
+
+    /// Whether the note the header's Add Note button would
+    /// open already exists (drives its Add/Edit label).
+    private var addNoteExists: Bool {
+        switch effectiveNotesTab {
+        case .book:
+            return personalData.bookNote(forKey: bookNoteKey) != nil
+        case .chapter:
+            return personalData.chapterNote(forKey: chapterNoteKey) != nil
+        default:
+            return selectedVerses.isEmpty
+                ? personalData.chapterNote(forKey: chapterNoteKey) != nil
+                : personalData.verseNote(forKey: verseNoteKey) != nil
+        }
+    }
+
+    /// The header's one Add Note button follows the current
+    /// context (Nov 12, 2026): the Book sub-tab edits the book
+    /// note, the Chapter sub-tab the chapter note; anywhere
+    /// else it edits the selected verses' note (anchored at
+    /// the first selected verse), or the chapter note when no
+    /// verses are selected. The Book and Chapter sub-tabs' own
+    /// add entries are gone — this button is the only one.
+    private func openAddNote() {
+        switch effectiveNotesTab {
+        case .book:
+            editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
+        case .chapter:
+            editorItem = .chapter(
+                key: chapterNoteKey,
+                reference: "\(history.bookTitle) \(history.chapter)")
+        default:
+            if selectedVerses.isEmpty {
+                editorItem = .chapter(
+                    key: chapterNoteKey,
+                    reference: "\(history.bookTitle) \(history.chapter)")
+            } else {
+                editorItem = .verse(key: verseNoteKey, reference: verseReference)
+            }
+        }
     }
 
     private var notesTab: some View {
@@ -605,15 +630,13 @@ struct AuxiliaryPanelView: View {
                     .pickerStyle(.segmented)
                 }
                 Spacer()
-                // The add-note entry point: always available, even
-                // when the Verse sub-tab is hidden or there are no
-                // notes at all (REQ-NT-18). It edits the anchor
-                // verse's note — adding one when there is none.
+                // The one add-note entry point: always available,
+                // even when there are no notes at all (REQ-NT-18).
+                // It follows the current context (see openAddNote).
                 Button {
-                    editorItem = .verse(key: verseNoteKey, reference: verseReference)
+                    openAddNote()
                 } label: {
-                    Label(personalData.verseNote(forKey: verseNoteKey) == nil
-                          ? "Add Note" : "Edit Note",
+                    Label(addNoteExists ? "Edit Note" : "Add Note",
                           systemImage: "square.and.pencil")
                         .font(.subheadline)
                 }
@@ -708,32 +731,14 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The Chapter sub-tab: the legacy verse-1 presentation when it
-    /// applies (REQ-NT-16), an add-chapter-note entry when the
-    /// chapter has no chapter note, and the chapter's notes in
-    /// reading order.
+    /// applies (REQ-NT-16), and the chapter's notes in reading
+    /// order. (Adding the chapter note is the header Add Note
+    /// button's job — it follows the active sub-tab.)
     private var chapterNotesContent: some View {
         List {
             if personalData.chapterNote(forKey: chapterNoteKey) == nil,
                let legacy = personalData.verseNote(forKey: verse1NoteKey) {
                 legacyChapterNote(legacy)
-            } else if personalData.chapterNote(forKey: chapterNoteKey) == nil {
-                Button {
-                    editorItem = .chapter(
-                        key: chapterNoteKey,
-                        reference: "\(history.bookTitle) \(history.chapter)")
-                } label: {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Label("Add Chapter Note", systemImage: "plus.circle")
-                            .font(.subheadline)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.bottom, 11)
-                        rowHairline
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 11, leading: 16,
-                                  bottom: 0, trailing: 0))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
             }
             ForEach(chapterNoteRows) { row in
                 noteRowView(row)

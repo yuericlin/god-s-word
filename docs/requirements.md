@@ -187,12 +187,18 @@ Multiple (KJV Gen 1:1-2):
   navigating), the nearest visible sub-tab takes its place (ties
   go to the earlier sub-tab; this logic is `NotesTabLogic` in
   SwordReader, unit-tested). When there are no notes at all, the
-  sub-tab bar hides and one empty state shows. An add-note entry
-  point (for the selected verse) is always available, even when
-  the Verse sub-tab is hidden; the Book and Chapter sub-tabs offer
-  their own add entry when their scoped note is missing. Tapping a
-  note row opens its editor in place. (Supersedes the Notes half
-  of REQ-AP-9.)
+  sub-tab bar hides and one empty state shows. One add-note
+  entry point — the header's Add Note button — is always
+  available, and it follows the current context: with the Book
+  sub-tab active it edits the book note, with the Chapter
+  sub-tab active the chapter note; otherwise (Recents, Verse,
+  or no sub-tab shown) it edits the note for the selected
+  verses (anchored at the first selected verse), or the
+  chapter note when no verses are selected. Its label reads
+  Edit Note when the note it would open already exists. The
+  Book and Chapter sub-tabs have no add entries of their own.
+  Tapping a note row opens its editor in place. (Supersedes
+  the Notes half of REQ-AP-9.)
 - **REQ-NT-19:** Notes belong to their book/chapter/verse, not to a
   version: a note written while reading one version is visible —
   and editable — in every version (the verse highlight, all Notes
