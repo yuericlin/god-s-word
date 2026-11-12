@@ -46,15 +46,26 @@ struct AuxiliaryPanelView: View {
     @State private var commentarySegments: [Int: [ScriptureReferences.Segment]] = [:]
     /// Book scope: chapter -> start verse -> reference segments.
     @State private var commentaryBookSegments: [Int: [Int: [ScriptureReferences.Segment]]] = [:]
-    /// A reference tapped in a commentary entry, for the reference
-    /// chapter sheet (REQ-AP-20).
+    /// A chapter to show in the reference chapter sheet
+    /// (REQ-AP-20): a tapped commentary reference, Recents
+    /// entry, or highlight.
     @State private var referenceLink: ReferenceLink?
 
-    /// Identifiable wrapper around a tapped reference target.
+    /// Identifiable wrapper around a chapter to show in the
+    /// reference chapter sheet (REQ-AP-20): the target, the
+    /// version to show it in, and what the sheet's Read More
+    /// button does — each opener decides. A commentary
+    /// reference reads in the version being read; a Recents
+    /// entry in its own version, its Read More performing the
+    /// version-switching jump a tap used to do directly; a
+    /// highlight in the version being read, its verses
+    /// selected.
     private struct ReferenceLink: Identifiable {
+        let version: BibleVersion
         let target: ScriptureReferenceTarget
+        let onReadChapter: () -> Void
         var id: String {
-            "\(target.testament)-\(target.book)-\(target.chapter)-"
+            "\(version.id)-\(target.testament)-\(target.book)-\(target.chapter)-"
                 + target.verses.map(String.init).joined(separator: ",")
         }
     }
@@ -262,12 +273,9 @@ struct AuxiliaryPanelView: View {
             }
         }
         .sheet(item: $referenceLink) { link in
-            ReferenceChapterView(version: history.version,
+            ReferenceChapterView(version: link.version,
                                  target: link.target) {
-                jumpTo(testament: link.target.testament,
-                       book: link.target.book,
-                       chapter: link.target.chapter)
-                history.pendingVerse = link.target.verses.first
+                link.onReadChapter()
             }
             .environmentObject(personalData)
         }
@@ -870,7 +878,13 @@ struct AuxiliaryPanelView: View {
         // the reference chapter sheet instead of a browser.
         .environment(\.openURL, OpenURLAction { url in
             if let target = refTarget(from: url) {
-                referenceLink = ReferenceLink(target: target)
+                referenceLink = ReferenceLink(
+                    version: history.version, target: target) {
+                        jumpTo(testament: target.testament,
+                               book: target.book,
+                               chapter: target.chapter)
+                        history.pendingVerse = target.verses.first
+                    }
                 return .handled
             }
             return .systemAction
@@ -1253,10 +1267,12 @@ struct AuxiliaryPanelView: View {
     // MARK: - Recents tab
 
     /// The reading history (REQ-AP-11), moved here from the reader's
-    /// left drawer: the same HistoryView list — tap an entry to jump
-    /// back to it (switching version when that version is installed),
-    /// swipe to delete. HistoryView's own Clear toolbar button needs
-    /// a navigation bar, so the tab header carries Clear instead.
+    /// left drawer: the same HistoryView list — tap an entry to view
+    /// its chapter in the reference chapter sheet, the sheet's Read
+    /// More jumping back to it (switching version when that version
+    /// is installed); swipe to delete. HistoryView's own Clear
+    /// toolbar button needs a navigation bar, so the tab header
+    /// carries Clear instead.
     private var recentsTab: some View {
         VStack(spacing: 0) {
             if !personalData.historyLog.isEmpty {
@@ -1265,16 +1281,37 @@ struct AuxiliaryPanelView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Button("Clear", role: .destructive) {
+                    Button(role: .destructive) {
                         personalData.clearHistory()
+                    } label: {
+                        Label("Clear", systemImage: "trash")
                     }
                     .font(.subheadline)
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 4)
             }
-            HistoryView(onSelect: jumpToHistoryEntry)
+            HistoryView(onSelect: openHistoryEntry)
         }
+    }
+
+    /// Tapping a history entry views its chapter in the
+    /// reference chapter sheet (REQ-AP-20), in the entry's own
+    /// version when it is still installed (the version being
+    /// read when it is not), with no verses selected — an
+    /// entry names a chapter, not verses. The sheet's Read
+    /// More performs the jump a tap used to do directly.
+    private func openHistoryEntry(_ entry: HistoryEntry) {
+        let version = availableVersions.first(where: { $0.id == entry.moduleID })
+            ?? history.version
+        referenceLink = ReferenceLink(
+            version: version,
+            target: ScriptureReferenceTarget(testament: entry.testament,
+                                             book: entry.book,
+                                             chapter: entry.chapter,
+                                             verses: [])) {
+                jumpToHistoryEntry(entry)
+            }
     }
 
     /// Jumps the reader to a history entry, switching to the entry's
@@ -1407,7 +1444,8 @@ struct AuxiliaryPanelView: View {
 
     /// One highlight row in any sub-tab: a yellow swatch and the
     /// reference with the version it was made in and its date
-    /// (the note-row format). Tap jumps; swipe deletes. Built
+    /// (the note-row format). Tap views the passage in the
+    /// reference chapter sheet; swipe deletes. Built
     /// exactly like a HistoryView row — default button style, no
     /// content-shape override — so the List makes the whole row
     /// the tap target, like the Recents tab's history items; the
@@ -1415,7 +1453,7 @@ struct AuxiliaryPanelView: View {
     /// the rows felt dead.
     private func highlightRow(_ h: Highlight) -> some View {
         Button {
-            jumpToHighlight(h)
+            openHighlight(h)
         } label: {
             // The row draws its own bottom hairline and hides the
             // List's separator: the automatic separator rendered in
@@ -1467,8 +1505,23 @@ struct AuxiliaryPanelView: View {
         history.chapter = chapter
     }
 
-    private func jumpToHighlight(_ h: Highlight) {
-        jumpTo(testament: h.testament, book: h.book, chapter: h.chapter)
+    /// Tapping a highlight views its passage in the reference
+    /// chapter sheet (REQ-AP-20), in the version being read —
+    /// highlights show in every version (REQ-HL-2), so unlike
+    /// a history entry this never switches version — with the
+    /// highlight's verses selected. The sheet's Read More
+    /// moves the reader to the passage, landing on its first
+    /// verse.
+    private func openHighlight(_ h: Highlight) {
+        let target = ScriptureReferenceTarget(
+            testament: h.testament, book: h.book, chapter: h.chapter,
+            verses: Array(h.startVerse...h.endVerse))
+        referenceLink = ReferenceLink(version: history.version,
+                                      target: target) {
+            jumpTo(testament: h.testament, book: h.book,
+                   chapter: h.chapter)
+            history.pendingVerse = h.startVerse
+        }
     }
 
     /// Title-line tap on a note row or a note editor's title
