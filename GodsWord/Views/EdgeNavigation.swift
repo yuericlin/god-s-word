@@ -112,10 +112,14 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
 /// any view, so rebuilds cannot take it down; the reader arms
 /// its handler on appear and clears it on disappear.
 ///
-/// The veto: the interactive pop recognizer is disabled
-/// (re-asserted on every drag, in case the framework turns it
-/// back on) and bound by failure requirements to two
-/// recognizers that never fail mid-touch — an inert
+/// The veto: the guard is the interactive pop recognizer's
+/// delegate for the app's lifetime and answers "never begin"
+/// (see gestureRecognizerShouldBegin) — the one mechanism
+/// that prohibits rather than postpones. As second layers it
+/// is also disabled (re-asserted on every drag, in case the
+/// framework turns it back on) and bound by failure
+/// requirements to two recognizers that never fail mid-touch
+/// — an inert
 /// screen-edge pan on the left edge (which also decides
 /// nothing; the drawer is the reader's start-zone decision)
 /// and the observing pan below, which is what reports reader
@@ -152,6 +156,13 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
         else { return }
         installed = true
         popRecognizer = pop
+        // The veto's core: the guard becomes the pop
+        // recognizer's delegate PERMANENTLY (never restored —
+        // see gestureRecognizerShouldBegin). In PR #82 this
+        // delegate lived on a view controller whose teardown
+        // restored the original delegate, taking the veto with
+        // it; the singleton outlives every view.
+        pop.delegate = self
 
         let edgePan = UIScreenEdgePanGestureRecognizer(
             target: self, action: #selector(ignoreEdgePan(_:)))
@@ -169,6 +180,21 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
         navView.addGestureRecognizer(swipePan)
 
         pop.isEnabled = false
+    }
+
+    /// The veto itself: the back gesture may never begin,
+    /// on any screen, ever (swiping back is disabled). The
+    /// guard is the pop recognizer's delegate for the app's
+    /// lifetime, so this answer never depends on a view's
+    /// lifecycle. The failure requirements in install(from:)
+    /// are only a second layer: a requirement postpones the
+    /// pop until the anchor recognizer fails, and a pan the
+    /// system cancels mid-drag DOES fail — releasing the pop
+    /// in the middle of the swipe (the PR #84 build's leak).
+    /// Every other recognizer the guard delegates for (the
+    /// observing pan) may always begin.
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        gestureRecognizer !== popRecognizer
     }
 
     /// The observing pan must never block the scroll view, the
