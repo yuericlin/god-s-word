@@ -46,238 +46,167 @@ extension View {
 
     /// Vetoes the system's interactive back gesture while this
     /// screen is visible (see SwipeBackVeto). The reader does
-    /// not use this: its swipe observer vetoes the gesture
-    /// itself (REQ-GS-2).
+    /// not use this: its own background trigger installs the
+    /// same guard (REQ-GS-2).
     func disableSwipeBack() -> some View {
         background(SwipeBackVeto().frame(width: 0, height: 0))
     }
 }
 
-/// Installs the same back-gesture veto the reader's swipe
-/// observer installs (REQ-GS-2), for the drill-down screens that
-/// have no swipe observer of their own (books, chapters): while
-/// the host screen is visible, the interactive pop recognizer
-/// is disabled and delegate-vetoed, with its original delegate
-/// saved and restored on disappear. Swiping back is disabled
-/// (Nov 11, 2026) — the drill-down moves forward by swipe and
-/// goes back by the navigation bar's back button only.
+/// Installs the back-gesture veto (SwipeBackGuard, below)
+/// for the drill-down screens that have no reader-style
+/// trigger of their own (books, chapters): appearance calls
+/// the guard's one-time installation. Swiping back is
+/// disabled (Nov 11, 2026) — the drill-down moves forward by
+/// swipe and goes back by the navigation bar's back button
+/// only.
 struct SwipeBackVeto: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
-        PopVetoViewController()
+        ReaderSwipeGesture.GuardTriggerViewController()
     }
 
     func updateUIViewController(_ vc: UIViewController, context: Context) {}
-
-    final class PopVetoViewController: UIViewController,
-        UIGestureRecognizerDelegate
-    {
-        private var savedPopDelegate: UIGestureRecognizerDelegate?
-        private var popVetoInstalled = false
-
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
-            guard let navController = navigationController,
-                  let pop = navController.interactivePopGestureRecognizer
-            else { return }
-            if !popVetoInstalled {
-                savedPopDelegate = pop.delegate
-                pop.delegate = self
-                popVetoInstalled = true
-            }
-            pop.isEnabled = false
-        }
-
-        override func viewWillDisappear(_ animated: Bool) {
-            super.viewWillDisappear(animated)
-            if popVetoInstalled,
-               let pop = navigationController?.interactivePopGestureRecognizer {
-                pop.delegate = savedPopDelegate
-                savedPopDelegate = nil
-                popVetoInstalled = false
-            }
-            navigationController?.interactivePopGestureRecognizer?.isEnabled = true
-        }
-
-        /// The back gesture may never begin while the host
-        /// screen is visible.
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            if gestureRecognizer
-                === navigationController?.interactivePopGestureRecognizer {
-                return false
-            }
-            return true
-        }
-    }
 }
 
-/// Observes swipes on the reader and reports each finished swipe's
-/// start point and travel, in window coordinates, to the reader's
-/// start-zone decision (REQ-GS-2). Two recognizers are installed on
-/// the navigation controller's view while the reader is visible:
-///
-/// - A screen-edge pan on the left edge that decides nothing: it
-///   exists only so the system's back-swipe has something to wait
-///   for (`require(toFail:)`). The back-swipe itself is vetoed
-///   outright while the reader is visible — disabled and
-///   delegate-vetoed — because on
-///   current iOS it begins from anywhere on screen: a middle
-///   rightward swipe popped back to the chapter picker, which
-///   slides in from the left and was three times reported as the
-///   settings drawer opening. (When this recognizer made the
-///   drawer decision itself, its system edge zone — wider than
-///   the app's 20pt — turned middle swipes into drawer pulls.)
-/// - A plain pan that only OBSERVES: it never cancels touches, it
-///   recognizes simultaneously with everything else (scrolling,
-///   taps, the edge strips), and it ignores a drag as soon as the
-///   drag proves to be a vertical scroll. On end it reports the touch's
-///   start location in the navigation view — the window's own
-///   coordinates, the ground truth for where the finger landed —
-///   which the reader converts into its own frame and classifies
-///   with `ReaderSwipeZones.action`. SwiftUI's drag gesture is no
-///   longer trusted for this: on device its reported start location
-///   still classified middle swipes as left-edge starts.
-///
-/// Everything is installed on appear and torn down on disappear, so
-/// other screens keep their swipe-back. Backward navigation on the
-/// reader uses the right edge instead.
+/// A trigger for SwipeBackGuard, carried in the reader's
+/// background: appearing installs the guard (once — later
+/// appearances are no-ops), and every update (re)arms the
+/// reader's swipe handler. There is deliberately NO teardown:
+/// the guard outlives any view (see its doc).
 struct ReaderSwipeGesture: UIViewControllerRepresentable {
     /// Called on the main thread when a swipe ends: the start point
     /// in window coordinates and the total translation.
     var onSwipe: (CGPoint, CGSize) -> Void
 
     func makeUIViewController(context: Context) -> UIViewController {
-        SwipeObserverViewController()
+        GuardTriggerViewController()
     }
 
     func updateUIViewController(_ vc: UIViewController, context: Context) {
-        (vc as? SwipeObserverViewController)?.onSwipe = onSwipe
+        SwipeBackGuard.shared.onSwipe = onSwipe
     }
 
-    final class SwipeObserverViewController: UIViewController,
-        UIGestureRecognizerDelegate
-    {
-        var onSwipe: ((CGPoint, CGSize) -> Void)?
-        private weak var navView: UIView?
-        private var edgePan: UIScreenEdgePanGestureRecognizer?
-        private var swipePan: UIPanGestureRecognizer?
-        /// The back gesture's own delegate, saved while the
-        /// reader's veto replaces it (restored on disappear).
-        private var savedPopDelegate: UIGestureRecognizerDelegate?
-        private var popVetoInstalled = false
-        private var swipeStart: CGPoint = .zero
-        /// Set once a drag proves to be a vertical scroll; its end
-        /// is then never reported as a swipe.
-        private var swipeIsScroll = false
-
+    final class GuardTriggerViewController: UIViewController {
         override func viewDidAppear(_ animated: Bool) {
             super.viewDidAppear(animated)
-            guard let navController = navigationController,
-                  let navView = navigationController?.view,
-                  let pop = navController.interactivePopGestureRecognizer else { return }
-            if edgePan == nil {
-                let pan = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(ignoreEdgePan(_:)))
-                pan.edges = .left
-                // The drawer wins the left edge; backward navigation uses the right edge.
-                pop.require(toFail: pan)
-                navView.addGestureRecognizer(pan)
-                edgePan = pan
-            }
-            if swipePan == nil {
-                let pan = UIPanGestureRecognizer(target: self, action: #selector(handleSwipePan(_:)))
-                pan.cancelsTouchesInView = false
-                pan.delegate = self
-                navView.addGestureRecognizer(pan)
-                swipePan = pan
-            }
-            self.navView = navView
-            // The system's interactive back gesture must never
-            // fire while the reader is visible: on current iOS
-            // it begins from anywhere on screen, so a middle
-            // rightward swipe popped back to the chapter picker
-            // — which slides in from the left, looking for all
-            // the world like the settings drawer opening (the
-            // three "drawer" reports of Nov 11, 2026 were this
-            // pop; the drawer's own decision was never wrong).
-            // Backward navigation on the reader is the right
-            // edge's job. Setting isEnabled = false alone does
-            // not hold (the framework re-asserts it), so the
-            // veto is layered: disable it, and veto its start
-            // as its delegate (its left-edge start already has
-            // to wait on the inert edge pan above).
-            if !popVetoInstalled {
-                savedPopDelegate = pop.delegate
-                pop.delegate = self
-                popVetoInstalled = true
-            }
-            navController.interactivePopGestureRecognizer?.isEnabled = false
+            SwipeBackGuard.shared.install(from: self)
         }
+    }
+}
 
-        override func viewWillDisappear(_ animated: Bool) {
-            super.viewWillDisappear(animated)
-            if let pan = edgePan {
-                navView?.removeGestureRecognizer(pan)
-                edgePan = nil
+/// The one owner of the reader's swipe recognizers and the
+/// back-gesture veto (REQ-GS-2). Installed ONCE, the first time
+/// any drill-down screen appears, and never torn down.
+///
+/// Why a permanent singleton: the recognizers used to be
+/// installed and removed with a background view controller's
+/// appearance, and that lifecycle is not reliable under
+/// SwiftUI view rebuilds — showing and hiding the bookmarks
+/// panel rebuilt the reader's tree and fired the teardown
+/// (recognizers removed, back gesture re-enabled) with no
+/// balancing reinstall, after which the drawer and chapter
+/// turns were dead and any rightward swipe popped to the
+/// chapter picker (reproduced Nov 11, 2026: open the
+/// bookmarks panel, hide it, swipe — pop). Installation here
+/// is idempotent and the state lives in this object, not in
+/// any view, so rebuilds cannot take it down; the reader arms
+/// its handler on appear and clears it on disappear.
+///
+/// The veto: the interactive pop recognizer is disabled
+/// (re-asserted on every drag, in case the framework turns it
+/// back on) and bound by failure requirements to two
+/// recognizers that never fail mid-touch — an inert
+/// screen-edge pan on the left edge (which also decides
+/// nothing; the drawer is the reader's start-zone decision)
+/// and the observing pan below, which is what reports reader
+/// swipes: it never cancels touches, recognizes simultaneously
+/// with everything else (scrolling, taps, the edge strips),
+/// ignores a drag as soon as the drag proves to be a vertical
+/// scroll, and on end reports the touch's start in the
+/// navigation view — the window's own coordinates, the ground
+/// truth for where the finger landed — which the reader
+/// converts into its own frame and classifies with
+/// `ReaderSwipeZones.action`.
+final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
+    static let shared = SwipeBackGuard()
+
+    /// The reader's swipe handler: (start, translation), both
+    /// in the navigation view's coordinates.
+    var onSwipe: ((CGPoint, CGSize) -> Void)?
+
+    private var installed = false
+    private weak var popRecognizer: UIGestureRecognizer?
+    private var swipeStart: CGPoint = .zero
+    /// Set once a drag proves to be a vertical scroll; its end
+    /// is then never reported as a swipe.
+    private var swipeIsScroll = false
+
+    /// Installs the recognizers on the navigation controller's
+    /// view. Safe to call on every drill-down appearance; only
+    /// the first call does anything.
+    func install(from vc: UIViewController) {
+        guard !installed,
+              let navController = vc.navigationController,
+              let navView = navController.view,
+              let pop = navController.interactivePopGestureRecognizer
+        else { return }
+        installed = true
+        popRecognizer = pop
+
+        let edgePan = UIScreenEdgePanGestureRecognizer(
+            target: self, action: #selector(ignoreEdgePan(_:)))
+        edgePan.edges = .left
+        // The drawer wins the left edge; the back gesture's
+        // start there has to wait on this inert recognizer.
+        pop.require(toFail: edgePan)
+        navView.addGestureRecognizer(edgePan)
+
+        let swipePan = UIPanGestureRecognizer(
+            target: self, action: #selector(handleSwipePan(_:)))
+        swipePan.cancelsTouchesInView = false
+        swipePan.delegate = self
+        pop.require(toFail: swipePan)
+        navView.addGestureRecognizer(swipePan)
+
+        pop.isEnabled = false
+    }
+
+    /// The observing pan must never block the scroll view, the
+    /// edge strips, or any other recognizer.
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        true
+    }
+
+    /// Deliberately no action: this recognizer exists only so
+    /// the system's back-swipe has something to wait for.
+    @objc private func ignoreEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {}
+
+    @objc private func handleSwipePan(_ pan: UIPanGestureRecognizer) {
+        guard let navView = pan.view else { return }
+        switch pan.state {
+        case .began:
+            swipeStart = pan.location(in: navView)
+            swipeIsScroll = false
+            // Re-assert the disable on every drag: the
+            // framework may have turned the recognizer back on
+            // since installation. (The failure requirements
+            // above are what actually keep it from beginning.)
+            popRecognizer?.isEnabled = false
+        case .changed:
+            // A clearly vertical drag is a scroll, not a swipe:
+            // mark it so its end is never reported.
+            let t = pan.translation(in: navView)
+            if abs(t.y) > 40, abs(t.y) > 1.5 * abs(t.x) {
+                swipeIsScroll = true
             }
-            if let pan = swipePan {
-                navView?.removeGestureRecognizer(pan)
-                swipePan = nil
-            }
-            navView = nil
-            if popVetoInstalled,
-               let pop = navigationController?.interactivePopGestureRecognizer {
-                pop.delegate = savedPopDelegate
-                savedPopDelegate = nil
-                popVetoInstalled = false
-            }
-            navigationController?.interactivePopGestureRecognizer?.isEnabled = true
-        }
-
-        /// The observing pan must never block the scroll view, the
-        /// edge strips, or any other recognizer.
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                               shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-            true
-        }
-
-        /// The back gesture's delegate veto (see viewDidAppear):
-        /// it may never begin while the reader is visible. Every
-        /// other recognizer this controller delegates for — the
-        /// observing pan — may always begin.
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            if gestureRecognizer
-                === navigationController?.interactivePopGestureRecognizer {
-                return false
-            }
-            return true
-        }
-
-        /// Deliberately no action: this recognizer exists only so
-        /// the system's back-swipe has something to wait for. The
-        /// drawer is opened by the reader's start-zone decision
-        /// (REQ-GS-2), not from here.
-        @objc private func ignoreEdgePan(_ recognizer: UIScreenEdgePanGestureRecognizer) {}
-
-        @objc private func handleSwipePan(_ pan: UIPanGestureRecognizer) {
-            guard let navView else { return }
-            switch pan.state {
-            case .began:
-                swipeStart = pan.location(in: navView)
-                swipeIsScroll = false
-            case .changed:
-                // A clearly vertical drag is a scroll, not a swipe:
-                // mark it so its end is never reported.
+        case .ended:
+            if !swipeIsScroll {
                 let t = pan.translation(in: navView)
-                if abs(t.y) > 40, abs(t.y) > 1.5 * abs(t.x) {
-                    swipeIsScroll = true
-                }
-            case .ended:
-                if !swipeIsScroll {
-                    let t = pan.translation(in: navView)
-                    onSwipe?(swipeStart, CGSize(width: t.x, height: t.y))
-                }
-            default:
-                break
+                onSwipe?(swipeStart, CGSize(width: t.x, height: t.y))
             }
+        default:
+            break
         }
     }
 }
