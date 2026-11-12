@@ -314,7 +314,13 @@ Multiple (KJV Gen 1:1-2):
   reader, the bookmarks panel), and only a swipe starting in the
   middle turns a chapter. The decision is fed by an observing
   UIKit pan recognizer that reports the touch's start in window
-  coordinates, converted into the reader's frame: neither the
+  coordinates, converted into the reader's frame. The reported
+  start is the true touch-down point — the location at
+  recognition minus the translation accumulated by then:
+  the raw location at recognition sits the threshold's
+  travel (10-25pt) inside the drag, which pushed genuine
+  edge starts outside the 20pt zones and made the drawer
+  unreachable (diagnostic, Nov 12, 2026). Neither the
   system's screen-edge pan recognizer (its edge zone is wider
   than the app's 20pt, so when it made the decision, middle
   swipes brought the drawer out; it is installed on the reader
@@ -347,7 +353,16 @@ Multiple (KJV Gen 1:1-2):
   delegate veto failed for a different reason — its
   delegate lived on a view controller the teardown stripped
   — not because the veto itself was wrong; the drawer's
-  death in that build was the same teardown. Right-edge
+  death in that build was the same teardown. And the
+  diagnostic census (Nov 12, 2026) found the deepest leak:
+  the navigation view carries TWO
+  _UIParallaxTransitionPanGestureRecognizers while
+  `interactivePopGestureRecognizer` names only one of
+  them, so the unnamed one stayed enabled and free to
+  drive the pop through every veto aimed at the named
+  one. The guard therefore sweeps the navigation view on
+  every appearance and every drag and vetoes EVERY
+  transition recognizer it finds the same way. Right-edge
   swipe right no longer goes back anywhere: swiping back
   is disabled (see §6).
 

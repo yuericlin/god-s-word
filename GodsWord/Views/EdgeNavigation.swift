@@ -127,8 +127,9 @@ struct ReaderSwipeGesture: UIViewControllerRepresentable {
 /// with everything else (scrolling, taps, the edge strips),
 /// ignores a drag as soon as the drag proves to be a vertical
 /// scroll, and on end reports the touch's start in the
-/// navigation view — the window's own coordinates, the ground
-/// truth for where the finger landed — which the reader
+/// navigation view — reconstructed as the location at
+/// recognition minus the translation accumulated by then,
+/// i.e. the true touch-down point — which the reader
 /// converts into its own frame and classifies with
 /// `ReaderSwipeZones.action`.
 final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
@@ -140,46 +141,76 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
 
     private var installed = false
     private weak var popRecognizer: UIGestureRecognizer?
+    private var swipePan: UIPanGestureRecognizer?
+    /// Every transition recognizer the sweep has vetoed
+    /// (see sweepTransitionRecognizers).
+    private var vetoedRecognizers = Set<ObjectIdentifier>()
     private var swipeStart: CGPoint = .zero
     /// Set once a drag proves to be a vertical scroll; its end
     /// is then never reported as a swipe.
     private var swipeIsScroll = false
 
     /// Installs the recognizers on the navigation controller's
-    /// view. Safe to call on every drill-down appearance; only
-    /// the first call does anything.
+    /// view. Safe to call on every drill-down appearance: the
+    /// recognizers are created on the first call, and every
+    /// call sweeps the view's transition recognizers (below).
     func install(from vc: UIViewController) {
-        guard !installed,
-              let navController = vc.navigationController,
+        guard let navController = vc.navigationController,
               let navView = navController.view,
               let pop = navController.interactivePopGestureRecognizer
         else { return }
-        installed = true
-        popRecognizer = pop
-        // The veto's core: the guard becomes the pop
-        // recognizer's delegate PERMANENTLY (never restored —
-        // see gestureRecognizerShouldBegin). In PR #82 this
-        // delegate lived on a view controller whose teardown
-        // restored the original delegate, taking the veto with
-        // it; the singleton outlives every view.
-        pop.delegate = self
+        if !installed {
+            installed = true
+            popRecognizer = pop
+            // The veto's core: the guard becomes the pop
+            // recognizer's delegate PERMANENTLY (never restored —
+            // see gestureRecognizerShouldBegin). In PR #82 this
+            // delegate lived on a view controller whose teardown
+            // restored the original delegate, taking the veto with
+            // it; the singleton outlives every view.
+            pop.delegate = self
 
-        let edgePan = UIScreenEdgePanGestureRecognizer(
-            target: self, action: #selector(ignoreEdgePan(_:)))
-        edgePan.edges = .left
-        // The drawer wins the left edge; the back gesture's
-        // start there has to wait on this inert recognizer.
-        pop.require(toFail: edgePan)
-        navView.addGestureRecognizer(edgePan)
+            let edgePan = UIScreenEdgePanGestureRecognizer(
+                target: self, action: #selector(ignoreEdgePan(_:)))
+            edgePan.edges = .left
+            // The drawer wins the left edge; the back gesture's
+            // start there has to wait on this inert recognizer.
+            pop.require(toFail: edgePan)
+            navView.addGestureRecognizer(edgePan)
 
-        let swipePan = UIPanGestureRecognizer(
-            target: self, action: #selector(handleSwipePan(_:)))
-        swipePan.cancelsTouchesInView = false
-        swipePan.delegate = self
-        pop.require(toFail: swipePan)
-        navView.addGestureRecognizer(swipePan)
+            let pan = UIPanGestureRecognizer(
+                target: self, action: #selector(handleSwipePan(_:)))
+            pan.cancelsTouchesInView = false
+            pan.delegate = self
+            pop.require(toFail: pan)
+            navView.addGestureRecognizer(pan)
+            swipePan = pan
 
-        pop.isEnabled = false
+            pop.isEnabled = false
+        }
+        sweepTransitionRecognizers(on: navView)
+    }
+
+    /// Vetoes every transition recognizer on the navigation
+    /// view. The diagnostic census (Nov 12, 2026) showed the
+    /// view carries TWO _UIParallaxTransitionPanGestureRecognizers
+    /// while `interactivePopGestureRecognizer` names only one
+    /// of them — and through every earlier build the unnamed
+    /// one stayed enabled, undelegated and unbound, free to
+    /// drive the pop no matter what was done to the named
+    /// one. So they are ALL vetoed the same way (disabled,
+    /// the guard as delegate, bound to the observing pan),
+    /// and the sweep repeats on every appearance and every
+    /// drag in case one is created later.
+    private func sweepTransitionRecognizers(on navView: UIView) {
+        for recognizer in navView.gestureRecognizers ?? [] {
+            guard String(describing: type(of: recognizer)).contains("ParallaxTransition")
+            else { continue }
+            recognizer.isEnabled = false
+            recognizer.delegate = self
+            if let swipePan { recognizer.require(toFail: swipePan) }
+            vetoedRecognizers.insert(ObjectIdentifier(recognizer))
+        }
     }
 
     /// The veto itself: the back gesture may never begin,
@@ -195,6 +226,7 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
     /// observing pan) may always begin.
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         gestureRecognizer !== popRecognizer
+            && !vetoedRecognizers.contains(ObjectIdentifier(gestureRecognizer))
     }
 
     /// The observing pan must never block the scroll view, the
@@ -212,13 +244,25 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
         guard let navView = pan.view else { return }
         switch pan.state {
         case .began:
-            swipeStart = pan.location(in: navView)
+            // The reported start is the true touch-down
+            // point: the location at recognition is already
+            // the recognition threshold's travel (10-25pt)
+            // inside the drag, which pushed genuine edge
+            // starts outside the 20pt edge zones and made
+            // the drawer unreachable (diagnostic, Nov 12,
+            // 2026: a left-edge swipe reported x=26).
+            // Subtracting the accumulated translation
+            // reconstructs where the finger landed.
+            let location = pan.location(in: navView)
+            let travel = pan.translation(in: navView)
+            swipeStart = CGPoint(x: location.x - travel.x,
+                                 y: location.y - travel.y)
             swipeIsScroll = false
-            // Re-assert the disable on every drag: the
-            // framework may have turned the recognizer back on
-            // since installation. (The failure requirements
-            // above are what actually keep it from beginning.)
+            // Re-assert the veto on every drag, in case a
+            // transition recognizer was created or re-enabled
+            // since installation.
             popRecognizer?.isEnabled = false
+            sweepTransitionRecognizers(on: navView)
         case .changed:
             // A clearly vertical drag is a scroll, not a swipe:
             // mark it so its end is never reported.
