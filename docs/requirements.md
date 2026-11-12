@@ -740,9 +740,13 @@ Multiple (KJV Gen 1:1-2):
   moved here from the reader's left drawer (the drawer's History
   button is gone; the Settings screen's History section, REQ-HI-5,
   remains). It shows the same HistoryView list: most recent first,
-  tap an entry to jump back to it (switching to the entry's version
-  when still installed), swipe to delete; a Clear button in the tab
-  header clears the log.
+  tap an entry to view its chapter in the reference chapter sheet
+  (REQ-AP-20) — in the entry's own version when still installed,
+  the version being read when it is not — with no verses selected
+  (an entry names a chapter, not verses); the sheet's Read More
+  jumps back to it (switching to the entry's version when still
+  installed); swipe to delete; a Clear button (trash icon) in the
+  tab header clears the log.
 - **REQ-AP-12:** Module downloads (both "Add Bible" and
   "Add Commentary") show progress with a cancel button
   (`PackageDownloader`): the row shows the fraction downloaded,
@@ -829,7 +833,10 @@ Multiple (KJV Gen 1:1-2):
   as before.
 - **REQ-AP-20:** Tapping a commentary reference opens a sheet
   showing the reference's whole chapter in the version being
-  read, rendered the way the main reader renders that chapter:
+  read. The same sheet is what a Recents entry (REQ-AP-11) and
+  a Highlights row (REQ-HL-4) open, with the verses the tapped
+  entry names selected — or none, for a chapter-only entry.
+  The chapter renders the way the main reader renders it:
   the reader's mode (paragraph or verse by verse, following
   its setting), font, and line spacing, with section headings,
   red letters, and Strong's numbers where the reader would
@@ -842,7 +849,8 @@ Multiple (KJV Gen 1:1-2):
   the commentary; a bottom "Read More" button — a bottom-bar
   Label button styled like that view's back / forward arrow
   buttons — dismisses and moves the main reader to that
-  chapter, landing on the first referenced verse.
+  chapter, landing on the first referenced verse when the
+  entry named verses.
 
 ## 16. Module sources
 
@@ -1024,9 +1032,12 @@ Multiple (KJV Gen 1:1-2):
   (`HighlightsTabLogic`, unit-tested); with no highlights at
   all the tab shows its empty state. Every row shows the
   reference, the version the highlight was made in, and its
-  date (the note-row format). Tapping a row jumps the reader
-  to that passage in the version being read — never switching
-  version; swiping a row deletes the highlight.
+  date (the note-row format). Tapping a row views the passage
+  in the reference chapter sheet (REQ-AP-20) in the version
+  being read — never switching version — with the highlight's
+  verses selected; the sheet's Read More moves the reader to
+  that passage, landing on its first verse; swiping a row
+  deletes the highlight.
 - **REQ-HL-5:** Highlights persist like bookmarks:
   UserDefaults (`gw.highlights.v1`), the backup payload
   (v11, additive — older payloads decode to [] and leave
