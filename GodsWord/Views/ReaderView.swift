@@ -193,11 +193,13 @@ struct ReaderView: View {
                             // offers to take a chapter-level note.
                             .contextMenu {
                                 Button { openChapterNoteEditor() } label: {
-                                    Label("Take Notes", systemImage: "square.and.pencil")
+                                    Label("Add Note", systemImage: "square.and.pencil")
                                 }
-                                Button("Assign Bookmark") {
+                                Button {
                                     assignVerse = nil
                                     showingAssignBookmark = true
+                                } label: {
+                                    Label("Assign Bookmark", systemImage: "bookmark")
                                 }
                             }
                         }
