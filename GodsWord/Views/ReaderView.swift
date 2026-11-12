@@ -130,7 +130,9 @@ struct ReaderView: View {
                 if diagLines.count > 20 { diagLines.removeFirst(diagLines.count - 20) }
             }
             SwipeDiag.add("READER APPEAR")
+            SwipeBackGuard.shared.probe("AT-APPEAR")
         }
+        .onDisappear { SwipeBackGuard.shared.probe("AT-DISAPPEAR") }
         .onChange(of: showingSettings) { SwipeDiag.add("SETTINGS -> \(showingSettings)") }
         .onDisappear { SwipeBackGuard.shared.onSwipe = nil }
     }
@@ -532,7 +534,7 @@ struct ReaderView: View {
 
     /// DIAGNOSTIC overlay (never merge).
     private var diagOverlay: some View {
-        Text(diagLines.joined(separator: "\n"))
+        Text(SwipeDiag.lines.joined(separator: "\n"))
             .font(.system(size: 8.5, design: .monospaced))
             .foregroundStyle(.black)
             .padding(4)

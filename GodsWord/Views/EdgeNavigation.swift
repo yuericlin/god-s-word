@@ -18,7 +18,12 @@ import UIKit
 /// a sink the reader's overlay renders.
 enum SwipeDiag {
     nonisolated(unsafe) static var sink: ((String) -> Void)?
-    static func add(_ s: String) { sink?(s) }
+    nonisolated(unsafe) static var lines: [String] = []
+    static func add(_ s: String) {
+        lines.append(s)
+        if lines.count > 40 { lines.removeFirst(lines.count - 40) }
+        sink?(s)
+    }
     static func cls(_ o: AnyObject?) -> String {
         guard let o else { return "nil" }
         return String(describing: type(of: o))
@@ -213,6 +218,11 @@ final class SwipeBackGuard: NSObject, UIGestureRecognizerDelegate {
         let answer = gestureRecognizer !== popRecognizer
         SwipeDiag.add("SHOULD-BEGIN \(SwipeDiag.cls(gestureRecognizer)) -> \(answer)")
         return answer
+    }
+
+    /// DIAGNOSTIC: report the veto's current state.
+    func probe(_ tag: String) {
+        SwipeDiag.add("\(tag) popEn=\(popRecognizer?.isEnabled ?? true) popDel=\(SwipeDiag.cls(popRecognizer?.delegate)) installed=\(installed)")
     }
 
     /// The observing pan must never block the scroll view, the
