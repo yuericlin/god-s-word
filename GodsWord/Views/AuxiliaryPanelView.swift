@@ -2181,11 +2181,19 @@ private struct ReferenceChapterView: View {
     }
 
     /// A referenced verse wears the reader's selection blue
-    /// over the whole verse, number included — the treatment
-    /// a selected verse gets in the reader.
+    /// over its text — the treatment a selected verse gets in
+    /// the reader — except the verse number itself: the number
+    /// is smaller and raised, so its background box is smaller
+    /// and shifted up, and painting it leaves a step (a kink)
+    /// at the bottom where its box meets the text's box. The
+    /// background therefore starts right after the number run.
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        let numberLength = "\(verse) ".count
+        guard attr.characters.count > numberLength else { return }
+        let start = attr.index(attr.startIndex, offsetByCharacters: numberLength)
+        attr[start..<attr.endIndex].backgroundColor =
+            UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
     /// Red-letter color (REQ-RL-3): deep red on light
