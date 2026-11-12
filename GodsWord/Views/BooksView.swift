@@ -23,16 +23,13 @@ struct BooksView: View {
         }
         .navigationTitle(history.version.displayName)
         .navigationBarTitleDisplayMode(.inline)
-        .edgeNavigation(
-            onForward: {
-                // Right-edge swipe left: forward to the chapter picker.
-                path.append(Route.chapters)
-            },
-            onBackward: {
-                // Right-edge swipe right: back to the version picker.
-                if !path.isEmpty { path.removeLast() }
-            }
-        )
+        .edgeNavigation(onForward: {
+            // Right-edge swipe left: forward to the chapter picker.
+            path.append(Route.chapters)
+        })
+        // No swiping back (Nov 11, 2026): the system's back
+        // gesture is vetoed while this screen is visible.
+        .disableSwipeBack()
     }
 
     private func bookButton(overall: Int, testament: Int, book: Int) -> some View {
