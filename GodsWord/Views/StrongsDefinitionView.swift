@@ -47,7 +47,11 @@ struct StrongsDefinitionView: View {
                 }
                 // Back / forward through the entries viewed in
                 // this session (REQ-ST-8): forward is enabled
-                // only after going back, like a browser.
+                // only after going back, like a browser. No
+                // trailing Spacer: the iOS 26 bottom bar is a
+                // capsule that hugs its content, and a spacer
+                // would sit inside it as dead space on the
+                // right, leaving the arrows off-center.
                 ToolbarItem(placement: .bottomBar) {
                     HStack {
                         Button { goBack() } label: {
@@ -58,7 +62,6 @@ struct StrongsDefinitionView: View {
                             Label("Forward", systemImage: "chevron.right")
                         }
                         .disabled(forwardStack.isEmpty)
-                        Spacer()
                     }
                 }
             }
