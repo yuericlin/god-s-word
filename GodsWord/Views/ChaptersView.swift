@@ -54,14 +54,12 @@ struct ChaptersView: View {
         }
         .navigationTitle("Select")
         .navigationBarTitleDisplayMode(.inline)
-        .edgeNavigation(
-            onForward: {
-                path.append(Route.reader)
-            },
-            onBackward: {
-                if !path.isEmpty { path.removeLast() }
-            }
-        )
+        .edgeNavigation(onForward: {
+            path.append(Route.reader)
+        })
+        // No swiping back (Nov 11, 2026): the system's back
+        // gesture is vetoed while this screen is visible.
+        .disableSwipeBack()
         .sheet(isPresented: $showingPicker) {
             BookChapterPickerSheet(history: history) { t, b, c in
                 history.testament = t

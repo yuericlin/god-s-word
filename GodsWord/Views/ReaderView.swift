@@ -283,16 +283,12 @@ struct ReaderView: View {
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { readerFrame = $0 }
         .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe).frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
-        .edgeNavigation(
-            onForward: {
-                // Right-edge swipe left: open the bookmarks panel.
-                showingBookmarks = true
-            },
-            onBackward: {
-                // Right-edge swipe right: back to the chapter picker.
-                if !path.isEmpty { path.removeLast() }
-            }
-        )
+        .edgeNavigation(onForward: {
+            // Right-edge swipe left: open the bookmarks panel.
+            // (No right-edge swipe right: swiping back is
+            // disabled, Nov 11, 2026.)
+            showingBookmarks = true
+        })
         .toolbar {
             ToolbarItem(placement: .principal) {
                 HStack(spacing: 8) {

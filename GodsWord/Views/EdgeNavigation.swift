@@ -1,6 +1,10 @@
 // EdgeNavigation.swift — edge swipe navigation.
-// Right edge: swipe left goes forward (versions -> books -> chapters -> reading),
-//             swipe right goes backward (reading -> chapters -> books -> versions).
+// Right edge: swipe left goes forward (versions -> books -> chapters -> reading).
+//             Swiping back is disabled everywhere in the drill-down
+//             (Nov 11, 2026): no right-edge swipe right, and the
+//             system's interactive back gesture is vetoed on every
+//             drill-down screen — going back is the navigation
+//             bar's back button only.
 // Left edge (on the reader): the settings/history drawer's zone. The
 // reader's start-zone decision opens it (REQ-GS-2), fed by this
 // file's observing pan recognizer reporting window coordinates;
@@ -10,10 +14,10 @@
 import SwiftUI
 import UIKit
 
-/// Right-edge strip: leftward swipe goes forward, rightward swipe goes backward.
+/// Right-edge strip: a leftward swipe goes forward. There is no
+/// backward swipe (Nov 11, 2026): swiping back is disabled.
 struct RightEdgeNavigation: ViewModifier {
     var onForward: (() -> Void)?
-    var onBackward: (() -> Void)?
 
     func body(content: Content) -> some View {
         content.overlay(alignment: .trailing) {
@@ -26,8 +30,6 @@ struct RightEdgeNavigation: ViewModifier {
                         .onEnded { value in
                             if value.translation.width < -40 {
                                 onForward?()
-                            } else if value.translation.width > 40 {
-                                onBackward?()
                             }
                         }
                 )
@@ -36,10 +38,75 @@ struct RightEdgeNavigation: ViewModifier {
 }
 
 extension View {
-    /// Right-edge swipes: left goes forward, right goes backward.
-    func edgeNavigation(onForward: (() -> Void)? = nil,
-                        onBackward: (() -> Void)? = nil) -> some View {
-        modifier(RightEdgeNavigation(onForward: onForward, onBackward: onBackward))
+    /// Right-edge swipe: left goes forward. (No backward swipe —
+    /// swiping back is disabled; see the file header.)
+    func edgeNavigation(onForward: (() -> Void)? = nil) -> some View {
+        modifier(RightEdgeNavigation(onForward: onForward))
+    }
+
+    /// Vetoes the system's interactive back gesture while this
+    /// screen is visible (see SwipeBackVeto). The reader does
+    /// not use this: its swipe observer vetoes the gesture
+    /// itself (REQ-GS-2).
+    func disableSwipeBack() -> some View {
+        background(SwipeBackVeto().frame(width: 0, height: 0))
+    }
+}
+
+/// Installs the same back-gesture veto the reader's swipe
+/// observer installs (REQ-GS-2), for the drill-down screens that
+/// have no swipe observer of their own (books, chapters): while
+/// the host screen is visible, the interactive pop recognizer
+/// is disabled and delegate-vetoed, with its original delegate
+/// saved and restored on disappear. Swiping back is disabled
+/// (Nov 11, 2026) — the drill-down moves forward by swipe and
+/// goes back by the navigation bar's back button only.
+struct SwipeBackVeto: UIViewControllerRepresentable {
+    func makeUIViewController(context: Context) -> UIViewController {
+        PopVetoViewController()
+    }
+
+    func updateUIViewController(_ vc: UIViewController, context: Context) {}
+
+    final class PopVetoViewController: UIViewController,
+        UIGestureRecognizerDelegate
+    {
+        private var savedPopDelegate: UIGestureRecognizerDelegate?
+        private var popVetoInstalled = false
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            guard let navController = navigationController,
+                  let pop = navController.interactivePopGestureRecognizer
+            else { return }
+            if !popVetoInstalled {
+                savedPopDelegate = pop.delegate
+                pop.delegate = self
+                popVetoInstalled = true
+            }
+            pop.isEnabled = false
+        }
+
+        override func viewWillDisappear(_ animated: Bool) {
+            super.viewWillDisappear(animated)
+            if popVetoInstalled,
+               let pop = navigationController?.interactivePopGestureRecognizer {
+                pop.delegate = savedPopDelegate
+                savedPopDelegate = nil
+                popVetoInstalled = false
+            }
+            navigationController?.interactivePopGestureRecognizer?.isEnabled = true
+        }
+
+        /// The back gesture may never begin while the host
+        /// screen is visible.
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            if gestureRecognizer
+                === navigationController?.interactivePopGestureRecognizer {
+                return false
+            }
+            return true
+        }
     }
 }
 

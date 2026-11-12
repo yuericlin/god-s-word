@@ -286,7 +286,10 @@ Multiple (KJV Gen 1:1-2):
 
 - Right edge swipe left = forward (versions → books → chapters → reader; at
   reader opens bookmarks panel).
-- Right edge swipe right = backward.
+- Swiping back is disabled (Nov 11, 2026): no right-edge swipe
+  right, and the system's interactive back gesture is vetoed
+  on every drill-down screen (books, chapters, reader) —
+  going back is the navigation bar's back button only.
 - Left edge = settings drawer (reader only).
 - Middle swipes turn chapters (crossing books at the edges, REQ-GS-1).
 
@@ -324,8 +327,10 @@ Multiple (KJV Gen 1:1-2):
   rightward swipe popped back to the chapter picker, which
   slides in from the left and was three times reported as
   the settings drawer opening (Nov 11, 2026; the drawer's
-  own decision was never wrong). Backward navigation on the
-  reader is the right edge's job (REQ-GS-1).
+  own decision was never wrong). The same veto is installed
+  on the books and chapters screens, and right-edge swipe
+  right no longer goes back anywhere: swiping back is
+  disabled (see §6).
 
 ---
 
