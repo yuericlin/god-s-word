@@ -1829,9 +1829,8 @@ struct AuxiliaryPanelView: View {
                                     : "Switch to sync mode")
             }
 
-            Text(parallelTitle)
+            parallelTitle
                 .font(.callout)
-                .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .padding(.horizontal, 44)
         }
@@ -1854,15 +1853,29 @@ struct AuxiliaryPanelView: View {
             }
     }
 
-    /// The header title: the version's short label — the
-    /// module id, as the main view names the version, not its
-    /// display name — and the passage it shows.
-    private var parallelTitle: String {
+    /// The header title, colored as the main view's title:
+    /// the version's short label — the module id, as the main
+    /// view names the version, not its display name — in
+    /// secondary, and the book and chapter in primary (white).
+    private var parallelTitle: Text {
+        Text("\(parallelVersionLabel) — ").foregroundColor(.secondary)
+            + Text(parallelPassageLabel).foregroundColor(.primary)
+    }
+
+    /// The version the parallel view shows, by its short label.
+    private var parallelVersionLabel: String {
+        personalData.parallelSyncMode
+            ? parallelSyncVersion.shortLabel
+            : parallelSeparateVersion.shortLabel
+    }
+
+    /// The passage the parallel view shows: book and chapter.
+    private var parallelPassageLabel: String {
         if personalData.parallelSyncMode {
-            return "\(parallelSyncVersion.shortLabel) — \(history.bookTitle) \(history.chapter)"
+            return "\(history.bookTitle) \(history.chapter)"
         }
         let target = effectiveSepTarget
-        return "\(parallelSeparateVersion.shortLabel) — \(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
+        return "\(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
     }
 
     /// The version a settings sheet starts from.

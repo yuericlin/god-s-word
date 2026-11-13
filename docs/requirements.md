@@ -1146,7 +1146,9 @@ Multiple (KJV Gen 1:1-2):
   carries a gear button on the left, a chain button on the
   right, and between them, centered, the parallel view's
   version — its short label (the module id), as the main view
-  names the version — and passage. The
+  names the version, in secondary — and its book and chapter
+  in the primary color (white), as the main view's title
+  shows them. The
   parallel view lives in the panel only; the main reading
   text is untouched.
 - **REQ-PA-2:** **Sync mode:** the parallel view shows the
