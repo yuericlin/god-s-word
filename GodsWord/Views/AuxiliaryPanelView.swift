@@ -232,21 +232,22 @@ struct AuxiliaryPanelView: View {
         .sheet(item: $editorItem) { item in
             switch item {
             case .verse(let key, let reference):
-                VerseNoteEditor(reference: reference, noteKey: key,
-                                initialText: personalData.verseNote(forKey: key) ?? "",
-                                seedText: "\(history.bookTitle) \(history.chapter)\n",
-                                sourceModuleID: history.version.id,
-                                onReadChapter: {
-                                    if let p = NoteKey.parse(key) {
-                                        jumpTo(testament: p.testament,
-                                               book: p.book,
-                                               chapter: p.chapter)
-                                        history.pendingVerse = p.verse
-                                    }
-                                })
-                    .environmentObject(personalData)
+                NoteEditor(reference: reference,
+                           initialText: personalData.verseNote(forKey: key) ?? "",
+                           seedText: "\(history.bookTitle) \(history.chapter)\n",
+                           onReadChapter: {
+                               if let p = NoteKey.parse(key) {
+                                   jumpTo(testament: p.testament,
+                                          book: p.book,
+                                          chapter: p.chapter)
+                                   history.pendingVerse = p.verse
+                               }
+                           }) { text in
+                    personalData.setVerseNote(text, forKey: key,
+                                              source: history.version.id)
+                }
             case .book(let key, let reference):
-                ScopedNoteEditor(reference: reference,
+                NoteEditor(reference: reference,
                                  initialText: personalData.bookNote(forKey: key) ?? "",
                                  onReadChapter: {
                                      if let p = BookNoteKey.parse(key) {
@@ -258,7 +259,7 @@ struct AuxiliaryPanelView: View {
                                              source: history.version.id)
                 }
             case .chapter(let key, let reference):
-                ScopedNoteEditor(reference: reference,
+                NoteEditor(reference: reference,
                                  initialText: personalData.chapterNote(forKey: key) ?? "",
                                  onReadChapter: {
                                      if let p = ChapterNoteKey.parse(key) {
@@ -493,7 +494,7 @@ struct AuxiliaryPanelView: View {
     /// Tapping a note row — title line or note text alike —
     /// opens its editor (REQ-NT-21): rows only edit, they
     /// never navigate. Reading the note's chapter is the
-    /// editor's Read Chapter button's job.
+    /// editor's Read button's job.
     private func openNoteEditor(_ row: NoteRow) {
         switch row.kind {
         case .book: editorItem = .book(key: row.key, reference: row.reference)
@@ -1543,88 +1544,6 @@ struct AuxiliaryPanelView: View {
         .pickerStyle(.segmented)
         .padding(.horizontal)
         .padding(.bottom, 8)
-    }
-}
-
-/// Editor for a book- or chapter-level note (REQ-NT-14). Mirrors
-/// VerseNoteEditor's behavior — self-contained text, Save/Delete via
-/// the `onSave` closure (nil = delete) — without a storage key, so the
-/// caller decides which scoped store the note belongs to.
-struct ScopedNoteEditor: View {
-    let reference: String
-    /// When set, a bottom-bar "Read Chapter" button (the
-    /// reference chapter sheet's pattern, REQ-AP-20) moves the
-    /// reader to the note's chapter, then dismisses
-    /// (REQ-NT-21). The editor itself only edits — its title
-    /// is never a jump target.
-    let onReadChapter: (() -> Void)?
-    private let originalText: String
-    private let onSave: (String?) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @FocusState private var isFocused: Bool
-    @State private var text: String
-    @State private var showingDeleteConfirm = false
-
-    init(reference: String, initialText: String,
-         onReadChapter: (() -> Void)? = nil,
-         onSave: @escaping (String?) -> Void) {
-        self.reference = reference
-        self.originalText = initialText
-        self.onReadChapter = onReadChapter
-        self.onSave = onSave
-        _text = State(initialValue: initialText)
-    }
-
-    var body: some View {
-        NavigationStack {
-            TextEditor(text: $text)
-                .focused($isFocused)
-                .padding()
-                .navigationTitle(reference)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    if let onReadChapter {
-                        // A plain text button, like the
-                        // reference sheet's Read More: a toolbar
-                        // Label would render as an icon alone.
-                        ToolbarItem(placement: .bottomBar) {
-                            Button("Read Chapter") {
-                                onReadChapter()
-                                dismiss()
-                            }
-                        }
-                    }
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
-                    }
-                    ToolbarItemGroup(placement: .confirmationAction) {
-                        if !originalText.isEmpty {
-                            Button("Delete", role: .destructive) {
-                                showingDeleteConfirm = true
-                            }
-                        }
-                        Button("Save") {
-                            onSave(text)
-                            dismiss()
-                        }
-                        .disabled(text == originalText)
-                    }
-                }
-                .confirmationDialog("Delete this note?",
-                                    isPresented: $showingDeleteConfirm,
-                                    titleVisibility: .visible) {
-                    Button("Delete Note", role: .destructive) {
-                        onSave(nil)
-                        dismiss()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                }
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        isFocused = true
-                    }
-                }
-        }
     }
 }
 

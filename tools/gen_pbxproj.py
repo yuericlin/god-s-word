@@ -37,7 +37,7 @@ sources = [
     "GodsWord/Views/ReaderView.swift",
     "GodsWord/Views/BookmarksView.swift",
     "GodsWord/Views/StrongsDefinitionView.swift",
-    "GodsWord/Views/VerseNoteEditor.swift",
+    "GodsWord/Views/NoteEditor.swift",
     "GodsWord/Views/ReadingSettingsView.swift",
     "GodsWord/Views/RepositoryView.swift",
     "GodsWord/Views/SourceEditView.swift",
