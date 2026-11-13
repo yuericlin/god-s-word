@@ -231,10 +231,8 @@ struct AuxiliaryPanelView: View {
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
-    /// Measured height of the floating tab controls (grabber
-    /// bar plus pill row): the header zone the panel-collapse
-    /// gesture reads (REQ-AP-18). They float over the content
-    /// and take none of its height (REQ-AP-21).
+    /// Measured height of the tab bar, so the content can take the
+    /// rest of the panel's 30% of the total height.
     @State private var tabBarHeight: CGFloat = 49
 
     enum PanelTab: String, CaseIterable {
@@ -322,7 +320,7 @@ struct AuxiliaryPanelView: View {
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
                                 .background(
-                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.16))
+                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.07))
                                 )
                                 .foregroundStyle(tab == t ? Color.primary : Color.secondary)
                         }
@@ -345,85 +343,37 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// Hides or shows the floating tab controls (REQ-AP-21):
-    /// a thin translucent bar centered above
-    /// the pill row — tap it to tuck the pills away or bring
-    /// them back. It stays when the pills are hidden, at the
-    /// panel's top-center. The choice is remembered
-    /// (PersonalData).
-    private var tabBarGrabber: some View {
-        Button {
-            personalData.panelTabBarHidden.toggle()
-        } label: {
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .frame(width: 40, height: 6)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 4)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(personalData.panelTabBarHidden
-                            ? "Show tab controls" : "Hide tab controls")
-    }
-
-    /// Height of the tab content: the whole expanded panel is
-    /// 30% of the total height, and the content takes all of it
-    /// but the divider — the tab bar floats over the content
-    /// (REQ-AP-21) instead of taking a share. Before ReaderView's
-    /// first measurement lands (totalHeight still zero), the
-    /// content keeps the old fixed 264.
+    /// Height of the tab content: the whole expanded panel — divider,
+    /// tab bar, and content — is 30% of the total height. Before
+    /// ReaderView's first measurement lands (totalHeight still zero),
+    /// the content keeps the old fixed 264.
     private var contentHeight: CGFloat {
         guard totalHeight > 0 else { return 264 }
-        return max(totalHeight * 0.30 - 1, 80)
+        return max(totalHeight * 0.30 - tabBarHeight - 1, 80)
     }
 
     /// The expanded panel: the tab bar plus the selected tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
-            ZStack {
-                Group {
-                    switch tab {
-                    case .notes: notesTab
-                    case .commentary: commentaryTab
-                    case .strongs: strongsTab
-                    case .recents: recentsTab
-                    case .highlights: highlightsTab
-                    case .parallel: parallelTab
-                    }
-                }
-                .frame(height: contentHeight)
-            }
-            .overlay(alignment: .top) {
-                // The tab controls float over the content
-                // (REQ-AP-21): transparent — no background of
-                // their own — overlapping the content's top,
-                // the tabs' own headers under them while they
-                // show; the pills render at 80% opacity. The
-                // thin bar centered above the row hides and
-                // shows the pills.
-                VStack(spacing: 0) {
-                    HStack {
-                        Spacer()
-                        tabBarGrabber
-                        Spacer()
-                    }
-                    if !personalData.panelTabBarHidden {
-                        panelTabBar
-                            .opacity(0.8)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                }
+            panelTabBar
                 .onGeometryChange(for: CGFloat.self, of: \.size.height) {
                     tabBarHeight = $0
                 }
+
+            Group {
+                switch tab {
+                case .notes: notesTab
+                case .commentary: commentaryTab
+                case .strongs: strongsTab
+                case .recents: recentsTab
+                case .highlights: highlightsTab
+                case .parallel: parallelTab
+                }
             }
-            .clipped()
+            .frame(height: contentHeight)
         }
         .background(.regularMaterial)
-        .animation(.easeInOut(duration: 0.25),
-                   value: personalData.panelTabBarHidden)
         .simultaneousGesture(collapseGesture)
         .onChange(of: tab) { updateSyncActive() }
         .onChange(of: personalData.parallelSyncMode) { updateSyncActive() }
