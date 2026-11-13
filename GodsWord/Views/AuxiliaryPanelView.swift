@@ -232,21 +232,22 @@ struct AuxiliaryPanelView: View {
         .sheet(item: $editorItem) { item in
             switch item {
             case .verse(let key, let reference):
-                VerseNoteEditor(reference: reference, noteKey: key,
-                                initialText: personalData.verseNote(forKey: key) ?? "",
-                                seedText: "\(history.bookTitle) \(history.chapter)\n",
-                                sourceModuleID: history.version.id,
-                                onReadChapter: {
-                                    if let p = NoteKey.parse(key) {
-                                        jumpTo(testament: p.testament,
-                                               book: p.book,
-                                               chapter: p.chapter)
-                                        history.pendingVerse = p.verse
-                                    }
-                                })
-                    .environmentObject(personalData)
+                NoteEditor(reference: reference,
+                           initialText: personalData.verseNote(forKey: key) ?? "",
+                           seedText: "\(history.bookTitle) \(history.chapter)\n",
+                           onReadChapter: {
+                               if let p = NoteKey.parse(key) {
+                                   jumpTo(testament: p.testament,
+                                          book: p.book,
+                                          chapter: p.chapter)
+                                   history.pendingVerse = p.verse
+                               }
+                           }) { text in
+                    personalData.setVerseNote(text, forKey: key,
+                                              source: history.version.id)
+                }
             case .book(let key, let reference):
-                ScopedNoteEditor(reference: reference,
+                NoteEditor(reference: reference,
                                  initialText: personalData.bookNote(forKey: key) ?? "",
                                  onReadChapter: {
                                      if let p = BookNoteKey.parse(key) {
@@ -258,7 +259,7 @@ struct AuxiliaryPanelView: View {
                                              source: history.version.id)
                 }
             case .chapter(let key, let reference):
-                ScopedNoteEditor(reference: reference,
+                NoteEditor(reference: reference,
                                  initialText: personalData.chapterNote(forKey: key) ?? "",
                                  onReadChapter: {
                                      if let p = ChapterNoteKey.parse(key) {
@@ -1546,11 +1547,11 @@ struct AuxiliaryPanelView: View {
     }
 }
 
-/// Editor for a book- or chapter-level note (REQ-NT-14). Mirrors
-/// VerseNoteEditor's behavior — self-contained text, Save/Delete via
-/// the `onSave` closure (nil = delete) — without a storage key, so the
-/// caller decides which scoped store the note belongs to.
-struct ScopedNoteEditor: View {
+/// The one note editor — verse, chapter, and book notes alike
+/// (REQ-NT-14/15). Self-contained text, Save/Delete via the
+/// `onSave` closure (nil = delete) — without a storage key, so
+/// the caller decides which store the note belongs to.
+struct NoteEditor: View {
     let reference: String
     /// When set, a "Read" button beside Cancel (top left)
     /// moves the reader to the note's chapter, then dismisses
@@ -1565,13 +1566,18 @@ struct ScopedNoteEditor: View {
     @State private var showingDeleteConfirm = false
 
     init(reference: String, initialText: String,
+         seedText: String = "",
          onReadChapter: (() -> Void)? = nil,
          onSave: @escaping (String?) -> Void) {
         self.reference = reference
         self.originalText = initialText
         self.onReadChapter = onReadChapter
         self.onSave = onSave
-        _text = State(initialValue: initialText)
+        // A brand-new note (no saved text) opens pre-filled
+        // with the seed (the selected verses' text, or book +
+        // chapter); originalText stays empty so Save is
+        // enabled and Delete stays hidden.
+        _text = State(initialValue: initialText.isEmpty ? seedText : initialText)
     }
 
     var body: some View {

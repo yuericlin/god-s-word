@@ -459,23 +459,23 @@ struct ReaderView: View {
                 .environmentObject(personalData)
         }
         .sheet(item: $noteEditorItem) { item in
-            VerseNoteEditor(reference: item.reference,
-                            noteKey: item.id,
-                            initialText: item.initialText,
-                            seedText: item.seedText,
-                            sourceModuleID: history.version.id,
-                            onReadChapter: {
-                                if let p = NoteKey.parse(item.id) {
-                                    history.testament = p.testament
-                                    history.book = p.book
-                                    history.chapter = p.chapter
-                                    history.pendingVerse = p.verse
-                                }
-                            })
-                .environmentObject(personalData)
+            NoteEditor(reference: item.reference,
+                       initialText: item.initialText,
+                       seedText: item.seedText,
+                       onReadChapter: {
+                           if let p = NoteKey.parse(item.id) {
+                               history.testament = p.testament
+                               history.book = p.book
+                               history.chapter = p.chapter
+                               history.pendingVerse = p.verse
+                           }
+                       }) { text in
+                personalData.setVerseNote(text, forKey: item.id,
+                                          source: history.version.id)
+            }
         }
         .sheet(isPresented: $showingChapterNoteEditor) {
-            ScopedNoteEditor(
+            NoteEditor(
                 reference: "\(history.bookTitle) \(history.chapter)",
                 initialText: personalData.chapterNote(forKey: currentChapterNoteKey) ?? ""
             ) { text in
