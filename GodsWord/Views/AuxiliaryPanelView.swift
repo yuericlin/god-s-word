@@ -346,7 +346,7 @@ struct AuxiliaryPanelView: View {
     }
 
     /// Hides or shows the floating tab controls (REQ-AP-21):
-    /// a thin translucent bar (80% opacity) centered above
+    /// a thin translucent bar centered above
     /// the pill row — tap it to tuck the pills away or bring
     /// them back. It stays when the pills are hidden, at the
     /// panel's top-center. The choice is remembered
@@ -357,7 +357,6 @@ struct AuxiliaryPanelView: View {
         } label: {
             Capsule()
                 .fill(.ultraThinMaterial)
-                .opacity(0.8)
                 .frame(width: 40, height: 6)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 4)
@@ -401,8 +400,9 @@ struct AuxiliaryPanelView: View {
                 // (REQ-AP-21): transparent — no background of
                 // their own — overlapping the content's top,
                 // the tabs' own headers under them while they
-                // show. The thin bar centered above the row
-                // hides and shows the pills.
+                // show; the pills render at 80% opacity. The
+                // thin bar centered above the row hides and
+                // shows the pills.
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
@@ -411,6 +411,7 @@ struct AuxiliaryPanelView: View {
                     }
                     if !personalData.panelTabBarHidden {
                         panelTabBar
+                            .opacity(0.8)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
