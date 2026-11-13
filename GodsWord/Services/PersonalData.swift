@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 12
+    public var version: Int = 13
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -85,6 +85,9 @@ public struct BackupPayload: Codable, Sendable {
     public var parallelSyncMode: Bool
     public var parallelSyncVersionID: String
     public var parallelSeparateVersionID: String
+    /// Panel tab controls hidden (REQ-AP-21). Payload v13+;
+    /// older payloads decode to false (controls shown).
+    public var panelTabBarHidden: Bool
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
@@ -108,6 +111,7 @@ public struct BackupPayload: Codable, Sendable {
                 parallelSyncMode: Bool = true,
                 parallelSyncVersionID: String = "",
                 parallelSeparateVersionID: String = "",
+                panelTabBarHidden: Bool = false,
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -134,6 +138,7 @@ public struct BackupPayload: Codable, Sendable {
         self.parallelSyncMode = parallelSyncMode
         self.parallelSyncVersionID = parallelSyncVersionID
         self.parallelSeparateVersionID = parallelSeparateVersionID
+        self.panelTabBarHidden = panelTabBarHidden
         self.backedUpAt = backedUpAt
     }
 
@@ -167,6 +172,7 @@ public struct BackupPayload: Codable, Sendable {
         parallelSyncMode = try c.decodeIfPresent(Bool.self, forKey: .parallelSyncMode) ?? true
         parallelSyncVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSyncVersionID) ?? ""
         parallelSeparateVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSeparateVersionID) ?? ""
+        panelTabBarHidden = try c.decodeIfPresent(Bool.self, forKey: .panelTabBarHidden) ?? false
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -200,6 +206,7 @@ public final class PersonalData: ObservableObject {
     private let parallelSyncModeKey = "gw.parallelSyncMode.v1"
     private let parallelSyncVersionKey = "gw.parallelSyncVersion.v1"
     private let parallelSeparateVersionKey = "gw.parallelSeparateVersion.v1"
+    private let panelTabBarHiddenKey = "gw.panelTabBarHidden.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -254,6 +261,7 @@ public final class PersonalData: ObservableObject {
         self.parallelSyncMode = defaults.object(forKey: parallelSyncModeKey) as? Bool ?? true
         self.parallelSyncVersionID = defaults.string(forKey: parallelSyncVersionKey) ?? ""
         self.parallelSeparateVersionID = defaults.string(forKey: parallelSeparateVersionKey) ?? ""
+        self.panelTabBarHidden = defaults.bool(forKey: panelTabBarHiddenKey)
         // REQ-NT-19: fold any legacy per-version note keys into the
         // version-less ones. didSet does not fire during init, so
         // persist the note stores explicitly afterwards.
@@ -420,6 +428,13 @@ public final class PersonalData: ObservableObject {
     /// being read. Persisted in UserDefaults.
     @Published public var parallelSeparateVersionID: String {
         didSet { defaults.set(parallelSeparateVersionID, forKey: parallelSeparateVersionKey) }
+    }
+
+    /// Whether the panel's tab controls are hidden (REQ-AP-21):
+    /// they float over the panel's content, and this remembers
+    /// the choice to tuck them away. Persisted in UserDefaults.
+    @Published public var panelTabBarHidden: Bool {
+        didSet { defaults.set(panelTabBarHidden, forKey: panelTabBarHiddenKey) }
     }
 
     /// Book-level notes (REQ-NT-14), keyed by
@@ -911,6 +926,7 @@ public final class PersonalData: ObservableObject {
                       parallelSyncMode: parallelSyncMode,
                       parallelSyncVersionID: parallelSyncVersionID,
                       parallelSeparateVersionID: parallelSeparateVersionID,
+                      panelTabBarHidden: panelTabBarHidden,
                       backedUpAt: Date())
     }
 
@@ -982,6 +998,7 @@ public final class PersonalData: ObservableObject {
         if !payload.parallelSeparateVersionID.isEmpty {
             parallelSeparateVersionID = payload.parallelSeparateVersionID
         }
+        panelTabBarHidden = payload.panelTabBarHidden
         // Note sources (payload v10+; older payloads decode to [:]
         // and leave current sources alone).
         if !payload.noteSources.isEmpty {
@@ -1028,6 +1045,8 @@ public final class PersonalData: ObservableObject {
         public var parallelSyncMode: Bool?
         public var parallelSyncVersionID: String?
         public var parallelSeparateVersionID: String?
+        /// Tab controls hidden (REQ-AP-21); optional likewise.
+        public var panelTabBarHidden: Bool?
     }
 
     private func syncBookmarksToiCloud() {
@@ -1118,7 +1137,8 @@ public final class PersonalData: ObservableObject {
             dictionaryGreekID: dictionaryGreekID,
             parallelSyncMode: parallelSyncMode,
             parallelSyncVersionID: parallelSyncVersionID,
-            parallelSeparateVersionID: parallelSeparateVersionID)
+            parallelSeparateVersionID: parallelSeparateVersionID,
+            panelTabBarHidden: panelTabBarHidden)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -1221,7 +1241,8 @@ public final class PersonalData: ObservableObject {
             dictionaryGreekID: dictionaryGreekID,
             parallelSyncMode: parallelSyncMode,
             parallelSyncVersionID: parallelSyncVersionID,
-            parallelSeparateVersionID: parallelSeparateVersionID)
+            parallelSeparateVersionID: parallelSeparateVersionID,
+            panelTabBarHidden: panelTabBarHidden)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -1312,6 +1333,7 @@ public final class PersonalData: ObservableObject {
                     dictionaryGreekID = gid
                 }
                 if let pm = s.parallelSyncMode { parallelSyncMode = pm }
+                if let tb = s.panelTabBarHidden { panelTabBarHidden = tb }
                 if let sid = s.parallelSyncVersionID, !sid.isEmpty {
                     parallelSyncVersionID = sid
                 }

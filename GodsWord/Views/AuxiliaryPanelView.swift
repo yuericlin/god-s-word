@@ -231,8 +231,10 @@ struct AuxiliaryPanelView: View {
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
-    /// Measured height of the tab bar, so the content can take the
-    /// rest of the panel's 30% of the total height.
+    /// Measured height of the tab bar: the header zone the
+    /// panel-collapse gesture reads (REQ-AP-18). The bar itself
+    /// floats over the content and takes none of its height
+    /// (REQ-AP-21).
     @State private var tabBarHeight: CGFloat = 49
 
     enum PanelTab: String, CaseIterable {
@@ -343,37 +345,78 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// Height of the tab content: the whole expanded panel — divider,
-    /// tab bar, and content — is 30% of the total height. Before
-    /// ReaderView's first measurement lands (totalHeight still zero),
-    /// the content keeps the old fixed 264.
+    /// Hides or shows the floating tab controls (REQ-AP-21): a
+    /// translucent circle over the content's bottom-trailing
+    /// corner, clear of the tabs' own headers at the top, which
+    /// the floating bar itself overlaps. The choice is
+    /// remembered (PersonalData).
+    private var tabBarToggle: some View {
+        Button {
+            personalData.panelTabBarHidden.toggle()
+        } label: {
+            Image(systemName: personalData.panelTabBarHidden
+                  ? "chevron.down" : "chevron.up")
+                .font(.callout)
+                .padding(7)
+                .background(Circle().fill(.ultraThinMaterial))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(personalData.panelTabBarHidden
+                            ? "Show tab controls" : "Hide tab controls")
+        .padding(.trailing, 12)
+        .padding(.bottom, 10)
+    }
+
+    /// Height of the tab content: the whole expanded panel is
+    /// 30% of the total height, and the content takes all of it
+    /// but the divider — the tab bar floats over the content
+    /// (REQ-AP-21) instead of taking a share. Before ReaderView's
+    /// first measurement lands (totalHeight still zero), the
+    /// content keeps the old fixed 264.
     private var contentHeight: CGFloat {
         guard totalHeight > 0 else { return 264 }
-        return max(totalHeight * 0.30 - tabBarHeight - 1, 80)
+        return max(totalHeight * 0.30 - 1, 80)
     }
 
     /// The expanded panel: the tab bar plus the selected tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
-            panelTabBar
-                .onGeometryChange(for: CGFloat.self, of: \.size.height) {
-                    tabBarHeight = $0
+            ZStack {
+                Group {
+                    switch tab {
+                    case .notes: notesTab
+                    case .commentary: commentaryTab
+                    case .strongs: strongsTab
+                    case .recents: recentsTab
+                    case .highlights: highlightsTab
+                    case .parallel: parallelTab
+                    }
                 }
-
-            Group {
-                switch tab {
-                case .notes: notesTab
-                case .commentary: commentaryTab
-                case .strongs: strongsTab
-                case .recents: recentsTab
-                case .highlights: highlightsTab
-                case .parallel: parallelTab
+                .frame(height: contentHeight)
+            }
+            .overlay(alignment: .top) {
+                // The tab controls float over the content
+                // (REQ-AP-21): transparent — no background of
+                // their own — overlapping the content's top,
+                // the tabs' own headers under them while they
+                // show.
+                if !personalData.panelTabBarHidden {
+                    panelTabBar
+                        .onGeometryChange(for: CGFloat.self, of: \.size.height) {
+                            tabBarHeight = $0
+                        }
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .frame(height: contentHeight)
+            .overlay(alignment: .bottomTrailing) {
+                tabBarToggle
+            }
+            .clipped()
         }
         .background(.regularMaterial)
+        .animation(.easeInOut(duration: 0.25),
+                   value: personalData.panelTabBarHidden)
         .simultaneousGesture(collapseGesture)
         .onChange(of: tab) { updateSyncActive() }
         .onChange(of: personalData.parallelSyncMode) { updateSyncActive() }
