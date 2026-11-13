@@ -862,13 +862,16 @@ Multiple (KJV Gen 1:1-2):
   chapter, landing on the first referenced verse when the
   entry named verses.
 - **REQ-AP-21:** The panel's tab controls float over the
-  panel's content: the pill row at 80% opacity, with no
+  panel's content: the pill row at 90% opacity, with no
   background of its own, overlapping the content's top —
   the content takes the
   panel's full height whether the controls show or not, and
   the tabs' own headers sit under them while they show. A
   thin bar centered above the controls — the
-  panel's top-center — hides and shows them; the choice is
+  panel's top-center — hides and shows them, and the
+  active tab's own header row (its picker, title bar, or
+  action row) hides and shows with them: the two control
+  rows stay together. The choice is
   remembered
   (`PersonalData.panelTabBarHidden`, in backups and settings
   sync like the other panel settings).

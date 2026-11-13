@@ -322,7 +322,7 @@ struct AuxiliaryPanelView: View {
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
                                 .background(
-                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.16))
+                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.30 : 0.22))
                                 )
                                 .foregroundStyle(tab == t ? Color.primary : Color.secondary)
                         }
@@ -345,8 +345,9 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// Hides or shows the floating tab controls (REQ-AP-21):
-    /// a thin translucent bar centered above
+    /// Hides or shows the panel's control rows (REQ-AP-21):
+    /// the floating tab controls and the active tab's own
+    /// header row, together — a thin translucent bar centered above
     /// the pill row — tap it to tuck the pills away or bring
     /// them back. It stays when the pills are hidden, at the
     /// panel's top-center. The choice is remembered
@@ -400,7 +401,7 @@ struct AuxiliaryPanelView: View {
                 // (REQ-AP-21): transparent — no background of
                 // their own — overlapping the content's top,
                 // the tabs' own headers under them while they
-                // show; the pills render at 80% opacity. The
+                // show; the pills render at 90% opacity. The
                 // thin bar centered above the row hides and
                 // shows the pills.
                 VStack(spacing: 0) {
@@ -411,7 +412,7 @@ struct AuxiliaryPanelView: View {
                     }
                     if !personalData.panelTabBarHidden {
                         panelTabBar
-                            .opacity(0.8)
+                            .opacity(0.9)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
@@ -847,7 +848,9 @@ struct AuxiliaryPanelView: View {
 
     private var notesTab: some View {
         VStack(spacing: 0) {
-            notesHeader
+            if !personalData.panelTabBarHidden {
+                notesHeader
+            }
 
             if let effectiveNotesTab {
                 switch effectiveNotesTab {
@@ -1017,6 +1020,7 @@ struct AuxiliaryPanelView: View {
 
     private var commentaryTab: some View {
         VStack(spacing: 0) {
+            if !personalData.panelTabBarHidden {
             HStack(spacing: 8) {
                 if commentaryHasEntries || commentaryLoading {
                     scopePicker(selection: $commentaryScope)
@@ -1053,6 +1057,7 @@ struct AuxiliaryPanelView: View {
                         CommentaryInfoView(module: mod)
                     }
                 }
+            }
             }
             if let mod = resolvedCommentary {
                 if let commentaryError {
@@ -1378,6 +1383,7 @@ struct AuxiliaryPanelView: View {
 
     private var strongsTab: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if !personalData.panelTabBarHidden {
             HStack {
                 Text(verseReference)
                     .font(.subheadline)
@@ -1411,6 +1417,7 @@ struct AuxiliaryPanelView: View {
                         }
                     }
                 }
+            }
             }
             if strongsSource == nil {
                 Text("No installed version has Strong's numbers. Download one (e.g. KJV) from the repository, or pick a fallback in Settings.")
@@ -1487,7 +1494,7 @@ struct AuxiliaryPanelView: View {
     /// carries Clear instead.
     private var recentsTab: some View {
         VStack(spacing: 0) {
-            if !personalData.historyLog.isEmpty {
+            if !personalData.historyLog.isEmpty && !personalData.panelTabBarHidden {
                 HStack {
                     Text("Reading history")
                         .font(.subheadline)
@@ -1578,7 +1585,7 @@ struct AuxiliaryPanelView: View {
 
     private var highlightsTab: some View {
         VStack(spacing: 0) {
-            if !visibleHighlightsTabs.isEmpty {
+            if !visibleHighlightsTabs.isEmpty && !personalData.panelTabBarHidden {
                 Picker("Highlights", selection: highlightsTabSelection) {
                     ForEach(visibleHighlightsTabs, id: \.self) { t in
                         Text(t.label).tag(t)
@@ -1802,8 +1809,10 @@ struct AuxiliaryPanelView: View {
 
     private var parallelTab: some View {
         VStack(spacing: 0) {
-            parallelHeader
-            Divider()
+            if !personalData.panelTabBarHidden {
+                parallelHeader
+                Divider()
+            }
             ParallelChapterView(
                 version: personalData.parallelSyncMode
                     ? parallelSyncVersion : parallelSeparateVersion,
