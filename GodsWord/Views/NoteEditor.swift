@@ -59,6 +59,7 @@ struct NoteEditor: View {
                                 onReadChapter()
                                 dismiss()
                             }
+                            .foregroundStyle(.blue)
                         }
                     }
                     ToolbarItemGroup(placement: .confirmationAction) {
