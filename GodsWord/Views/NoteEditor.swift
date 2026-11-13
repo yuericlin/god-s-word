@@ -50,28 +50,44 @@ struct NoteEditor: View {
                 .navigationTitle(reference)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItemGroup(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
-                        // Read: the editor's one navigation
-                        // action, beside Cancel (REQ-NT-21).
-                        if let onReadChapter {
-                            Button("Read") {
-                                onReadChapter()
+                    // Each side's pair sits in one HStack of
+                    // plain buttons: the 10pt stack spacing is
+                    // then the true gap between the two labels —
+                    // the same as the pill's edge-to-label
+                    // padding. (With the system button style,
+                    // each label also carries its own padding
+                    // and the visible gap balloons past 30pt;
+                    // a ToolbarItemGroup's spacing is not ours
+                    // to set at all.)
+                    ToolbarItem(placement: .cancellationAction) {
+                        HStack(spacing: 10) {
+                            Button("Cancel") { dismiss() }
+                            // Read: the editor's one navigation
+                            // action, beside Cancel (REQ-NT-21).
+                            if let onReadChapter {
+                                Button("Read") {
+                                    onReadChapter()
+                                    dismiss()
+                                }
+                                .foregroundStyle(.blue)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        HStack(spacing: 10) {
+                            if !originalText.isEmpty {
+                                Button("Delete", role: .destructive) {
+                                    showingDeleteConfirm = true
+                                }
+                            }
+                            Button("Save") {
+                                onSave(text)
                                 dismiss()
                             }
+                            .disabled(text == originalText)
                         }
-                    }
-                    ToolbarItemGroup(placement: .confirmationAction) {
-                        if !originalText.isEmpty {
-                            Button("Delete", role: .destructive) {
-                                showingDeleteConfirm = true
-                            }
-                        }
-                        Button("Save") {
-                            onSave(text)
-                            dismiss()
-                        }
-                        .disabled(text == originalText)
+                        .buttonStyle(.plain)
                     }
                 }
                 .confirmationDialog("Delete this note?",
