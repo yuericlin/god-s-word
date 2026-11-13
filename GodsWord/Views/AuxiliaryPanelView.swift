@@ -80,7 +80,7 @@ enum ParallelSettingsKind: Identifiable {
 /// parallel view report through it while sync is live, to find
 /// the topmost visible verse (REQ-PA-2).
 struct VerseTopFramesKey: PreferenceKey {
-    static var defaultValue: [Int: CGFloat] = [:]
+    nonisolated(unsafe) static var defaultValue: [Int: CGFloat] = [:]
     static func reduce(value: inout [Int: CGFloat],
                        nextValue: () -> [Int: CGFloat]) {
         value.merge(nextValue()) { _, new in new }
@@ -90,7 +90,7 @@ struct VerseTopFramesKey: PreferenceKey {
 /// The reading text's scroll fraction (0...1), reported in
 /// paragraph mode, where there are no per-verse rows (REQ-PA-2).
 struct ScrollFractionKey: PreferenceKey {
-    static var defaultValue: Double? = nil
+    nonisolated(unsafe) static var defaultValue: Double? = nil
     static func reduce(value: inout Double?, nextValue: () -> Double?) {
         if let next = nextValue() { value = next }
     }
