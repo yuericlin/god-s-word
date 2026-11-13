@@ -12,9 +12,8 @@ struct VerseNoteEditor: View {
     /// The version being read when the editor opened; recorded as
     /// the note's source (REQ-NT-19) when the note is first saved.
     let sourceModuleID: String
-    /// When set, a bottom-bar "Read Chapter" button (the
-    /// reference chapter sheet's pattern, REQ-AP-20) moves the
-    /// reader to the note's chapter, then dismisses
+    /// When set, a "Read" button beside Cancel (top left)
+    /// moves the reader to the note's chapter, then dismisses
     /// (REQ-NT-21). The editor itself only edits — its title
     /// is never a jump target.
     let onReadChapter: (() -> Void)?
@@ -48,19 +47,16 @@ struct VerseNoteEditor: View {
                 .navigationTitle(reference)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if let onReadChapter {
-                        // A plain text button, like the
-                        // reference sheet's Read More: a toolbar
-                        // Label would render as an icon alone.
-                        ToolbarItem(placement: .bottomBar) {
-                            Button("Read Chapter") {
+                    ToolbarItemGroup(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                        // Read: the editor's one navigation
+                        // action, beside Cancel (REQ-NT-21).
+                        if let onReadChapter {
+                            Button("Read") {
                                 onReadChapter()
                                 dismiss()
                             }
                         }
-                    }
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
                     }
                     ToolbarItemGroup(placement: .confirmationAction) {
                         if !originalText.isEmpty {

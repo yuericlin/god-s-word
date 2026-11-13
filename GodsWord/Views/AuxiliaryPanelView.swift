@@ -493,7 +493,7 @@ struct AuxiliaryPanelView: View {
     /// Tapping a note row — title line or note text alike —
     /// opens its editor (REQ-NT-21): rows only edit, they
     /// never navigate. Reading the note's chapter is the
-    /// editor's Read Chapter button's job.
+    /// editor's Read button's job.
     private func openNoteEditor(_ row: NoteRow) {
         switch row.kind {
         case .book: editorItem = .book(key: row.key, reference: row.reference)
@@ -1552,9 +1552,8 @@ struct AuxiliaryPanelView: View {
 /// caller decides which scoped store the note belongs to.
 struct ScopedNoteEditor: View {
     let reference: String
-    /// When set, a bottom-bar "Read Chapter" button (the
-    /// reference chapter sheet's pattern, REQ-AP-20) moves the
-    /// reader to the note's chapter, then dismisses
+    /// When set, a "Read" button beside Cancel (top left)
+    /// moves the reader to the note's chapter, then dismisses
     /// (REQ-NT-21). The editor itself only edits — its title
     /// is never a jump target.
     let onReadChapter: (() -> Void)?
@@ -1583,19 +1582,16 @@ struct ScopedNoteEditor: View {
                 .navigationTitle(reference)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if let onReadChapter {
-                        // A plain text button, like the
-                        // reference sheet's Read More: a toolbar
-                        // Label would render as an icon alone.
-                        ToolbarItem(placement: .bottomBar) {
-                            Button("Read Chapter") {
+                    ToolbarItemGroup(placement: .cancellationAction) {
+                        Button("Cancel") { dismiss() }
+                        // Read: the editor's one navigation
+                        // action, beside Cancel (REQ-NT-21).
+                        if let onReadChapter {
+                            Button("Read") {
                                 onReadChapter()
                                 dismiss()
                             }
                         }
-                    }
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
                     }
                     ToolbarItemGroup(placement: .confirmationAction) {
                         if !originalText.isEmpty {
