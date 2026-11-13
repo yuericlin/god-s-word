@@ -51,16 +51,19 @@ struct NoteEditor: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     // Each side's pair sits in one HStack of
-                    // plain buttons: the 10pt stack spacing is
-                    // then the true gap between the two labels —
-                    // the same as the pill's edge-to-label
-                    // padding. (With the system button style,
-                    // each label also carries its own padding
-                    // and the visible gap balloons past 30pt;
-                    // a ToolbarItemGroup's spacing is not ours
-                    // to set at all.)
+                    // system-styled buttons — the pill, its edge
+                    // padding, and the buttons' press feel are
+                    // exactly the system's. The spacing is
+                    // negative (-18) to overlap the two buttons'
+                    // transparent inner padding (~28pt of the
+                    // ~36pt gap measured at spacing 8), leaving
+                    // the labels ~10pt apart — the same as the
+                    // pill's edge-to-label padding. (Plain-style
+                    // buttons were tried first: the toolbar
+                    // clipped their labels and stripped the
+                    // pill's edge padding. Nov 12, 2026.)
                     ToolbarItem(placement: .cancellationAction) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: -18) {
                             Button("Cancel") { dismiss() }
                             // Read: the editor's one navigation
                             // action, beside Cancel (REQ-NT-21).
@@ -72,10 +75,9 @@ struct NoteEditor: View {
                                 .foregroundStyle(.blue)
                             }
                         }
-                        .buttonStyle(.plain)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: -18) {
                             if !originalText.isEmpty {
                                 Button("Delete", role: .destructive) {
                                     showingDeleteConfirm = true
@@ -87,7 +89,6 @@ struct NoteEditor: View {
                             }
                             .disabled(text == originalText)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .confirmationDialog("Delete this note?",
