@@ -345,26 +345,26 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// Hides or shows the floating tab controls (REQ-AP-21): a
-    /// translucent circle over the content's bottom-trailing
-    /// corner, clear of the tabs' own headers at the top, which
-    /// the floating bar itself overlaps. The choice is
-    /// remembered (PersonalData).
-    private var tabBarToggle: some View {
+    /// Hides or shows the floating tab controls (REQ-AP-21):
+    /// a thin translucent bar at the pill row's leading end —
+    /// tap it to tuck the pills away or bring them back. It
+    /// stays when the pills are hidden, at the panel's
+    /// top-left. The choice is remembered (PersonalData).
+    private var tabBarGrabber: some View {
         Button {
             personalData.panelTabBarHidden.toggle()
         } label: {
-            Image(systemName: personalData.panelTabBarHidden
-                  ? "chevron.down" : "chevron.up")
-                .font(.callout)
-                .padding(7)
-                .background(Circle().fill(.ultraThinMaterial))
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .frame(width: 40, height: 6)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 4)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(personalData.panelTabBarHidden
                             ? "Show tab controls" : "Hide tab controls")
-        .padding(.trailing, 12)
-        .padding(.bottom, 10)
+        .padding(.leading, 8)
     }
 
     /// Height of the tab content: the whole expanded panel is
@@ -400,17 +400,18 @@ struct AuxiliaryPanelView: View {
                 // (REQ-AP-21): transparent — no background of
                 // their own — overlapping the content's top,
                 // the tabs' own headers under them while they
-                // show.
-                if !personalData.panelTabBarHidden {
-                    panelTabBar
-                        .onGeometryChange(for: CGFloat.self, of: \.size.height) {
-                            tabBarHeight = $0
-                        }
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                // show. The thin bar at the row's leading end
+                // hides and shows the pills.
+                HStack(spacing: 2) {
+                    tabBarGrabber
+                    if !personalData.panelTabBarHidden {
+                        panelTabBar
+                            .onGeometryChange(for: CGFloat.self, of: \.size.height) {
+                                tabBarHeight = $0
+                            }
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
                 }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                tabBarToggle
             }
             .clipped()
         }

@@ -866,8 +866,8 @@ Multiple (KJV Gen 1:1-2):
   own, overlapping the content's top — the content takes the
   panel's full height whether the controls show or not, and
   the tabs' own headers sit under them while they show. A
-  chevron control over the content's bottom-trailing corner
-  hides and shows them; the choice is remembered
+  thin bar at the controls' leading end — the panel's
+  top-left — hides and shows them; the choice is remembered
   (`PersonalData.panelTabBarHidden`, in backups and settings
   sync like the other panel settings).
 
