@@ -1793,43 +1793,46 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The header over the parallel chapter: the gear on the
-    /// left, the version and passage, and the mode chain on
-    /// the right (REQ-PA-1, REQ-PA-4).
+    /// left, the mode chain on the right, and the version and
+    /// passage centered over the whole header between them
+    /// (REQ-PA-1, REQ-PA-4).
     private var parallelHeader: some View {
-        HStack(spacing: 10) {
-            Button {
-                parallelSettings = personalData.parallelSyncMode
-                    ? .syncVersion : .separate
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.callout)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Parallel view settings")
-
-            Text(parallelTitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button {
-                parallelSettings = personalData.parallelSyncMode
-                    ? .toSeparate : .toSync
-            } label: {
-                if personalData.parallelSyncMode {
-                    Image(systemName: "link")
+        ZStack {
+            HStack(spacing: 10) {
+                Button {
+                    parallelSettings = personalData.parallelSyncMode
+                        ? .syncVersion : .separate
+                } label: {
+                    Image(systemName: "gearshape")
                         .font(.callout)
-                        .foregroundStyle(.yellow)
-                } else {
-                    brokenChainIcon
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Parallel view settings")
+
+                Spacer()
+
+                Button {
+                    parallelSettings = personalData.parallelSyncMode
+                        ? .toSeparate : .toSync
+                } label: {
+                    if personalData.parallelSyncMode {
+                        Image(systemName: "link")
+                            .font(.callout)
+                            .foregroundStyle(.yellow)
+                    } else {
+                        brokenChainIcon
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(personalData.parallelSyncMode
+                                    ? "Switch to separate mode"
+                                    : "Switch to sync mode")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(personalData.parallelSyncMode
-                                ? "Switch to separate mode"
-                                : "Switch to sync mode")
+
+            parallelTitle
+                .font(.callout)
+                .lineLimit(1)
+                .padding(.horizontal, 44)
         }
         .padding(.horizontal)
         .padding(.vertical, 6)
@@ -1850,12 +1853,29 @@ struct AuxiliaryPanelView: View {
             }
     }
 
-    private var parallelTitle: String {
+    /// The header title, colored as the main view's title:
+    /// the version's short label — the module id, as the main
+    /// view names the version, not its display name — in
+    /// secondary, and the book and chapter in primary (white).
+    private var parallelTitle: Text {
+        Text("\(parallelVersionLabel) — ").foregroundColor(.secondary)
+            + Text(parallelPassageLabel).foregroundColor(.primary)
+    }
+
+    /// The version the parallel view shows, by its short label.
+    private var parallelVersionLabel: String {
+        personalData.parallelSyncMode
+            ? parallelSyncVersion.shortLabel
+            : parallelSeparateVersion.shortLabel
+    }
+
+    /// The passage the parallel view shows: book and chapter.
+    private var parallelPassageLabel: String {
         if personalData.parallelSyncMode {
-            return "\(parallelSyncVersion.displayName) — \(history.bookTitle) \(history.chapter)"
+            return "\(history.bookTitle) \(history.chapter)"
         }
         let target = effectiveSepTarget
-        return "\(parallelSeparateVersion.displayName) — \(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
+        return "\(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
     }
 
     /// The version a settings sheet starts from.
