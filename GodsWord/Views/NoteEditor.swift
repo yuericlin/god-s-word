@@ -50,12 +50,17 @@ struct NoteEditor: View {
                 .navigationTitle(reference)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    // Each side's pair sits in one HStack so
-                    // the gap between the two buttons is ours
-                    // (8pt) — a ToolbarItemGroup's spacing is
-                    // system-fixed and wide.
+                    // Each side's pair sits in one HStack of
+                    // plain buttons: the 10pt stack spacing is
+                    // then the true gap between the two labels —
+                    // the same as the pill's edge-to-label
+                    // padding. (With the system button style,
+                    // each label also carries its own padding
+                    // and the visible gap balloons past 30pt;
+                    // a ToolbarItemGroup's spacing is not ours
+                    // to set at all.)
                     ToolbarItem(placement: .cancellationAction) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             Button("Cancel") { dismiss() }
                             // Read: the editor's one navigation
                             // action, beside Cancel (REQ-NT-21).
@@ -67,9 +72,10 @@ struct NoteEditor: View {
                                 .foregroundStyle(.blue)
                             }
                         }
+                        .buttonStyle(.plain)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: 10) {
                             if !originalText.isEmpty {
                                 Button("Delete", role: .destructive) {
                                     showingDeleteConfirm = true
@@ -81,6 +87,7 @@ struct NoteEditor: View {
                             }
                             .disabled(text == originalText)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .confirmationDialog("Delete this note?",
