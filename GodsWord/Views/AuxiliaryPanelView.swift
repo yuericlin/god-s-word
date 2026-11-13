@@ -1455,6 +1455,7 @@ struct AuxiliaryPanelView: View {
             }
             HistoryView(onSelect: openHistoryEntry)
         }
+        .background(Color.black)
     }
 
     /// Tapping a history entry views its chapter in the
@@ -1561,6 +1562,7 @@ struct AuxiliaryPanelView: View {
                 .padding(.horizontal)
             }
         }
+        .background(Color.black)
     }
 
     /// Every highlight, newest first (the Recents sub-tab).
@@ -1586,6 +1588,8 @@ struct AuxiliaryPanelView: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.black)
     }
 
     private func highlightList(_ highlights: [Highlight]) -> some View {
@@ -1595,6 +1599,8 @@ struct AuxiliaryPanelView: View {
             }
         }
         .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(Color.black)
     }
 
     private func highlightReference(_ h: Highlight) -> String {
@@ -1606,7 +1612,8 @@ struct AuxiliaryPanelView: View {
 
     /// One highlight row in any sub-tab: a yellow swatch and the
     /// reference with the version it was made in and its date
-    /// (the note-row format). Tap views the passage in the
+    /// (the note-row format), blue on black — the same rendering
+    /// as the Recents tab's history entries (REQ-AP-11). Tap views the passage in the
     /// reference chapter sheet; swipe deletes. Built
     /// exactly like a HistoryView row — default button style, no
     /// content-shape override — so the List makes the whole row
@@ -1629,7 +1636,8 @@ struct AuxiliaryPanelView: View {
                      + sourceSuffix(h.version)
                      + noteDateSuffix(h.createdAt))
                     .font(.subheadline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.blue)
+                    .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.leading, 14)
                     .overlay(alignment: .leading) {
@@ -1647,7 +1655,7 @@ struct AuxiliaryPanelView: View {
         .listRowInsets(EdgeInsets(top: 11, leading: 16,
                                   bottom: 0, trailing: 0))
         .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
+        .listRowBackground(Color.black)
         .swipeActions {
             Button(role: .destructive) {
                 personalData.removeHighlight(id: h.id)
