@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 11
+    public var version: Int = 12
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -79,6 +79,12 @@ public struct BackupPayload: Codable, Sendable {
     /// (StrongsHebrew / StrongsGreek).
     public var dictionaryHebrewID: String
     public var dictionaryGreekID: String
+    /// Parallel tab (REQ-PA-5): the remembered mode (true =
+    /// sync) and each mode's version id. Payload v12+; older
+    /// payloads decode to sync mode and empty ids.
+    public var parallelSyncMode: Bool
+    public var parallelSyncVersionID: String
+    public var parallelSeparateVersionID: String
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
@@ -99,6 +105,9 @@ public struct BackupPayload: Codable, Sendable {
                 interestedLanguages: [String] = [],
                 dictionaryHebrewID: String = "",
                 dictionaryGreekID: String = "",
+                parallelSyncMode: Bool = true,
+                parallelSyncVersionID: String = "",
+                parallelSeparateVersionID: String = "",
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -122,6 +131,9 @@ public struct BackupPayload: Codable, Sendable {
         self.interestedLanguages = interestedLanguages
         self.dictionaryHebrewID = dictionaryHebrewID
         self.dictionaryGreekID = dictionaryGreekID
+        self.parallelSyncMode = parallelSyncMode
+        self.parallelSyncVersionID = parallelSyncVersionID
+        self.parallelSeparateVersionID = parallelSeparateVersionID
         self.backedUpAt = backedUpAt
     }
 
@@ -152,6 +164,9 @@ public struct BackupPayload: Codable, Sendable {
         interestedLanguages = try c.decodeIfPresent([String].self, forKey: .interestedLanguages) ?? []
         dictionaryHebrewID = try c.decodeIfPresent(String.self, forKey: .dictionaryHebrewID) ?? ""
         dictionaryGreekID = try c.decodeIfPresent(String.self, forKey: .dictionaryGreekID) ?? ""
+        parallelSyncMode = try c.decodeIfPresent(Bool.self, forKey: .parallelSyncMode) ?? true
+        parallelSyncVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSyncVersionID) ?? ""
+        parallelSeparateVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSeparateVersionID) ?? ""
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -182,6 +197,9 @@ public final class PersonalData: ObservableObject {
     private let interestedLanguagesKey = "gw.interestedLanguages.v1"
     private let dictionaryHebrewKey = "gw.dictionaryHebrew.v1"
     private let dictionaryGreekKey = "gw.dictionaryGreek.v1"
+    private let parallelSyncModeKey = "gw.parallelSyncMode.v1"
+    private let parallelSyncVersionKey = "gw.parallelSyncVersion.v1"
+    private let parallelSeparateVersionKey = "gw.parallelSeparateVersion.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -231,6 +249,11 @@ public final class PersonalData: ObservableObject {
         self.interestedLanguages = defaults.stringArray(forKey: interestedLanguagesKey) ?? []
         self.dictionaryHebrewID = defaults.string(forKey: dictionaryHebrewKey) ?? ""
         self.dictionaryGreekID = defaults.string(forKey: dictionaryGreekKey) ?? ""
+        // Parallel tab (REQ-PA-5): sync is the default mode —
+        // only an explicitly stored value selects separate.
+        self.parallelSyncMode = defaults.object(forKey: parallelSyncModeKey) as? Bool ?? true
+        self.parallelSyncVersionID = defaults.string(forKey: parallelSyncVersionKey) ?? ""
+        self.parallelSeparateVersionID = defaults.string(forKey: parallelSeparateVersionKey) ?? ""
         // REQ-NT-19: fold any legacy per-version note keys into the
         // version-less ones. didSet does not fire during init, so
         // persist the note stores explicitly afterwards.
@@ -377,6 +400,26 @@ public final class PersonalData: ObservableObject {
         } else {
             compareVersionIDs.append(id)
         }
+    }
+
+    /// Parallel tab: true while the parallel view is in sync
+    /// mode (REQ-PA-5). Persisted in UserDefaults.
+    @Published public var parallelSyncMode: Bool {
+        didSet { defaults.set(parallelSyncMode, forKey: parallelSyncModeKey) }
+    }
+
+    /// The parallel view's version in sync mode (REQ-PA-5);
+    /// empty until the user picks one. Persisted in UserDefaults.
+    @Published public var parallelSyncVersionID: String {
+        didSet { defaults.set(parallelSyncVersionID, forKey: parallelSyncVersionKey) }
+    }
+
+    /// The parallel view's version in separate mode (REQ-PA-5).
+    /// Its book and chapter are deliberately not persisted: a
+    /// fresh session starts separate mode from the chapter
+    /// being read. Persisted in UserDefaults.
+    @Published public var parallelSeparateVersionID: String {
+        didSet { defaults.set(parallelSeparateVersionID, forKey: parallelSeparateVersionKey) }
     }
 
     /// Book-level notes (REQ-NT-14), keyed by
@@ -865,6 +908,9 @@ public final class PersonalData: ObservableObject {
                       interestedLanguages: interestedLanguages,
                       dictionaryHebrewID: dictionaryHebrewID,
                       dictionaryGreekID: dictionaryGreekID,
+                      parallelSyncMode: parallelSyncMode,
+                      parallelSyncVersionID: parallelSyncVersionID,
+                      parallelSeparateVersionID: parallelSeparateVersionID,
                       backedUpAt: Date())
     }
 
@@ -926,6 +972,16 @@ public final class PersonalData: ObservableObject {
         if !payload.dictionaryGreekID.isEmpty {
             dictionaryGreekID = payload.dictionaryGreekID
         }
+        // Parallel tab (payload v12+; older payloads decode to
+        // sync mode and empty ids, which leave current version
+        // choices alone).
+        parallelSyncMode = payload.parallelSyncMode
+        if !payload.parallelSyncVersionID.isEmpty {
+            parallelSyncVersionID = payload.parallelSyncVersionID
+        }
+        if !payload.parallelSeparateVersionID.isEmpty {
+            parallelSeparateVersionID = payload.parallelSeparateVersionID
+        }
         // Note sources (payload v10+; older payloads decode to [:]
         // and leave current sources alone).
         if !payload.noteSources.isEmpty {
@@ -967,6 +1023,11 @@ public final class PersonalData: ObservableObject {
         public var interestedLanguages: [String]?
         public var dictionaryHebrewID: String?
         public var dictionaryGreekID: String?
+        /// Parallel tab mode + per-mode versions (REQ-PA-5);
+        /// optional for the same reason.
+        public var parallelSyncMode: Bool?
+        public var parallelSyncVersionID: String?
+        public var parallelSeparateVersionID: String?
     }
 
     private func syncBookmarksToiCloud() {
@@ -1054,7 +1115,10 @@ public final class PersonalData: ObservableObject {
             strongsFallbackVersionID: strongsFallbackVersionID,
             interestedLanguages: interestedLanguages,
             dictionaryHebrewID: dictionaryHebrewID,
-            dictionaryGreekID: dictionaryGreekID)
+            dictionaryGreekID: dictionaryGreekID,
+            parallelSyncMode: parallelSyncMode,
+            parallelSyncVersionID: parallelSyncVersionID,
+            parallelSeparateVersionID: parallelSeparateVersionID)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -1154,7 +1218,10 @@ public final class PersonalData: ObservableObject {
             strongsFallbackVersionID: strongsFallbackVersionID,
             interestedLanguages: interestedLanguages,
             dictionaryHebrewID: dictionaryHebrewID,
-            dictionaryGreekID: dictionaryGreekID)
+            dictionaryGreekID: dictionaryGreekID,
+            parallelSyncMode: parallelSyncMode,
+            parallelSyncVersionID: parallelSyncVersionID,
+            parallelSeparateVersionID: parallelSeparateVersionID)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -1243,6 +1310,13 @@ public final class PersonalData: ObservableObject {
                 }
                 if let gid = s.dictionaryGreekID, !gid.isEmpty {
                     dictionaryGreekID = gid
+                }
+                if let pm = s.parallelSyncMode { parallelSyncMode = pm }
+                if let sid = s.parallelSyncVersionID, !sid.isEmpty {
+                    parallelSyncVersionID = sid
+                }
+                if let sid = s.parallelSeparateVersionID, !sid.isEmpty {
+                    parallelSeparateVersionID = sid
                 }
             default:
                 continue
