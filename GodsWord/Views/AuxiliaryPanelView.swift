@@ -322,7 +322,7 @@ struct AuxiliaryPanelView: View {
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 6)
                                 .background(
-                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.07))
+                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.16))
                                 )
                                 .foregroundStyle(tab == t ? Color.primary : Color.secondary)
                         }
