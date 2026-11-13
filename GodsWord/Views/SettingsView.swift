@@ -149,7 +149,24 @@ struct SettingsView: View {
                 } header: {
                     Text("Auxiliary panel")
                 } footer: {
-                    Text("The panel below the reader has Notes, Commentary, and Strong's tabs. Commentary entries show for the book, chapter, or verse being read.")
+                    Text("The panel below the reader has Notes, Commentary, Strong's, Recents, Highlights, and Parallel tabs. Commentary entries show for the book, chapter, or verse being read.")
+                }
+
+                Section {
+                    NavigationLink {
+                        ParallelSettingsView(history: history)
+                    } label: {
+                        HStack {
+                            Text("Parallel tab")
+                            Spacer()
+                            Text(personalData.parallelSyncMode ? "Sync" : "Separate")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Parallel")
+                } footer: {
+                    Text("The panel's Parallel tab shows a second version alongside the reading. Choose its mode and each mode's version here, or from the tab's own settings.")
                 }
 
                 Section {
@@ -562,6 +579,109 @@ struct CurrentVersionPicker: View {
         } else {
             personalData.saveLastReading(moduleID: version.id,
                                          testament: 1, book: 1, chapter: 1)
+        }
+    }
+}
+
+/// The Parallel tab's remembered settings (REQ-PA-8): the mode
+/// and each mode's version. These are the same PersonalData
+/// values the panel's own sheets edit, so a change here shows
+/// there and the other way around. A version row's checkmark
+/// marks the version in effect: the remembered choice, or —
+/// while none is remembered (or it was uninstalled) — the
+/// REQ-PA-7 fallback the panel itself resolves.
+struct ParallelSettingsView: View {
+    /// The live reading, for the fallback's "isn't the one
+    /// being read"; nil on a fresh launch, where the saved
+    /// last reading stands in.
+    let history: ReadingHistory?
+
+    @EnvironmentObject private var personalData: PersonalData
+    @Environment(\.moduleStore) private var store
+    @State private var versions: [BibleVersion] = []
+
+    var body: some View {
+        List {
+            Section {
+                Picker("Mode", selection: modeBinding) {
+                    Text("Sync").tag(true)
+                    Text("Separate").tag(false)
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Mode")
+            } footer: {
+                Text("Sync shows the chapter being read in another version, the two views scrolling together. Separate shows any version, book, and chapter, scrolling on its own.")
+            }
+
+            versionSection(title: "Sync version",
+                           storedID: personalData.parallelSyncVersionID) { version in
+                personalData.parallelSyncVersionID = version.id
+            }
+
+            versionSection(title: "Separate version",
+                           storedID: personalData.parallelSeparateVersionID) { version in
+                personalData.parallelSeparateVersionID = version.id
+            }
+        }
+        .navigationTitle("Parallel")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            versions = BibleVersion.allInstalled(in: store)
+        }
+    }
+
+    private var modeBinding: Binding<Bool> {
+        Binding(get: { personalData.parallelSyncMode },
+                set: { personalData.parallelSyncMode = $0 })
+    }
+
+    /// The version being read, for the fallback rule.
+    private var readingVersionID: String {
+        history?.version.id
+            ?? personalData.loadLastReading()?.moduleID ?? ""
+    }
+
+    /// The version in effect for a stored choice (REQ-PA-7).
+    private func effectiveID(storedID: String) -> String? {
+        if versions.contains(where: { $0.id == storedID }) {
+            return storedID
+        }
+        return versions.first { $0.id != readingVersionID }?.id
+            ?? versions.first?.id
+    }
+
+    /// One checkmark version list, in the Current Version
+    /// picker's rows: short label, display name under it when
+    /// the two differ, checkmark on the version in effect.
+    private func versionSection(title: String, storedID: String,
+                                pick: @escaping (BibleVersion) -> Void) -> some View {
+        Section {
+            ForEach(versions) { version in
+                Button {
+                    pick(version)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(version.shortLabel)
+                                .foregroundStyle(.primary)
+                            if version.displayName != version.shortLabel {
+                                Text(version.displayName)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        if effectiveID(storedID: storedID) == version.id {
+                            Image(systemName: "checkmark")
+                                .foregroundStyle(.tint)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+            }
+        } header: {
+            Text(title)
         }
     }
 }
