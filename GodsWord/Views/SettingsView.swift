@@ -138,7 +138,7 @@ struct SettingsView: View {
                         CommentaryModulePicker()
                     } label: {
                         HStack {
-                            Text("Commentary")
+                            Text("Current commentary")
                             Spacer()
                             Text(personalData.commentaryModuleID.isEmpty
                                  ? "Automatic"
@@ -147,9 +147,9 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Auxiliary panel")
+                    Text("Commentary")
                 } footer: {
-                    Text("The panel below the reader has Notes, Commentary, Strong's, Recents, Highlights, and Parallel tabs. Commentary entries show for the book, chapter, or verse being read.")
+                    Text("The commentary the panel's Commentary tab shows for the book, chapter, or verse being read. Automatic uses the first installed commentary; more download from the same repositories as Bibles.")
                 }
 
                 Section {
@@ -157,7 +157,7 @@ struct SettingsView: View {
                         ParallelSettingsView(history: history)
                     } label: {
                         HStack {
-                            Text("Parallel tab")
+                            Text("Parallel mode")
                             Spacer()
                             Text(personalData.parallelSyncMode ? "Sync" : "Separate")
                                 .foregroundStyle(.secondary)

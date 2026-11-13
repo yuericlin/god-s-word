@@ -707,7 +707,7 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-AP-6:** The commentary shown is `PersonalData.commentaryModuleID`
   (persisted, in backups and `settings.json` like the Compare setting).
   Empty/uninstalled means the first installed renderable commentary.
-  It is chosen in Settings > Auxiliary panel > Commentary or in the
+  It is chosen in Settings > Commentary > Current commentary or in the
   panel's own header menu. With no commentary installed, the tab shows
   an empty state offering the Repository.
 - **REQ-AP-7:** The Strong's tab renders the selected verse (lowest
