@@ -679,8 +679,9 @@ Multiple (KJV Gen 1:1-2):
   label's full natural width — never a fixed-width segmented control
   that truncates labels — and it scrolls the selected tab into view
   when the selection changes and when the panel opens. The expanded
-  panel's total height (tab bar plus content) is 30% of the
-  reader view's total height, not a fixed point size.
+  panel's total height is 30% of the reader view's total height,
+  not a fixed point size; within it the tab bar floats over the
+  content (REQ-AP-21), which takes the full height.
 - **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
   Each shows the scoped note for the book / chapter / selected verse
   being read (REQ-NT-14) with an Add/Edit action opening the note
@@ -860,6 +861,17 @@ Multiple (KJV Gen 1:1-2):
   buttons — dismisses and moves the main reader to that
   chapter, landing on the first referenced verse when the
   entry named verses.
+- **REQ-AP-21:** The panel's tab controls float over the
+  panel's content: the pill row at 80% opacity, with no
+  background of its own, overlapping the content's top —
+  the content takes the
+  panel's full height whether the controls show or not, and
+  the tabs' own headers sit under them while they show. A
+  thin bar centered above the controls — the
+  panel's top-center — hides and shows them; the choice is
+  remembered
+  (`PersonalData.panelTabBarHidden`, in backups and settings
+  sync like the other panel settings).
 
 ## 16. Module sources
 
