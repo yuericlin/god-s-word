@@ -47,6 +47,20 @@ struct ReaderView: View {
     @State private var selectedVerses: Set<Int> = []
     /// Verse a note jump wants scrolled into view (REQ-NT-21).
     @State private var scrollTargetVerse: Int? = nil
+    /// The sync channel to the auxiliary panel's Parallel tab
+    /// (REQ-PA-2), shared with AuxiliaryPanelView: while sync
+    /// is live, the verse both views keep at their top.
+    @State private var parallelSync = ParallelSyncState()
+    /// True while a sync-driven scroll of this view is settling:
+    /// the scroll's own position reports must not be mistaken
+    /// for the user moving the anchor.
+    @State private var mainSyncApplying = false
+    /// Generation counter for the apply-settle timer, so a stale
+    /// timer can't release a newer apply's lock.
+    @State private var syncApplyGeneration = 0
+    /// The verse currently at this view's top, from its own
+    /// position reports (sync mode only).
+    @State private var mainTopVerse = 1
     /// chapterKey of the chapter actually on screen (set when a
     /// load completes), so a same-chapter verse jump lands at
     /// once while a chapter-changing one waits for its load.
@@ -113,6 +127,7 @@ struct ReaderView: View {
             AuxiliaryPanelView(history: history,
                                selectedVerses: selectedVerses,
                                availableVersions: availableVersions,
+                               parallelSync: parallelSync,
                                collapsed: $panelCollapsed,
                                totalHeight: rootHeight)
         }
@@ -192,6 +207,78 @@ struct ReaderView: View {
             }
         }
         .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
+        // Sync mode (REQ-PA-2): report this view's top verse to
+        // the shared anchor, and follow the anchor when the
+        // parallel view moved it. Both directions are inert
+        // unless the panel's Parallel tab has sync live.
+        .coordinateSpace(name: "mainReading")
+        .onPreferenceChange(VerseTopFramesKey.self) { frames in
+            guard personalData.verseByVerse,
+                  let top = topVisibleVerse(frames: frames, threshold: 20)
+            else { return }
+            mainTopVerse = top
+            guard parallelSync.active, !mainSyncApplying,
+                  top != parallelSync.anchorVerse else { return }
+            parallelSync.anchorVerse = top
+            parallelSync.lastMovedByMain = true
+        }
+        .onPreferenceChange(ScrollFractionKey.self) { fraction in
+            guard !personalData.verseByVerse, let fraction else { return }
+            let top = verseAtScrollFraction(fraction)
+            mainTopVerse = top
+            guard parallelSync.active, !mainSyncApplying,
+                  top != parallelSync.anchorVerse else { return }
+            parallelSync.anchorVerse = top
+            parallelSync.lastMovedByMain = true
+        }
+        .onChange(of: parallelSync.anchorVerse) {
+            guard parallelSync.active, !parallelSync.lastMovedByMain,
+                  parallelSync.anchorVerse != mainTopVerse else { return }
+            mainSyncApplying = true
+            syncApplyGeneration += 1
+            let generation = syncApplyGeneration
+            if personalData.verseByVerse {
+                proxy.scrollTo("v\(parallelSync.anchorVerse)", anchor: .top)
+            } else if let i = paragraphAnchorIndex(for: parallelSync.anchorVerse) {
+                proxy.scrollTo("frac-\(i)", anchor: .top)
+            }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                if syncApplyGeneration == generation {
+                    mainSyncApplying = false
+                }
+            }
+        }
+        .onChange(of: readingLocationKey) {
+            // A new chapter restarts the anchor at its top; the
+            // parallel view reloads the same chapter with it.
+            if parallelSync.active {
+                parallelSync.anchorVerse = 1
+                parallelSync.lastMovedByMain = true
+                mainTopVerse = 1
+            }
+        }
+    }
+
+    /// Testament/book/chapter as one key, for changes that move
+    /// the reading location (a version change alone is not one).
+    private var readingLocationKey: String {
+        "\(history.testament)-\(history.book)-\(history.chapter)"
+    }
+
+    /// The verse at a scroll fraction of the chapter text, by
+    /// character share — the inverse of paragraphAnchorIndex,
+    /// for sync reporting in paragraph mode (REQ-PA-2).
+    private func verseAtScrollFraction(_ fraction: Double) -> Int {
+        guard !verses.isEmpty else { return 1 }
+        let total = verses.reduce(0) { $0 + $1.text.count }
+        guard total > 0 else { return verses[0].verse }
+        var acc = 0.0
+        for v in verses {
+            acc += Double(v.text.count) / Double(total)
+            if fraction < acc { return v.verse }
+        }
+        return verses[verses.count - 1].verse
     }
 
     private var chapterTextStack: some View {
@@ -231,6 +318,8 @@ struct ReaderView: View {
                 }
                 Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
                     .id("v\(v.verse)")
+                    .reportVerseTop(v.verse, space: "mainReading",
+                                    enabled: parallelSync.active)
                     .font(.system(size: personalData.fontSize, design: .serif))
                     .lineSpacing(6)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -249,6 +338,8 @@ struct ReaderView: View {
                 }
                 Text(attributedVerse(number: v.verse, text: v.text))
                     .id("v\(v.verse)")
+                    .reportVerseTop(v.verse, space: "mainReading",
+                                    enabled: parallelSync.active)
                     .font(.system(size: personalData.fontSize, design: .serif))
                     .lineSpacing(6)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -279,6 +370,19 @@ struct ReaderView: View {
                     }
                     .frame(height: geo.size.height)
                     .allowsHitTesting(false)
+                }
+            }
+            // Sync reporting in paragraph mode (REQ-PA-2): the
+            // text's scroll fraction in this view.
+            .background {
+                if parallelSync.active {
+                    GeometryReader { geo in
+                        Color.clear.preference(
+                            key: ScrollFractionKey.self,
+                            value: scrollFraction(
+                                frame: geo.frame(in: .named("mainReading")),
+                                viewportHeight: viewSize.height))
+                    }
                 }
             }
     }

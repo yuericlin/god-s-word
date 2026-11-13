@@ -1,6 +1,8 @@
 // AuxiliaryPanelView.swift — the panel below the reading panel.
-// Five tabs: Notes, Commentary, the selected verse rendered with
-// Strong's numbers, Recents (the reading history), and Highlights.
+// Six tabs: Notes, Commentary, the selected verse rendered with
+// Strong's numbers, Recents (the reading history), Highlights,
+// and Parallel — a second chapter view, synced to the reading
+// or independent of it (REQ-PA).
 // The Notes tab
 // has Recents / Book / Chapter / Verse sub-tabs (REQ-NT-18) over the
 // scoped notes (REQ-NT-14); Commentary has Book / Chapter / Verse
@@ -13,6 +15,142 @@ import SwiftUI
 import UIKit
 import SwordReader
 
+/// The channel between the main reading view and the panel's
+/// parallel view while sync mode is live (REQ-PA-2): the verse
+/// both views keep at their top, and which side moved last — a
+/// side scrolls programmatically only when the OTHER side set
+/// the anchor, so the two never chase each other around.
+/// Owned by ReaderView and passed to the panel; the panel
+/// turns `active` on only while its Parallel tab is showing
+/// in sync mode.
+@Observable
+final class ParallelSyncState {
+    var anchorVerse: Int = 1
+    var lastMovedByMain: Bool = true
+    var active: Bool = false
+}
+
+/// A book/chapter location for the parallel view.
+struct ParallelTarget: Equatable {
+    var testament: Int
+    var book: Int
+    var chapter: Int
+
+    /// 0-based index across the whole Bible (0–65).
+    var overall: Int {
+        testament == 1 ? book - 1 : 39 + book - 1
+    }
+
+    init(testament: Int, book: Int, chapter: Int) {
+        self.testament = testament
+        self.book = book
+        self.chapter = chapter
+    }
+
+    init(overall: Int, chapter: Int) {
+        if overall < 39 {
+            testament = 1
+            book = overall + 1
+        } else {
+            testament = 2
+            book = overall - 39 + 1
+        }
+        self.chapter = chapter
+    }
+}
+
+/// What the parallel settings sheet is doing (REQ-PA-4).
+enum ParallelSettingsKind: Identifiable {
+    /// Gear in sync mode: the sync version only.
+    case syncVersion
+    /// Gear in separate mode: version, book, and chapter.
+    case separate
+    /// Chain in sync mode: separate's settings; Done switches
+    /// to separate mode with them applied.
+    case toSeparate
+    /// Chain in separate mode: the sync version; book and
+    /// chapter are the main view's and cannot be changed.
+    case toSync
+
+    var id: String { "\(self)" }
+}
+
+/// Verse number -> the verse row's top edge in the reporting
+/// scroll view's coordinate space. Both the reader and the
+/// parallel view report through it while sync is live, to find
+/// the topmost visible verse (REQ-PA-2).
+struct VerseTopFramesKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: [Int: CGFloat] = [:]
+    static func reduce(value: inout [Int: CGFloat],
+                       nextValue: () -> [Int: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+/// The reading text's scroll fraction (0...1), reported in
+/// paragraph mode, where there are no per-verse rows (REQ-PA-2).
+struct ScrollFractionKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: Double? = nil
+    static func reduce(value: inout Double?, nextValue: () -> Double?) {
+        if let next = nextValue() { value = next }
+    }
+}
+
+/// The topmost visible verse from reported row tops: the last
+/// verse whose top has reached `threshold` (just past the
+/// scroll view's top padding), or the first verse when none has.
+func topVisibleVerse(frames: [Int: CGFloat], threshold: CGFloat) -> Int? {
+    let sorted = frames.sorted { $0.value < $1.value }
+    var top: Int? = nil
+    for (verse, minY) in sorted {
+        if minY <= threshold {
+            top = verse
+        } else {
+            break
+        }
+    }
+    return top ?? sorted.first?.key
+}
+
+/// A reading text's scroll fraction from its frame in the
+/// scroll view's coordinate space (the text is padded by
+/// `inset` within the scroll content).
+func scrollFraction(frame: CGRect, viewportHeight: CGFloat,
+                    inset: CGFloat = 16) -> Double {
+    let scrollable = frame.height + inset * 2 - viewportHeight
+    guard scrollable > 0 else { return 0 }
+    let offset = max(0, inset - frame.minY)
+    return min(1, Double(offset / scrollable))
+}
+
+/// Reports a verse row's top edge in the named scroll space
+/// while sync is live (REQ-PA-2); inert otherwise, so a view
+/// that isn't syncing pays nothing for it.
+struct VerseTopReporter: ViewModifier {
+    let verse: Int
+    let space: String
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        content.background {
+            if enabled {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: VerseTopFramesKey.self,
+                        value: [verse: geo.frame(in: .named(space)).minY])
+                }
+            }
+        }
+    }
+}
+
+extension View {
+    /// See VerseTopReporter.
+    func reportVerseTop(_ verse: Int, space: String, enabled: Bool) -> some View {
+        modifier(VerseTopReporter(verse: verse, space: space, enabled: enabled))
+    }
+}
+
 struct AuxiliaryPanelView: View {
     let history: ReadingHistory
     /// Verses selected in the reader; the Verse scopes anchor at the
@@ -20,6 +158,9 @@ struct AuxiliaryPanelView: View {
     let selectedVerses: Set<Int>
     /// All installed Bible versions (for the Strong's source resolution).
     let availableVersions: [BibleVersion]
+    /// The sync channel to the reader's main view (REQ-PA-2),
+    /// owned by ReaderView.
+    let parallelSync: ParallelSyncState
     /// Owned by ReaderView: the toggle button lives in the reader's
     /// bottom bar, next to the chapter controls (REQ-AP-1). When
     /// collapsed, the panel renders nothing at all.
@@ -50,6 +191,13 @@ struct AuxiliaryPanelView: View {
     /// (REQ-AP-20): a tapped commentary reference, Recents
     /// entry, or highlight.
     @State private var referenceLink: ReferenceLink?
+    /// Parallel tab: the settings sheet being shown (REQ-PA-4).
+    @State private var parallelSettings: ParallelSettingsKind?
+    /// Parallel tab, separate mode: the session's target —
+    /// frozen from the chapter being read when separate mode
+    /// is first shown, then owned by its settings (REQ-PA-3).
+    /// Deliberately not persisted (REQ-PA-5).
+    @State private var parallelSepTarget: ParallelTarget?
 
     /// Identifiable wrapper around a chapter to show in the
     /// reference chapter sheet (REQ-AP-20): the target, the
@@ -93,6 +241,7 @@ struct AuxiliaryPanelView: View {
         case strongs = "Strong's"
         case recents = "Recents"
         case highlights = "Highlights"
+        case parallel = "Parallel"
     }
 
     enum PanelScope: String, CaseIterable {
@@ -219,12 +368,16 @@ struct AuxiliaryPanelView: View {
                 case .strongs: strongsTab
                 case .recents: recentsTab
                 case .highlights: highlightsTab
+                case .parallel: parallelTab
                 }
             }
             .frame(height: contentHeight)
         }
         .background(.regularMaterial)
         .simultaneousGesture(collapseGesture)
+        .onChange(of: tab) { updateSyncActive() }
+        .onChange(of: personalData.parallelSyncMode) { updateSyncActive() }
+        .onDisappear { parallelSync.active = false }
         .onAppear {
             commentaries = CommentaryModule.allInstalled(in: store)
             expandedBookChapters = [history.chapter]
@@ -1545,6 +1698,200 @@ struct AuxiliaryPanelView: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
     }
+
+    // MARK: - Parallel tab (REQ-PA)
+
+    /// Sync is live only while this tab is the one showing, the
+    /// panel is expanded, and the remembered mode is sync.
+    private func updateSyncActive() {
+        parallelSync.active = tab == .parallel && !collapsed
+            && personalData.parallelSyncMode
+    }
+
+    /// The sync mode's version: the remembered choice, else the
+    /// first installed version that isn't the one being read.
+    private var parallelSyncVersion: BibleVersion {
+        availableVersions.first { $0.id == personalData.parallelSyncVersionID }
+            ?? availableVersions.first { $0.id != history.version.id }
+            ?? history.version
+    }
+
+    /// The separate mode's version, resolved the same way.
+    private var parallelSeparateVersion: BibleVersion {
+        availableVersions.first { $0.id == personalData.parallelSeparateVersionID }
+            ?? availableVersions.first { $0.id != history.version.id }
+            ?? history.version
+    }
+
+    /// Separate mode's target: the session's frozen target, or
+    /// — before it freezes — the chapter being read.
+    private var effectiveSepTarget: ParallelTarget {
+        parallelSepTarget
+            ?? ParallelTarget(testament: history.testament,
+                              book: history.book,
+                              chapter: history.chapter)
+    }
+
+    /// The location the parallel view shows: the main view's
+    /// own chapter in sync mode, the session target otherwise.
+    private var parallelTarget: ParallelTarget {
+        personalData.parallelSyncMode
+            ? ParallelTarget(testament: history.testament,
+                             book: history.book,
+                             chapter: history.chapter)
+            : effectiveSepTarget
+    }
+
+    private var parallelTab: some View {
+        VStack(spacing: 0) {
+            parallelHeader
+            Divider()
+            ParallelChapterView(
+                version: personalData.parallelSyncMode
+                    ? parallelSyncVersion : parallelSeparateVersion,
+                testament: parallelTarget.testament,
+                book: parallelTarget.book,
+                chapter: parallelTarget.chapter,
+                sync: personalData.parallelSyncMode ? parallelSync : nil)
+        }
+        .sheet(item: $parallelSettings) { kind in
+            ParallelSettingsSheet(
+                kind: kind,
+                versions: availableVersions,
+                mainTarget: ParallelTarget(testament: history.testament,
+                                           book: history.book,
+                                           chapter: history.chapter),
+                mainBookTitle: history.bookTitle,
+                initialVersionID: initialParallelVersionID(for: kind),
+                initialTarget: initialParallelTarget(for: kind),
+                onApply: { versionID, target in
+                    applyParallelSettings(kind: kind,
+                                          versionID: versionID,
+                                          target: target)
+                })
+        }
+        .onAppear {
+            // Separate mode freezes its starting target from the
+            // chapter being read (REQ-PA-5); after that only its
+            // settings move it.
+            if !personalData.parallelSyncMode, parallelSepTarget == nil {
+                parallelSepTarget = ParallelTarget(
+                    testament: history.testament,
+                    book: history.book,
+                    chapter: history.chapter)
+            }
+            updateSyncActive()
+        }
+    }
+
+    /// The header over the parallel chapter: the gear on the
+    /// left, the version and passage, and the mode chain on
+    /// the right (REQ-PA-1, REQ-PA-4).
+    private var parallelHeader: some View {
+        HStack(spacing: 10) {
+            Button {
+                parallelSettings = personalData.parallelSyncMode
+                    ? .syncVersion : .separate
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.callout)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Parallel view settings")
+
+            Text(parallelTitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button {
+                parallelSettings = personalData.parallelSyncMode
+                    ? .toSeparate : .toSync
+            } label: {
+                if personalData.parallelSyncMode {
+                    Image(systemName: "link")
+                        .font(.callout)
+                        .foregroundStyle(.yellow)
+                } else {
+                    brokenChainIcon
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(personalData.parallelSyncMode
+                                ? "Switch to separate mode"
+                                : "Switch to sync mode")
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+    }
+
+    /// The broken chain of separate mode (REQ-PA-4): a gray
+    /// link struck through — SF Symbols has no broken-link
+    /// glyph, so the slash is drawn over it.
+    private var brokenChainIcon: some View {
+        Image(systemName: "link")
+            .font(.callout)
+            .foregroundStyle(.gray)
+            .overlay {
+                Rectangle()
+                    .fill(.gray)
+                    .frame(width: 2, height: 20)
+                    .rotationEffect(.degrees(-45))
+            }
+    }
+
+    private var parallelTitle: String {
+        if personalData.parallelSyncMode {
+            return "\(parallelSyncVersion.displayName) — \(history.bookTitle) \(history.chapter)"
+        }
+        let target = effectiveSepTarget
+        return "\(parallelSeparateVersion.displayName) — \(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
+    }
+
+    /// The version a settings sheet starts from.
+    private func initialParallelVersionID(for kind: ParallelSettingsKind) -> String {
+        switch kind {
+        case .syncVersion, .toSync: return parallelSyncVersion.id
+        case .separate, .toSeparate: return parallelSeparateVersion.id
+        }
+    }
+
+    /// The passage a settings sheet starts from.
+    private func initialParallelTarget(for kind: ParallelSettingsKind) -> ParallelTarget {
+        switch kind {
+        case .syncVersion, .toSync:
+            return ParallelTarget(testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter)
+        case .separate, .toSeparate:
+            return effectiveSepTarget
+        }
+    }
+
+    /// Applies a settings sheet's Done (REQ-PA-4): the gear
+    /// sheets set their own mode's version (the full form also
+    /// sets separate's target); the chain sheets do the same
+    /// and switch the mode.
+    private func applyParallelSettings(kind: ParallelSettingsKind,
+                                       versionID: String,
+                                       target: ParallelTarget) {
+        switch kind {
+        case .syncVersion:
+            personalData.parallelSyncVersionID = versionID
+        case .toSync:
+            personalData.parallelSyncVersionID = versionID
+            personalData.parallelSyncMode = true
+        case .separate:
+            personalData.parallelSeparateVersionID = versionID
+            parallelSepTarget = target
+        case .toSeparate:
+            personalData.parallelSeparateVersionID = versionID
+            parallelSepTarget = target
+            personalData.parallelSyncMode = false
+        }
+    }
 }
 
 /// Chooses the commentary module the auxiliary panel shows. Used from
@@ -2187,6 +2534,520 @@ private struct ReferenceChapterView: View {
                 ..< attr.index(attr.startIndex, offsetByCharacters: end)
             attr[r].foregroundColor = Self.redLetterColor
             attr[r].font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+        }
+    }
+}
+// MARK: - Parallel chapter view
+
+/// The Parallel tab's chapter: one chapter in one version,
+/// rendered the way the reference chapter renders it
+/// (REQ-PA-6) but embedded in the panel and read-only — no
+/// selection, no marks; Strong's numbers still open the
+/// dictionary. In sync mode (`sync` non-nil) it reports its
+/// top verse to the shared anchor and follows the anchor when
+/// the main view moved it (REQ-PA-2); in separate mode it
+/// simply scrolls on its own (REQ-PA-3).
+private struct ParallelChapterView: View {
+    let version: BibleVersion
+    let testament: Int
+    let book: Int
+    let chapter: Int
+    /// The shared anchor channel in sync mode; nil in
+    /// separate mode.
+    let sync: ParallelSyncState?
+
+    @EnvironmentObject private var personalData: PersonalData
+    @State private var verses: [(verse: Int, text: String)] = []
+    @State private var verseTokens: [(verse: Int, tokens: [WordToken])] = []
+    @State private var jesusSpans: [Int: [(start: Int, end: Int)]] = [:]
+    @State private var headings: [Int: String] = [:]
+    @State private var strongsKey: String?
+    /// True while a sync-driven scroll is settling: its own
+    /// position reports must not be mistaken for the user
+    /// moving the anchor (mirrors ReaderView's flag).
+    @State private var applying = false
+    @State private var applyGeneration = 0
+    /// The verse currently at this view's top.
+    @State private var topVerse = 1
+    @State private var viewSize: CGSize = .zero
+
+    /// Strong's numbers show exactly when the reader would
+    /// show them for this version (the reader's own rule).
+    private var useStrongs: Bool {
+        personalData.showStrongs && version.supportsStrongs
+    }
+
+    private var loadKey: String {
+        "\(version.id)|\(testament)|\(book)|\(chapter)"
+    }
+
+    private var anchorFromSync: Int { sync?.anchorVerse ?? -1 }
+    private var syncIsActive: Bool { sync?.active ?? false }
+
+    var body: some View {
+        Group {
+            if personalData.verseByVerse {
+                verseMode
+            } else {
+                paragraphMode
+            }
+        }
+        .task(id: loadKey) {
+            // Verses load last: everything the renderers read
+            // must already be in place when they arrive.
+            verseTokens = await version.loadTokens(
+                testament: testament, book: book, chapter: chapter)
+            jesusSpans = await version.loadJesusSpans(
+                testament: testament, book: book, chapter: chapter)
+            headings = await version.loadHeadings(
+                testament: testament, book: book, chapter: chapter)
+            verses = (try? await version.loadChapter(
+                testament: testament, book: book, chapter: chapter)) ?? []
+        }
+        .environment(\.openURL, OpenURLAction { url in
+            // Tapping a Strong's number opens its dictionary
+            // entry, as in the reader.
+            if url.scheme == "strongs", let key = url.host, !key.isEmpty {
+                strongsKey = key
+                return .handled
+            }
+            return .systemAction
+        })
+        .sheet(isPresented: Binding(
+            get: { strongsKey != nil },
+            set: { if !$0 { strongsKey = nil } }
+        )) {
+            if let key = strongsKey {
+                StrongsDefinitionView(key: key)
+            }
+        }
+    }
+
+    private var verseMode: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if useStrongs {
+                        ForEach(verseTokens, id: \.verse) { v in
+                            Group {
+                                if let heading = headings[v.verse] {
+                                    headingRow(heading)
+                                }
+                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                    .id(v.verse)
+                                    .reportVerseTop(v.verse, space: "parallelReading",
+                                                    enabled: sync != nil)
+                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                    .lineSpacing(6)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    } else {
+                        ForEach(verses, id: \.verse) { v in
+                            Group {
+                                if let heading = headings[v.verse] {
+                                    headingRow(heading)
+                                }
+                                Text(attributedVerse(number: v.verse, text: v.text))
+                                    .id(v.verse)
+                                    .reportVerseTop(v.verse, space: "parallelReading",
+                                                    enabled: sync != nil)
+                                    .font(.system(size: personalData.fontSize, design: .serif))
+                                    .lineSpacing(6)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+            .coordinateSpace(name: "parallelReading")
+            .onPreferenceChange(VerseTopFramesKey.self) { frames in
+                reportTop(topVisibleVerse(frames: frames, threshold: 20))
+            }
+            .onChange(of: verses.count) { alignAfterLoad(proxy: proxy) }
+            .onChange(of: loadKey) { alignAfterLoad(proxy: proxy) }
+            .onChange(of: anchorFromSync) { applyAnchor(proxy: proxy) }
+            .onChange(of: syncIsActive) {
+                if syncIsActive { applyAnchor(proxy: proxy) }
+            }
+        }
+    }
+
+    private var paragraphMode: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
+                    .font(.system(size: personalData.fontSize, design: .serif))
+                    .lineSpacing(6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // The same invisible 20-slice ladder the
+                    // reference chapter uses for verse jumps.
+                    .background {
+                        GeometryReader { geo in
+                            VStack(spacing: 0) {
+                                ForEach(0..<20, id: \.self) { i in
+                                    Color.clear
+                                        .id("frac-\(i)")
+                                }
+                            }
+                            .frame(height: geo.size.height)
+                            .allowsHitTesting(false)
+                        }
+                    }
+                    // Sync reporting in paragraph mode: the
+                    // text's scroll fraction in this view.
+                    .background {
+                        if sync != nil {
+                            GeometryReader { geo in
+                                Color.clear.preference(
+                                    key: ScrollFractionKey.self,
+                                    value: scrollFraction(
+                                        frame: geo.frame(in: .named("parallelReading")),
+                                        viewportHeight: viewSize.height))
+                            }
+                        }
+                    }
+                    .padding()
+            }
+            .coordinateSpace(name: "parallelReading")
+            .onGeometryChange(for: CGSize.self, of: \.size) { viewSize = $0 }
+            .onPreferenceChange(ScrollFractionKey.self) { fraction in
+                if let fraction {
+                    reportTop(verseAtScrollFraction(fraction))
+                }
+            }
+            .onChange(of: verses.count) { alignAfterLoad(proxy: proxy) }
+            .onChange(of: loadKey) { alignAfterLoad(proxy: proxy) }
+            .onChange(of: anchorFromSync) { applyAnchor(proxy: proxy) }
+            .onChange(of: syncIsActive) {
+                if syncIsActive { applyAnchor(proxy: proxy) }
+            }
+        }
+    }
+
+    /// After a (re)load — a new chapter, or the same chapter in
+    /// a newly picked version — realign to the shared anchor,
+    /// whichever side set it last: the reloaded content starts
+    /// wherever the scroll view left it, and sync means the
+    /// anchor's verse is at the top.
+    private func alignAfterLoad(proxy: ScrollViewProxy) {
+        guard let sync, sync.active else { return }
+        let anchor = sync.anchorVerse
+        guard anchor != topVerse else { return }
+        applying = true
+        applyGeneration += 1
+        let generation = applyGeneration
+        if personalData.verseByVerse {
+            proxy.scrollTo(anchor, anchor: .top)
+        } else if let i = paragraphAnchorIndex(for: anchor) {
+            proxy.scrollTo("frac-\(i)", anchor: .top)
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            if applyGeneration == generation { applying = false }
+        }
+    }
+
+    /// Follows the shared anchor when the main view moved it.
+    private func applyAnchor(proxy: ScrollViewProxy) {
+        guard let sync, sync.active, sync.lastMovedByMain else { return }
+        let anchor = sync.anchorVerse
+        guard anchor != topVerse else { return }
+        applying = true
+        applyGeneration += 1
+        let generation = applyGeneration
+        if personalData.verseByVerse {
+            proxy.scrollTo(anchor, anchor: .top)
+        } else if let i = paragraphAnchorIndex(for: anchor) {
+            proxy.scrollTo("frac-\(i)", anchor: .top)
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            if applyGeneration == generation { applying = false }
+        }
+    }
+
+    /// Publishes this view's top verse to the shared anchor.
+    private func reportTop(_ top: Int?) {
+        guard let sync, let top else { return }
+        topVerse = top
+        guard sync.active, !applying, top != sync.anchorVerse else { return }
+        sync.anchorVerse = top
+        sync.lastMovedByMain = false
+    }
+
+    /// The verse at a scroll fraction of the chapter text, by
+    /// character share — the inverse of paragraphAnchorIndex.
+    private func verseAtScrollFraction(_ fraction: Double) -> Int {
+        guard !verses.isEmpty else { return 1 }
+        let total = verses.reduce(0) { $0 + $1.text.count }
+        guard total > 0 else { return verses[0].verse }
+        var acc = 0.0
+        for v in verses {
+            acc += Double(v.text.count) / Double(total)
+            if fraction < acc { return v.verse }
+        }
+        return verses[verses.count - 1].verse
+    }
+
+    // MARK: - Rendering (mirrors the reference chapter's,
+    // minus its referenced-verse highlight)
+
+    private func headingRow(_ heading: String) -> some View {
+        Text(heading)
+            .font(.system(size: personalData.fontSize, design: .serif).weight(.semibold))
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func attributedHeading(_ heading: String) -> AttributedString {
+        var run = AttributedString(heading)
+        run.font = .system(size: personalData.fontSize, design: .serif).weight(.semibold)
+        return run
+    }
+
+    private func attributedVerse(number: Int, text: String) -> AttributedString {
+        var out = attributedVerseNumber(number)
+        out += AttributedString(" ")
+        out += AttributedString(text)
+        applyRedLetters(to: &out, verse: number)
+        return out
+    }
+
+    private func attributedParagraph() -> AttributedString {
+        var out = AttributedString("")
+        for (i, v) in verses.enumerated() {
+            if let heading = headings[v.verse] {
+                if i > 0 { out += AttributedString("\n\n") }
+                out += attributedHeading(heading)
+                out += AttributedString("\n")
+            } else if i > 0 { out += AttributedString(" ") }
+            out += attributedVerse(number: v.verse, text: v.text)
+        }
+        return out
+    }
+
+    private func attributedStrongsNumber(_ key: String) -> AttributedString {
+        var num = AttributedString(" \(key)")
+        num.font = .system(size: personalData.fontSize * 0.55, design: .serif)
+        num.foregroundColor = .blue
+        num.baselineOffset = personalData.fontSize * 0.22
+        num.underlineStyle = .single
+        num.link = URL(string: "strongs://\(key)")
+        return num
+    }
+
+    private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
+        var out = attributedVerseNumber(number)
+        out += AttributedString(" ")
+        for token in tokens {
+            var seg = AttributedString(token.text)
+            if personalData.showRedLetters, token.isJesusSpeech {
+                seg.foregroundColor = Self.redLetterColor
+                seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+            }
+            out += seg
+            for key in token.strongs {
+                out += attributedStrongsNumber(key)
+            }
+        }
+        return out
+    }
+
+    private func attributedParagraphTokens() -> AttributedString {
+        var out = AttributedString("")
+        for (i, v) in verseTokens.enumerated() {
+            if let heading = headings[v.verse] {
+                if i > 0 { out += AttributedString("\n\n") }
+                out += attributedHeading(heading)
+                out += AttributedString("\n")
+            } else if i > 0 { out += AttributedString(" ") }
+            out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
+        }
+        return out
+    }
+
+    private func attributedVerseNumber(_ number: Int) -> AttributedString {
+        var num = AttributedString("\(number) ")
+        num.font = .system(size: personalData.fontSize * 0.65, design: .serif)
+        num.foregroundColor = .secondary
+        num.baselineOffset = personalData.fontSize * 0.25
+        return num
+    }
+
+    /// The ladder slice a verse falls in, by its share of the
+    /// chapter's characters — the reader's own math.
+    private func paragraphAnchorIndex(for verse: Int) -> Int? {
+        guard verses.contains(where: { $0.verse == verse }) else { return nil }
+        var total = 0
+        var before = 0
+        for v in verses {
+            if v.verse < verse { before += v.text.count }
+            total += v.text.count
+        }
+        guard total > 0 else { return nil }
+        return min(19, Int(Double(before) / Double(total) * 20))
+    }
+
+    /// Red-letter color (REQ-RL-3): deep red on light
+    /// backgrounds, brighter on dark — the reader's own.
+    private static let redLetterColor = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 1.0, green: 0.42, blue: 0.36, alpha: 1)
+            : UIColor(red: 0.76, green: 0.09, blue: 0.07, alpha: 1)
+    })
+
+    /// Paints the verse's Jesus-speech spans red and bold
+    /// (REQ-RL-3), in the reader's span coordinates.
+    private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
+        guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
+        let prefix = "\(verse) ".count + 1
+        for span in spans {
+            let start = prefix + span.start
+            let end = prefix + span.end
+            guard start < end, end <= attr.characters.count else { continue }
+            let r = attr.index(attr.startIndex, offsetByCharacters: start)
+                ..< attr.index(attr.startIndex, offsetByCharacters: end)
+            attr[r].foregroundColor = Self.redLetterColor
+            attr[r].font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
+        }
+    }
+}
+
+// MARK: - Parallel settings sheet
+
+/// The Parallel tab's settings (REQ-PA-4). One sheet, three
+/// forms: the version only (sync mode's gear); version, book,
+/// and chapter (separate's gear, and sync's chain on its way
+/// to separate); and the version with the main view's book
+/// and chapter shown fixed (separate's chain, on its way to
+/// sync). Done applies through `onApply`; Cancel dismisses
+/// and applies nothing.
+private struct ParallelSettingsSheet: View {
+    let kind: ParallelSettingsKind
+    let versions: [BibleVersion]
+    /// The main view's current location: shown fixed by the
+    /// to-sync form.
+    let mainTarget: ParallelTarget
+    let mainBookTitle: String
+    /// What Done reports: the chosen version id, and the
+    /// chosen target (the full forms only).
+    let onApply: (String, ParallelTarget) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draftVersionID: String
+    @State private var draftOverall: Int
+    @State private var draftChapter: Int
+
+    init(kind: ParallelSettingsKind,
+         versions: [BibleVersion],
+         mainTarget: ParallelTarget,
+         mainBookTitle: String,
+         initialVersionID: String,
+         initialTarget: ParallelTarget,
+         onApply: @escaping (String, ParallelTarget) -> Void) {
+        self.kind = kind
+        self.versions = versions
+        self.mainTarget = mainTarget
+        self.mainBookTitle = mainBookTitle
+        self.onApply = onApply
+        _draftVersionID = State(initialValue: initialVersionID)
+        _draftOverall = State(initialValue: initialTarget.overall)
+        _draftChapter = State(initialValue: initialTarget.chapter)
+    }
+
+    private var showsTargetFields: Bool {
+        kind == .separate || kind == .toSeparate
+    }
+
+    private var title: String {
+        switch kind {
+        case .syncVersion: return "Sync Version"
+        case .toSync: return "Sync View"
+        case .separate, .toSeparate: return "Separate View"
+        }
+    }
+
+    private var draftVersion: BibleVersion? {
+        versions.first { $0.id == draftVersionID } ?? versions.first
+    }
+
+    private var draftChapterCount: Int {
+        guard let v = draftVersion else { return 1 }
+        let t = ParallelTarget(overall: draftOverall, chapter: 1)
+        return max(1, v.chapterCount(testament: t.testament, book: t.book))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Version") {
+                    ForEach(versions, id: \.id) { v in
+                        Button {
+                            draftVersionID = v.id
+                        } label: {
+                            HStack {
+                                Text(v.displayName)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if v.id == draftVersionID {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                    }
+                }
+                if showsTargetFields, let dv = draftVersion {
+                    Section("Passage") {
+                        Picker("Book", selection: $draftOverall) {
+                            Section("Old Testament") {
+                                ForEach(0..<39, id: \.self) { i in
+                                    Text(dv.bookName(overall: i)).tag(i)
+                                }
+                            }
+                            Section("New Testament") {
+                                ForEach(39..<66, id: \.self) { i in
+                                    Text(dv.bookName(overall: i)).tag(i)
+                                }
+                            }
+                        }
+                        Picker("Chapter", selection: $draftChapter) {
+                            ForEach(1...draftChapterCount, id: \.self) { c in
+                                Text("\(c)").tag(c)
+                            }
+                        }
+                    }
+                }
+                if kind == .toSync {
+                    Section("Passage") {
+                        LabeledContent("Book", value: mainBookTitle)
+                            .foregroundStyle(.secondary)
+                        LabeledContent("Chapter", value: "\(mainTarget.chapter)")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        onApply(draftVersionID,
+                                ParallelTarget(overall: draftOverall,
+                                               chapter: draftChapter))
+                        dismiss()
+                    }
+                }
+            }
+            .onChange(of: draftOverall) {
+                if draftChapter > draftChapterCount {
+                    draftChapter = draftChapterCount
+                }
+            }
         }
     }
 }

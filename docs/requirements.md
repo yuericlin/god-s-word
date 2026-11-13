@@ -1132,3 +1132,61 @@ Multiple (KJV Gen 1:1-2):
   span); 2,018 ChiUns verses ship, with Revelation's spans
   quote-aligned on the verses' own texts (pinned in
   RedLetterArtifactTests).
+
+## 20. Parallel view
+
+- **REQ-PA-1:** The auxiliary panel (§15) gains a **Parallel**
+  tab: a second chapter view under a header row. The header
+  carries a gear button on the left, the parallel view's
+  version and passage, and a chain button on the right. The
+  parallel view lives in the panel only; the main reading
+  text is untouched.
+- **REQ-PA-2:** **Sync mode:** the parallel view shows the
+  main view's book and chapter in its own chosen version.
+  The two views keep the same top visible verse: scrolling
+  either view scrolls the other so that verse is at its top.
+  Sync is exact in verse-by-verse mode; in paragraph mode it
+  follows the app's text-share approximation (the ladder of
+  REQ-NT-21), in both directions. A chapter change in the
+  main view reloads the parallel chapter and restarts both
+  views at its top. Sync is live only while the Parallel
+  tab is showing.
+- **REQ-PA-3:** **Separate mode:** the parallel view shows
+  any version, book, and chapter, chosen in its settings,
+  and scrolls independently; navigation in the main view
+  never moves it, and its scrolling never moves the main
+  view.
+- **REQ-PA-4:** Each mode shows the same two header buttons.
+  In sync mode the chain is a **yellow link**: tapping it
+  opens separate mode's settings (version, book, chapter) —
+  **Done** applies them and switches to separate mode,
+  **Cancel** dismisses and applies nothing. The gear opens
+  a version picker only (book and chapter stay the main
+  view's). In separate mode the chain is a **gray broken
+  link**: tapping it opens sync mode's settings — the
+  version can change; book and chapter show the main view's
+  current values, grayed and unchangeable — **Done** applies
+  and switches to sync mode, **Cancel** dismisses and
+  applies nothing. Separate mode's gear opens separate's
+  settings (all three fields). A settings **Done** is the
+  only way anything applies.
+- **REQ-PA-5:** The mode and each mode's version are
+  remembered (UserDefaults `gw.parallelSyncMode.v1`,
+  `gw.parallelSyncVersion.v1`,
+  `gw.parallelSeparateVersion.v1`; backup payload v12 and
+  the settings sync/export files). Separate mode's book and
+  chapter are **not** remembered: a fresh session starts
+  separate mode at the chapter being read, and only its
+  settings move it from there.
+- **REQ-PA-6:** The parallel view renders its chapter the
+  way the reader does — the reading font setting, verse by
+  verse or paragraph following the setting, section
+  headings, red letters, and Strong's numbers under the
+  reader's own rule — and is read-only in v1: no verse
+  selection and none of the reader's marks, but Strong's
+  numbers still open the dictionary.
+- **REQ-PA-7:** First use: sync mode, and each mode's
+  version defaults to the first installed version that
+  isn't the one being read (the current version itself when
+  it is the only one installed). A remembered version that
+  is no longer installed falls back the same way.
