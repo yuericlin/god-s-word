@@ -1196,3 +1196,10 @@ Multiple (KJV Gen 1:1-2):
   isn't the one being read (the current version itself when
   it is the only one installed). A remembered version that
   is no longer installed falls back the same way.
+- **REQ-PA-8:** Settings carries a **Parallel** section: a
+  link (labeled with the current mode) to a Parallel settings
+  page holding the mode (Sync / Separate) and each mode's
+  version, as checkmark lists whose check marks the version
+  in effect (REQ-PA-7). These are the same remembered
+  choices the panel's own sheets edit (REQ-PA-5), so a
+  change in either place applies in both.
