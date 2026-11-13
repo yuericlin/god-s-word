@@ -751,7 +751,11 @@ Multiple (KJV Gen 1:1-2):
   (an entry names a chapter, not verses); the sheet's Read More
   jumps back to it (switching to the entry's version when still
   installed); swipe to delete; a Clear button (trash icon) in the
-  tab header clears the log.
+  tab header clears the log. Each entry renders on one line —
+  book and chapter, every version read, and the earliest visit's
+  date and time, nothing dropped — in the Highlights row format
+  (REQ-HL-4): blue text with the yellow bar, on a black
+  background.
 - **REQ-AP-12:** Module downloads (both "Add Bible" and
   "Add Commentary") show progress with a cancel button
   (`PackageDownloader`): the row shows the fraction downloaded,
@@ -1037,7 +1041,9 @@ Multiple (KJV Gen 1:1-2):
   (`HighlightsTabLogic`, unit-tested); with no highlights at
   all the tab shows its empty state. Every row shows the
   reference, the version the highlight was made in, and its
-  date (the note-row format). Tapping a row views the passage
+  date (the note-row format), on one line: blue text with the
+  yellow bar on a black background — the same rendering as a
+  Recents history entry (REQ-AP-11). Tapping a row views the passage
   in the reference chapter sheet (REQ-AP-20) in the version
   being read — never switching version — with the highlight's
   verses selected; the sheet's Read More moves the reader to
