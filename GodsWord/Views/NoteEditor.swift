@@ -72,7 +72,13 @@ struct NoteEditor: View {
                                     onReadChapter()
                                     dismiss()
                                 }
+                                // Blue, pinned two ways: the
+                                // label style and the bar tint —
+                                // inside the toolbar's glass pill
+                                // either one alone can be
+                                // overridden by the bar.
                                 .foregroundStyle(.blue)
+                                .tint(.blue)
                             }
                         }
                     }
