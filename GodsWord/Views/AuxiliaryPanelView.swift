@@ -1698,6 +1698,200 @@ struct AuxiliaryPanelView: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
     }
+
+    // MARK: - Parallel tab (REQ-PA)
+
+    /// Sync is live only while this tab is the one showing, the
+    /// panel is expanded, and the remembered mode is sync.
+    private func updateSyncActive() {
+        parallelSync.active = tab == .parallel && !collapsed
+            && personalData.parallelSyncMode
+    }
+
+    /// The sync mode's version: the remembered choice, else the
+    /// first installed version that isn't the one being read.
+    private var parallelSyncVersion: BibleVersion {
+        availableVersions.first { $0.id == personalData.parallelSyncVersionID }
+            ?? availableVersions.first { $0.id != history.version.id }
+            ?? history.version
+    }
+
+    /// The separate mode's version, resolved the same way.
+    private var parallelSeparateVersion: BibleVersion {
+        availableVersions.first { $0.id == personalData.parallelSeparateVersionID }
+            ?? availableVersions.first { $0.id != history.version.id }
+            ?? history.version
+    }
+
+    /// Separate mode's target: the session's frozen target, or
+    /// — before it freezes — the chapter being read.
+    private var effectiveSepTarget: ParallelTarget {
+        parallelSepTarget
+            ?? ParallelTarget(testament: history.testament,
+                              book: history.book,
+                              chapter: history.chapter)
+    }
+
+    /// The location the parallel view shows: the main view's
+    /// own chapter in sync mode, the session target otherwise.
+    private var parallelTarget: ParallelTarget {
+        personalData.parallelSyncMode
+            ? ParallelTarget(testament: history.testament,
+                             book: history.book,
+                             chapter: history.chapter)
+            : effectiveSepTarget
+    }
+
+    private var parallelTab: some View {
+        VStack(spacing: 0) {
+            parallelHeader
+            Divider()
+            ParallelChapterView(
+                version: personalData.parallelSyncMode
+                    ? parallelSyncVersion : parallelSeparateVersion,
+                testament: parallelTarget.testament,
+                book: parallelTarget.book,
+                chapter: parallelTarget.chapter,
+                sync: personalData.parallelSyncMode ? parallelSync : nil)
+        }
+        .sheet(item: $parallelSettings) { kind in
+            ParallelSettingsSheet(
+                kind: kind,
+                versions: availableVersions,
+                mainTarget: ParallelTarget(testament: history.testament,
+                                           book: history.book,
+                                           chapter: history.chapter),
+                mainBookTitle: history.bookTitle,
+                initialVersionID: initialParallelVersionID(for: kind),
+                initialTarget: initialParallelTarget(for: kind),
+                onApply: { versionID, target in
+                    applyParallelSettings(kind: kind,
+                                          versionID: versionID,
+                                          target: target)
+                })
+        }
+        .onAppear {
+            // Separate mode freezes its starting target from the
+            // chapter being read (REQ-PA-5); after that only its
+            // settings move it.
+            if !personalData.parallelSyncMode, parallelSepTarget == nil {
+                parallelSepTarget = ParallelTarget(
+                    testament: history.testament,
+                    book: history.book,
+                    chapter: history.chapter)
+            }
+            updateSyncActive()
+        }
+    }
+
+    /// The header over the parallel chapter: the gear on the
+    /// left, the version and passage, and the mode chain on
+    /// the right (REQ-PA-1, REQ-PA-4).
+    private var parallelHeader: some View {
+        HStack(spacing: 10) {
+            Button {
+                parallelSettings = personalData.parallelSyncMode
+                    ? .syncVersion : .separate
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.callout)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Parallel view settings")
+
+            Text(parallelTitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button {
+                parallelSettings = personalData.parallelSyncMode
+                    ? .toSeparate : .toSync
+            } label: {
+                if personalData.parallelSyncMode {
+                    Image(systemName: "link")
+                        .font(.callout)
+                        .foregroundStyle(.yellow)
+                } else {
+                    brokenChainIcon
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(personalData.parallelSyncMode
+                                ? "Switch to separate mode"
+                                : "Switch to sync mode")
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+    }
+
+    /// The broken chain of separate mode (REQ-PA-4): a gray
+    /// link struck through — SF Symbols has no broken-link
+    /// glyph, so the slash is drawn over it.
+    private var brokenChainIcon: some View {
+        Image(systemName: "link")
+            .font(.callout)
+            .foregroundStyle(.gray)
+            .overlay {
+                Rectangle()
+                    .fill(.gray)
+                    .frame(width: 2, height: 20)
+                    .rotationEffect(.degrees(-45))
+            }
+    }
+
+    private var parallelTitle: String {
+        if personalData.parallelSyncMode {
+            return "\(parallelSyncVersion.displayName) — \(history.bookTitle) \(history.chapter)"
+        }
+        let target = effectiveSepTarget
+        return "\(parallelSeparateVersion.displayName) — \(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
+    }
+
+    /// The version a settings sheet starts from.
+    private func initialParallelVersionID(for kind: ParallelSettingsKind) -> String {
+        switch kind {
+        case .syncVersion, .toSync: return parallelSyncVersion.id
+        case .separate, .toSeparate: return parallelSeparateVersion.id
+        }
+    }
+
+    /// The passage a settings sheet starts from.
+    private func initialParallelTarget(for kind: ParallelSettingsKind) -> ParallelTarget {
+        switch kind {
+        case .syncVersion, .toSync:
+            return ParallelTarget(testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter)
+        case .separate, .toSeparate:
+            return effectiveSepTarget
+        }
+    }
+
+    /// Applies a settings sheet's Done (REQ-PA-4): the gear
+    /// sheets set their own mode's version (the full form also
+    /// sets separate's target); the chain sheets do the same
+    /// and switch the mode.
+    private func applyParallelSettings(kind: ParallelSettingsKind,
+                                       versionID: String,
+                                       target: ParallelTarget) {
+        switch kind {
+        case .syncVersion:
+            personalData.parallelSyncVersionID = versionID
+        case .toSync:
+            personalData.parallelSyncVersionID = versionID
+            personalData.parallelSyncMode = true
+        case .separate:
+            personalData.parallelSeparateVersionID = versionID
+            parallelSepTarget = target
+        case .toSeparate:
+            personalData.parallelSeparateVersionID = versionID
+            parallelSepTarget = target
+            personalData.parallelSyncMode = false
+        }
+    }
 }
 
 /// Chooses the commentary module the auxiliary panel shows. Used from
@@ -2007,200 +2201,6 @@ struct DictionarySettingsView: View {
             personalData.dictionaryGreekID = ""
         }
         reload()
-    }
-
-    // MARK: - Parallel tab (REQ-PA)
-
-    /// Sync is live only while this tab is the one showing, the
-    /// panel is expanded, and the remembered mode is sync.
-    private func updateSyncActive() {
-        parallelSync.active = tab == .parallel && !collapsed
-            && personalData.parallelSyncMode
-    }
-
-    /// The sync mode's version: the remembered choice, else the
-    /// first installed version that isn't the one being read.
-    private var parallelSyncVersion: BibleVersion {
-        availableVersions.first { $0.id == personalData.parallelSyncVersionID }
-            ?? availableVersions.first { $0.id != history.version.id }
-            ?? history.version
-    }
-
-    /// The separate mode's version, resolved the same way.
-    private var parallelSeparateVersion: BibleVersion {
-        availableVersions.first { $0.id == personalData.parallelSeparateVersionID }
-            ?? availableVersions.first { $0.id != history.version.id }
-            ?? history.version
-    }
-
-    /// Separate mode's target: the session's frozen target, or
-    /// — before it freezes — the chapter being read.
-    private var effectiveSepTarget: ParallelTarget {
-        parallelSepTarget
-            ?? ParallelTarget(testament: history.testament,
-                              book: history.book,
-                              chapter: history.chapter)
-    }
-
-    /// The location the parallel view shows: the main view's
-    /// own chapter in sync mode, the session target otherwise.
-    private var parallelTarget: ParallelTarget {
-        personalData.parallelSyncMode
-            ? ParallelTarget(testament: history.testament,
-                             book: history.book,
-                             chapter: history.chapter)
-            : effectiveSepTarget
-    }
-
-    private var parallelTab: some View {
-        VStack(spacing: 0) {
-            parallelHeader
-            Divider()
-            ParallelChapterView(
-                version: personalData.parallelSyncMode
-                    ? parallelSyncVersion : parallelSeparateVersion,
-                testament: parallelTarget.testament,
-                book: parallelTarget.book,
-                chapter: parallelTarget.chapter,
-                sync: personalData.parallelSyncMode ? parallelSync : nil)
-        }
-        .sheet(item: $parallelSettings) { kind in
-            ParallelSettingsSheet(
-                kind: kind,
-                versions: availableVersions,
-                mainTarget: ParallelTarget(testament: history.testament,
-                                           book: history.book,
-                                           chapter: history.chapter),
-                mainBookTitle: history.bookTitle,
-                initialVersionID: initialParallelVersionID(for: kind),
-                initialTarget: initialParallelTarget(for: kind),
-                onApply: { versionID, target in
-                    applyParallelSettings(kind: kind,
-                                          versionID: versionID,
-                                          target: target)
-                })
-        }
-        .onAppear {
-            // Separate mode freezes its starting target from the
-            // chapter being read (REQ-PA-5); after that only its
-            // settings move it.
-            if !personalData.parallelSyncMode, parallelSepTarget == nil {
-                parallelSepTarget = ParallelTarget(
-                    testament: history.testament,
-                    book: history.book,
-                    chapter: history.chapter)
-            }
-            updateSyncActive()
-        }
-    }
-
-    /// The header over the parallel chapter: the gear on the
-    /// left, the version and passage, and the mode chain on
-    /// the right (REQ-PA-1, REQ-PA-4).
-    private var parallelHeader: some View {
-        HStack(spacing: 10) {
-            Button {
-                parallelSettings = personalData.parallelSyncMode
-                    ? .syncVersion : .separate
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.callout)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Parallel view settings")
-
-            Text(parallelTitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button {
-                parallelSettings = personalData.parallelSyncMode
-                    ? .toSeparate : .toSync
-            } label: {
-                if personalData.parallelSyncMode {
-                    Image(systemName: "link")
-                        .font(.callout)
-                        .foregroundStyle(.yellow)
-                } else {
-                    brokenChainIcon
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(personalData.parallelSyncMode
-                                ? "Switch to separate mode"
-                                : "Switch to sync mode")
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 6)
-    }
-
-    /// The broken chain of separate mode (REQ-PA-4): a gray
-    /// link struck through — SF Symbols has no broken-link
-    /// glyph, so the slash is drawn over it.
-    private var brokenChainIcon: some View {
-        Image(systemName: "link")
-            .font(.callout)
-            .foregroundStyle(.gray)
-            .overlay {
-                Rectangle()
-                    .fill(.gray)
-                    .frame(width: 2, height: 20)
-                    .rotationEffect(.degrees(-45))
-            }
-    }
-
-    private var parallelTitle: String {
-        if personalData.parallelSyncMode {
-            return "\(parallelSyncVersion.displayName) — \(history.bookTitle) \(history.chapter)"
-        }
-        let target = effectiveSepTarget
-        return "\(parallelSeparateVersion.displayName) — \(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
-    }
-
-    /// The version a settings sheet starts from.
-    private func initialParallelVersionID(for kind: ParallelSettingsKind) -> String {
-        switch kind {
-        case .syncVersion, .toSync: return parallelSyncVersion.id
-        case .separate, .toSeparate: return parallelSeparateVersion.id
-        }
-    }
-
-    /// The passage a settings sheet starts from.
-    private func initialParallelTarget(for kind: ParallelSettingsKind) -> ParallelTarget {
-        switch kind {
-        case .syncVersion, .toSync:
-            return ParallelTarget(testament: history.testament,
-                                  book: history.book,
-                                  chapter: history.chapter)
-        case .separate, .toSeparate:
-            return effectiveSepTarget
-        }
-    }
-
-    /// Applies a settings sheet's Done (REQ-PA-4): the gear
-    /// sheets set their own mode's version (the full form also
-    /// sets separate's target); the chain sheets do the same
-    /// and switch the mode.
-    private func applyParallelSettings(kind: ParallelSettingsKind,
-                                       versionID: String,
-                                       target: ParallelTarget) {
-        switch kind {
-        case .syncVersion:
-            personalData.parallelSyncVersionID = versionID
-        case .toSync:
-            personalData.parallelSyncVersionID = versionID
-            personalData.parallelSyncMode = true
-        case .separate:
-            personalData.parallelSeparateVersionID = versionID
-            parallelSepTarget = target
-        case .toSeparate:
-            personalData.parallelSeparateVersionID = versionID
-            parallelSepTarget = target
-            personalData.parallelSyncMode = false
-        }
     }
 }
 
