@@ -231,10 +231,10 @@ struct AuxiliaryPanelView: View {
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
-    /// Measured height of the tab bar: the header zone the
-    /// panel-collapse gesture reads (REQ-AP-18). The bar itself
-    /// floats over the content and takes none of its height
-    /// (REQ-AP-21).
+    /// Measured height of the floating tab controls (grabber
+    /// bar plus pill row): the header zone the panel-collapse
+    /// gesture reads (REQ-AP-18). They float over the content
+    /// and take none of its height (REQ-AP-21).
     @State private var tabBarHeight: CGFloat = 49
 
     enum PanelTab: String, CaseIterable {
@@ -346,25 +346,26 @@ struct AuxiliaryPanelView: View {
     }
 
     /// Hides or shows the floating tab controls (REQ-AP-21):
-    /// a thin translucent bar at the pill row's leading end —
-    /// tap it to tuck the pills away or bring them back. It
-    /// stays when the pills are hidden, at the panel's
-    /// top-left. The choice is remembered (PersonalData).
+    /// a thin translucent bar (80% opacity) centered above
+    /// the pill row — tap it to tuck the pills away or bring
+    /// them back. It stays when the pills are hidden, at the
+    /// panel's top-center. The choice is remembered
+    /// (PersonalData).
     private var tabBarGrabber: some View {
         Button {
             personalData.panelTabBarHidden.toggle()
         } label: {
             Capsule()
                 .fill(.ultraThinMaterial)
+                .opacity(0.8)
                 .frame(width: 40, height: 6)
-                .padding(.vertical, 10)
+                .padding(.vertical, 8)
                 .padding(.horizontal, 4)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(personalData.panelTabBarHidden
                             ? "Show tab controls" : "Hide tab controls")
-        .padding(.leading, 8)
     }
 
     /// Height of the tab content: the whole expanded panel is
@@ -400,17 +401,21 @@ struct AuxiliaryPanelView: View {
                 // (REQ-AP-21): transparent — no background of
                 // their own — overlapping the content's top,
                 // the tabs' own headers under them while they
-                // show. The thin bar at the row's leading end
+                // show. The thin bar centered above the row
                 // hides and shows the pills.
-                HStack(spacing: 2) {
-                    tabBarGrabber
+                VStack(spacing: 0) {
+                    HStack {
+                        Spacer()
+                        tabBarGrabber
+                        Spacer()
+                    }
                     if !personalData.panelTabBarHidden {
                         panelTabBar
-                            .onGeometryChange(for: CGFloat.self, of: \.size.height) {
-                                tabBarHeight = $0
-                            }
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
+                }
+                .onGeometryChange(for: CGFloat.self, of: \.size.height) {
+                    tabBarHeight = $0
                 }
             }
             .clipped()
