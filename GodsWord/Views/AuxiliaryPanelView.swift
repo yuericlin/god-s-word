@@ -371,7 +371,11 @@ struct AuxiliaryPanelView: View {
     /// The primary control: the current mode's name in a
     /// capsule; tapping opens the system's menu of modes to
     /// choose from — alphabetical, the current one carrying
-    /// the system's check. The system menu it is: a custom
+    /// the system's check. The menu's order is fixed: the
+    /// default priority order puts the first item nearest
+    /// the button, which turns the list upside down when
+    /// the menu opens upward, as this one does. The system
+    /// menu it is: a custom
     /// popover list could not be made to size itself to its
     /// rows (PRs #110–#113), so the menu's own insets and
     /// check placement stand.
@@ -397,6 +401,7 @@ struct AuxiliaryPanelView: View {
             .background(Capsule().fill(Color.primary.opacity(0.24)))
             .foregroundStyle(.primary)
         }
+        .menuOrder(.fixed)
         .accessibilityLabel("Mode: \(tab.rawValue)")
         .accessibilityHint("Tap to choose a mode")
     }

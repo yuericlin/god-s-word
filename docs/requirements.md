@@ -683,7 +683,9 @@ Multiple (KJV Gen 1:1-2):
   no tab's content carries a header of its own. The row's leftmost
   control is the primary button: it shows the current mode, and
   tapping it opens the system's menu of the modes to choose
-  from, the current one carrying the system's check.
+  from — alphabetical, in fixed top-to-bottom order (the
+  menu's default priority order reverses a list that opens
+  upward) — the current one carrying the system's check.
   Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
