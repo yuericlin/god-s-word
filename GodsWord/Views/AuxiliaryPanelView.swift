@@ -2495,7 +2495,7 @@ private struct ReferenceChapterView: View {
                 if i > 0 { out += AttributedString("\n\n") }
                 out += attributedHeading(heading)
                 out += AttributedString("\n")
-            } else if i > 0 { out += AttributedString(" ") }
+            } else if i > 0 { out += paragraphJoin(after: verses[i - 1].verse, before: v.verse) }
             out += attributedVerse(number: v.verse, text: v.text)
         }
         return out
@@ -2543,7 +2543,7 @@ private struct ReferenceChapterView: View {
                 if i > 0 { out += AttributedString("\n\n") }
                 out += attributedHeading(heading)
                 out += AttributedString("\n")
-            } else if i > 0 { out += AttributedString(" ") }
+            } else if i > 0 { out += paragraphJoin(after: verseTokens[i - 1].verse, before: v.verse) }
             out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
         }
         return out
@@ -2573,20 +2573,28 @@ private struct ReferenceChapterView: View {
         return min(19, Int(Double(before) / Double(total) * 20))
     }
 
+    /// The space joining two verses in a paragraph: painted
+    /// with the selection blue when both neighbors are
+    /// referenced, so the band runs unbroken from the first
+    /// verse's number through the last verse's text — the
+    /// reader's own join treatment (REQ-AP-20, REQ-VP-1).
+    private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
+        var join = AttributedString(" ")
+        if target.verses.contains(previous),
+           target.verses.contains(next) {
+            join.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        }
+        return join
+    }
+
     /// A referenced verse wears the reader's selection blue
-    /// over its text — the treatment a selected verse gets in
-    /// the reader — except the verse number itself: the number
-    /// is smaller and raised, so its background box is smaller
-    /// and shifted up, and painting it leaves a step (a kink)
-    /// at the bottom where its box meets the text's box. The
-    /// background therefore starts right after the number run.
+    /// over the whole verse — its number, the spaces around
+    /// the number, and its text — the treatment a selected
+    /// verse gets in the reader (REQ-AP-20, REQ-VP-1), so
+    /// consecutive referenced verses read as one band.
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        let numberLength = "\(verse) ".count
-        guard attr.characters.count > numberLength else { return }
-        let start = attr.index(attr.startIndex, offsetByCharacters: numberLength)
-        attr[start..<attr.endIndex].backgroundColor =
-            UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
     /// Red-letter color (REQ-RL-3): deep red on light

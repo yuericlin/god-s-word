@@ -50,6 +50,11 @@ outside SwiftUI).
 ### Selection
 - **REQ-VP-1:** Tapping a verse selects it. The selected verse shows a light sky
   blue highlight (`UIColor(0.53, 0.81, 0.98, alpha 0.55)` via `backgroundColor`).
+  The blue covers the whole verse — its number and the spaces around it, and
+  in paragraph mode the space joining it to a selected neighbor — so
+  consecutive selected verses read as one band, as consecutive highlighted
+  verses do (REQ-HL-2). The reference chapter sheet's referenced verses wear
+  exactly this treatment (REQ-AP-20).
 - **REQ-VP-2:** Tapping a selected verse again unselects it.
 - **REQ-VP-3:** Multiple verses can be selected at once.
 - **REQ-VP-4:** Selection is cleared when the testament, book, or chapter changes.
