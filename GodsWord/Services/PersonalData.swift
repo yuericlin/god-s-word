@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 12
+    public var version: Int = 13
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -85,6 +85,10 @@ public struct BackupPayload: Codable, Sendable {
     public var parallelSyncMode: Bool
     public var parallelSyncVersionID: String
     public var parallelSeparateVersionID: String
+    /// The auxiliary panel's remembered mode (REQ-AP-21): a
+    /// PanelTab raw value; "" = never set — the panel starts
+    /// on Notes. Payload v13+; older payloads decode to "".
+    public var panelTab: String
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
@@ -108,6 +112,7 @@ public struct BackupPayload: Codable, Sendable {
                 parallelSyncMode: Bool = true,
                 parallelSyncVersionID: String = "",
                 parallelSeparateVersionID: String = "",
+                panelTab: String = "",
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -134,6 +139,7 @@ public struct BackupPayload: Codable, Sendable {
         self.parallelSyncMode = parallelSyncMode
         self.parallelSyncVersionID = parallelSyncVersionID
         self.parallelSeparateVersionID = parallelSeparateVersionID
+        self.panelTab = panelTab
         self.backedUpAt = backedUpAt
     }
 
@@ -167,6 +173,7 @@ public struct BackupPayload: Codable, Sendable {
         parallelSyncMode = try c.decodeIfPresent(Bool.self, forKey: .parallelSyncMode) ?? true
         parallelSyncVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSyncVersionID) ?? ""
         parallelSeparateVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSeparateVersionID) ?? ""
+        panelTab = try c.decodeIfPresent(String.self, forKey: .panelTab) ?? ""
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -200,6 +207,7 @@ public final class PersonalData: ObservableObject {
     private let parallelSyncModeKey = "gw.parallelSyncMode.v1"
     private let parallelSyncVersionKey = "gw.parallelSyncVersion.v1"
     private let parallelSeparateVersionKey = "gw.parallelSeparateVersion.v1"
+    private let panelTabKey = "gw.panelTab.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -254,6 +262,7 @@ public final class PersonalData: ObservableObject {
         self.parallelSyncMode = defaults.object(forKey: parallelSyncModeKey) as? Bool ?? true
         self.parallelSyncVersionID = defaults.string(forKey: parallelSyncVersionKey) ?? ""
         self.parallelSeparateVersionID = defaults.string(forKey: parallelSeparateVersionKey) ?? ""
+        self.panelTab = defaults.string(forKey: panelTabKey) ?? ""
         // REQ-NT-19: fold any legacy per-version note keys into the
         // version-less ones. didSet does not fire during init, so
         // persist the note stores explicitly afterwards.
@@ -420,6 +429,15 @@ public final class PersonalData: ObservableObject {
     /// being read. Persisted in UserDefaults.
     @Published public var parallelSeparateVersionID: String {
         didSet { defaults.set(parallelSeparateVersionID, forKey: parallelSeparateVersionKey) }
+    }
+
+    /// The auxiliary panel's current mode (REQ-AP-21), held
+    /// as a PanelTab raw value: the panel restores it when it
+    /// opens and rewrites it on every mode change. Empty
+    /// until a mode is first stored — the panel then starts
+    /// on Notes. Persisted in UserDefaults.
+    @Published public var panelTab: String {
+        didSet { defaults.set(panelTab, forKey: panelTabKey) }
     }
 
     /// Book-level notes (REQ-NT-14), keyed by
@@ -911,6 +929,7 @@ public final class PersonalData: ObservableObject {
                       parallelSyncMode: parallelSyncMode,
                       parallelSyncVersionID: parallelSyncVersionID,
                       parallelSeparateVersionID: parallelSeparateVersionID,
+                      panelTab: panelTab,
                       backedUpAt: Date())
     }
 
@@ -982,6 +1001,11 @@ public final class PersonalData: ObservableObject {
         if !payload.parallelSeparateVersionID.isEmpty {
             parallelSeparateVersionID = payload.parallelSeparateVersionID
         }
+        // Panel mode (payload v13+; older payloads decode to
+        // "" and leave the current mode alone).
+        if !payload.panelTab.isEmpty {
+            panelTab = payload.panelTab
+        }
         // Note sources (payload v10+; older payloads decode to [:]
         // and leave current sources alone).
         if !payload.noteSources.isEmpty {
@@ -1028,6 +1052,9 @@ public final class PersonalData: ObservableObject {
         public var parallelSyncMode: Bool?
         public var parallelSyncVersionID: String?
         public var parallelSeparateVersionID: String?
+        /// The panel's remembered mode (REQ-AP-21); optional
+        /// for the same reason.
+        public var panelTab: String?
     }
 
     private func syncBookmarksToiCloud() {
@@ -1118,7 +1145,8 @@ public final class PersonalData: ObservableObject {
             dictionaryGreekID: dictionaryGreekID,
             parallelSyncMode: parallelSyncMode,
             parallelSyncVersionID: parallelSyncVersionID,
-            parallelSeparateVersionID: parallelSeparateVersionID)
+            parallelSeparateVersionID: parallelSeparateVersionID,
+            panelTab: panelTab)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -1221,7 +1249,8 @@ public final class PersonalData: ObservableObject {
             dictionaryGreekID: dictionaryGreekID,
             parallelSyncMode: parallelSyncMode,
             parallelSyncVersionID: parallelSyncVersionID,
-            parallelSeparateVersionID: parallelSeparateVersionID)
+            parallelSeparateVersionID: parallelSeparateVersionID,
+            panelTab: panelTab)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -1317,6 +1346,9 @@ public final class PersonalData: ObservableObject {
                 }
                 if let sid = s.parallelSeparateVersionID, !sid.isEmpty {
                     parallelSeparateVersionID = sid
+                }
+                if let pt = s.panelTab, !pt.isEmpty {
+                    panelTab = pt
                 }
             default:
                 continue

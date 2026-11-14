@@ -227,6 +227,9 @@ struct AuxiliaryPanelView: View {
     }
     @State private var commentaryLoading = false
     @State private var commentaryError: String?
+    /// Whether the remembered mode (REQ-AP-21) has been
+    /// restored into `tab` yet this session.
+    @State private var didRestoreTab = false
     @State private var expandedBookChapters: Set<Int> = []
     @State private var strongsTokens: [WordToken] = []
     @State private var strongsLoadedKey = ""
@@ -570,12 +573,21 @@ struct AuxiliaryPanelView: View {
         }
         .background(.regularMaterial)
         .simultaneousGesture(collapseGesture)
-        .onChange(of: tab) { updateSyncActive() }
+        .onChange(of: tab) {
+            updateSyncActive()
+            personalData.panelTab = tab.rawValue
+        }
         .onChange(of: personalData.parallelSyncMode) { updateSyncActive() }
         .onDisappear { parallelSync.active = false }
         .onAppear {
             commentaries = CommentaryModule.allInstalled(in: store)
             expandedBookChapters = [history.chapter]
+            // Restore the remembered mode once (REQ-AP-21);
+            // an unset setting starts the panel on Notes.
+            if !didRestoreTab {
+                didRestoreTab = true
+                tab = PanelTab(rawValue: personalData.panelTab) ?? .notes
+            }
         }
         .sheet(item: $editorItem) { item in
             switch item {
