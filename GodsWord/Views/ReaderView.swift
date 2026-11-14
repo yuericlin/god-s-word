@@ -971,13 +971,20 @@ struct ReaderView: View {
     }
 
     /// The space joining two verses in a paragraph: painted
-    /// with the highlight yellow when both neighbors are
+    /// with the selection's sky blue when both neighbors are
+    /// selected, and with the highlight yellow when both are
     /// highlighted, so the band runs unbroken from the first
-    /// verse's number through the last verse's text (REQ-HL-2).
+    /// verse's number through the last verse's text
+    /// (REQ-VP-1, REQ-HL-2). The blue wins, as it does on the
+    /// verses themselves: a verse both highlighted and
+    /// selected renders blue.
     private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
         var join = AttributedString(" ")
-        if highlightedInChapter.contains(previous),
-           highlightedInChapter.contains(next) {
+        if selectedVerses.contains(previous),
+           selectedVerses.contains(next) {
+            join.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        } else if highlightedInChapter.contains(previous),
+                  highlightedInChapter.contains(next) {
             join.backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
         }
         return join
