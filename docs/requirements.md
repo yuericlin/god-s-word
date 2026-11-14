@@ -686,6 +686,16 @@ Multiple (KJV Gen 1:1-2):
   the current one carrying a blue check at the right of its
   row. The list keeps a margin above its first row and below
   its last, so no row touches the list's top or bottom edge.
+  The list declares its whole size to the popover that
+  presents it — 180 wide, and a height counted from its own
+  parts: each row is the callout line height plus its
+  padding, and the hairlines between the rows and the two
+  margins make up the rest — because the popover does not
+  infer the list's height from its content. Counted from
+  the line height, the height follows the system text size;
+  the row padding and the margins are defined once each and
+  shared by the layout and the count, so the two cannot
+  drift apart.
   Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and

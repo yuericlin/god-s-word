@@ -400,6 +400,35 @@ struct AuxiliaryPanelView: View {
         }
     }
 
+    /// The mode list's two metrics, each defined once and used
+    /// by both the list's layout and its declared height
+    /// below, so the two can never drift apart: a row's
+    /// vertical padding, and the margin above the first row
+    /// and below the last.
+    private let modeRowPadding: CGFloat = 9
+    private let modeListMargin: CGFloat = 8
+
+    /// The mode list's declared height: every row (the callout
+    /// line height plus its padding above and below), the
+    /// hairlines between the rows, and the margins above the
+    /// first row and below the last. The popover
+    /// that presents the list does not infer its height from
+    /// the list's content — it clips the list to a height of
+    /// its own (diagnosed with PR #112's marked build, which
+    /// painted the rows and the margins in different colors
+    /// and showed the margins lying entirely outside the
+    /// popover's card) — so the list declares its whole size:
+    /// this height, and the 180 width in the frame below.
+    /// Counting the height from the callout line height keeps
+    /// it in step with the system text size, which is what
+    /// the rows render at.
+    private var modeListHeight: CGFloat {
+        let rowCount = CGFloat(PanelTab.allCases.count)
+        let row = UIFont.preferredFont(forTextStyle: .callout).lineHeight + 2 * modeRowPadding
+        let hairlines = (rowCount - 1) / UIScreen.main.scale
+        return rowCount * row + hairlines + 2 * modeListMargin
+    }
+
     /// The mode list the primary button opens: one row per
     /// mode, hairlines between, the current mode's row
     /// carrying a blue check at its right; choosing a row
@@ -423,7 +452,7 @@ struct AuxiliaryPanelView: View {
                         }
                     }
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
+                    .padding(.vertical, modeRowPadding)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -432,8 +461,8 @@ struct AuxiliaryPanelView: View {
                 }
             }
         }
-        .padding(.vertical, 8)
-        .frame(width: 180)
+        .padding(.vertical, modeListMargin)
+        .frame(width: 180, height: modeListHeight)
     }
 
     /// The one add-note entry point: always available, even
