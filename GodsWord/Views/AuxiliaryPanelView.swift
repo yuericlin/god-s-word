@@ -175,7 +175,6 @@ struct AuxiliaryPanelView: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var tab: PanelTab = .notes
-    @State private var showingModeList = false
     @State private var notesSubTab: NotesSubTab = .recents
     @State private var commentaryScope: PanelScope = .verse
     @State private var editorItem: EditorItem?
@@ -370,14 +369,20 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The primary control: the current mode's name in a
-    /// capsule; tapping opens the list of modes to choose
-    /// from — alphabetical, the current one carrying a blue
-    /// check at its right. A custom popover, not a Menu: a
-    /// menu puts its check at the left and takes the width
-    /// it wants.
+    /// capsule; tapping opens the system's menu of modes to
+    /// choose from — alphabetical, the current one carrying
+    /// the system's check. The system menu it is: a custom
+    /// popover list could not be made to size itself to its
+    /// rows (PRs #110–#113), so the menu's own insets and
+    /// check placement stand.
     private var modeButton: some View {
-        Button {
-            showingModeList = true
+        Menu {
+            Picker("Mode", selection: $tab) {
+                ForEach(PanelTab.allCases, id: \.self) { t in
+                    Text(t.rawValue).tag(t)
+                }
+            }
+            .pickerStyle(.inline)
         } label: {
             HStack(spacing: 5) {
                 Text(tab.rawValue)
@@ -392,48 +397,8 @@ struct AuxiliaryPanelView: View {
             .background(Capsule().fill(Color.primary.opacity(0.24)))
             .foregroundStyle(.primary)
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Mode: \(tab.rawValue)")
         .accessibilityHint("Tap to choose a mode")
-        .popover(isPresented: $showingModeList, arrowEdge: .top) {
-            modeList
-                .presentationCompactAdaptation(.popover)
-        }
-    }
-
-    /// The mode list the primary button opens: one row per
-    /// mode, hairlines between, the current mode's row
-    /// carrying a blue check at its right; choosing a row
-    /// switches and dismisses.
-    private var modeList: some View {
-        VStack(spacing: 0) {
-            ForEach(PanelTab.allCases, id: \.self) { t in
-                Button {
-                    tab = t
-                    showingModeList = false
-                } label: {
-                    HStack {
-                        Text(t.rawValue)
-                            .font(.callout)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if t == tab {
-                            Image(systemName: "checkmark")
-                                .font(.callout)
-                                .foregroundStyle(.blue)
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                if t != PanelTab.allCases.last {
-                    Divider()
-                }
-            }
-        }
-        .frame(width: 180)
     }
 
     /// The one add-note entry point: always available, even
@@ -1559,7 +1524,6 @@ struct AuxiliaryPanelView: View {
         VStack(spacing: 0) {
             HistoryView(onSelect: openHistoryEntry)
         }
-        .background(Color.black)
     }
 
     /// Tapping a history entry views its chapter in the
@@ -1655,7 +1619,6 @@ struct AuxiliaryPanelView: View {
                 .padding(.horizontal)
             }
         }
-        .background(Color.black)
     }
 
     /// Every highlight, newest first (the Recents sub-tab).
@@ -1682,7 +1645,6 @@ struct AuxiliaryPanelView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.black)
     }
 
     private func highlightList(_ highlights: [Highlight]) -> some View {
@@ -1693,7 +1655,6 @@ struct AuxiliaryPanelView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.black)
     }
 
     private func highlightReference(_ h: Highlight) -> String {
@@ -1705,8 +1666,9 @@ struct AuxiliaryPanelView: View {
 
     /// One highlight row in any sub-tab: a yellow swatch and the
     /// reference with the version it was made in and its date
-    /// (the note-row format), blue on black — the same rendering
-    /// as the Recents tab's history entries (REQ-AP-11). Tap views the passage in the
+    /// (the note-row format), blue on the panel's background —
+    /// the same rendering as the Recents tab's history entries
+    /// (REQ-AP-11). Tap views the passage in the
     /// reference chapter sheet; swipe deletes. Built
     /// exactly like a HistoryView row — default button style, no
     /// content-shape override — so the List makes the whole row
@@ -1748,7 +1710,7 @@ struct AuxiliaryPanelView: View {
         .listRowInsets(EdgeInsets(top: 11, leading: 16,
                                   bottom: 0, trailing: 0))
         .listRowSeparator(.hidden)
-        .listRowBackground(Color.black)
+        .listRowBackground(Color.clear)
         .swipeActions {
             Button(role: .destructive) {
                 personalData.removeHighlight(id: h.id)

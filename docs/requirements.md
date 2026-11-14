@@ -682,9 +682,8 @@ Multiple (KJV Gen 1:1-2):
   All of the panel's controls live in a single row at its top, and
   no tab's content carries a header of its own. The row's leftmost
   control is the primary button: it shows the current mode, and
-  tapping it opens the modes as a compact list to choose from,
-  the current one carrying a blue check at the right of its
-  row.
+  tapping it opens the system's menu of the modes to choose
+  from, the current one carrying the system's check.
   Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
@@ -774,8 +773,8 @@ Multiple (KJV Gen 1:1-2):
   tab header clears the log. Each entry renders on one line —
   book and chapter, every version read, and the earliest visit's
   date and time, nothing dropped — in the Highlights row format
-  (REQ-HL-4): blue text with the yellow bar, on a black
-  background.
+  (REQ-HL-4): blue text with the yellow bar, on the panel's
+  background — the same background as every other mode.
 - **REQ-AP-12:** Module downloads (both "Add Bible" and
   "Add Commentary") show progress with a cancel button
   (`PackageDownloader`): the row shows the fraction downloaded,
@@ -1084,8 +1083,9 @@ Multiple (KJV Gen 1:1-2):
   all the tab shows its empty state. Every row shows the
   reference, the version the highlight was made in, and its
   date (the note-row format), on one line: blue text with the
-  yellow bar on a black background — the same rendering as a
-  Recents history entry (REQ-AP-11). Tapping a row views the passage
+  yellow bar on the panel's background — the same background
+  as every other mode, and the same rendering as a Recents
+  history entry (REQ-AP-11). Tapping a row views the passage
   in the reference chapter sheet (REQ-AP-20) in the version
   being read — never switching version — with the highlight's
   verses selected; the sheet's Read More moves the reader to
