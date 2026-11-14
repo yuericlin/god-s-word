@@ -7,7 +7,7 @@ struct LicenseNoticeView: View {
     var body: some View {
         List {
             Section("This app") {
-                Text("God's Word app and library code: MIT License, Copyright (c) 2026 Eric Lin.")
+                Text("God's Word app and library code: MIT License, Copyright (c) 2026 Lin & Ying Service, LLC.")
                 Text("The app contains no Bible text, lexicon, or dictionary. All of them are downloaded or imported by you.")
             }
             Section("Bible texts and modules") {
