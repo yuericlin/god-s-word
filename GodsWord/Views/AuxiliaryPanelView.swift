@@ -339,12 +339,7 @@ struct AuxiliaryPanelView: View {
                 commentaryMenu
                 commentaryInfoButton
             case .strongs:
-                Text(verseReference)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Spacer()
-                strongsSourceControl
+                strongsTitle
             case .recents:
                 Spacer()
                 if !personalData.historyLog.isEmpty {
@@ -437,8 +432,8 @@ struct AuxiliaryPanelView: View {
                 }
             }
         }
-        .frame(width: 180)
         .padding(.vertical, 8)
+        .frame(width: 180)
     }
 
     /// The one add-note entry point: always available, even
@@ -495,16 +490,21 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// The Strong's source control: the reading version's
-    /// own label when it provides the numbers, else a menu
-    /// of the versions that do (the fallback choice).
+    /// The Strong's title in the control row, centered like
+    /// the Parallel title (REQ-PA-1): the source version's
+    /// short label in secondary, then the verse reference in
+    /// primary — "{version} - {book} {chapter}:{verse}". When
+    /// the source is a fallback choice the title is a menu
+    /// that switches it; when the reading version itself
+    /// provides the numbers it is plain text.
     @ViewBuilder
-    private var strongsSourceControl: some View {
+    private var strongsTitle: some View {
         if let source = strongsSource {
             if source.id == history.version.id {
-                Text(source.shortLabel)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                strongsTitleText(source: source)
+                    .font(.callout)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
             } else {
                 Menu {
                     ForEach(strongsVersions) { version in
@@ -519,15 +519,24 @@ struct AuxiliaryPanelView: View {
                         }
                     }
                 } label: {
-                    HStack(spacing: 2) {
-                        Text(source.shortLabel)
+                    HStack(spacing: 4) {
+                        strongsTitleText(source: source)
                         Image(systemName: "chevron.down").font(.caption2)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.callout)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
+    }
+
+    /// The Strong's title's text: "{version} - {reference}",
+    /// the version in secondary, the reference in primary —
+    /// the Parallel title's coloring (REQ-PA-1).
+    private func strongsTitleText(source: BibleVersion) -> Text {
+        Text("\(source.shortLabel) - ").foregroundColor(.secondary)
+            + Text(verseReference).foregroundColor(.primary)
     }
 
     /// Clears the reading history (the Recents mode's
@@ -1927,7 +1936,7 @@ struct AuxiliaryPanelView: View {
     /// view names the version, not its display name — in
     /// secondary, and the book and chapter in primary (white).
     private var parallelTitle: Text {
-        Text("\(parallelVersionLabel) — ").foregroundColor(.secondary)
+        Text("\(parallelVersionLabel) - ").foregroundColor(.secondary)
             + Text(parallelPassageLabel).foregroundColor(.primary)
     }
 
