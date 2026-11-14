@@ -432,7 +432,15 @@ struct AuxiliaryPanelView: View {
                 }
             }
         }
+        // DIAGNOSTIC (diag/modelist-popover-marks, do not merge):
+        // blue paints the rows' own bounds; red is applied outside
+        // the 8pt stack padding, so red can show only where the
+        // padding is part of the laid-out frame. A screenshot of
+        // the open list then shows whether the popover measured
+        // the padding, clipped it, or never laid it out at all.
+        .background(Color.blue)
         .padding(.vertical, 8)
+        .background(Color.red)
         .frame(width: 180)
     }
 
