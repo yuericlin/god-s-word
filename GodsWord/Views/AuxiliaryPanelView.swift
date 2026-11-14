@@ -231,8 +231,8 @@ struct AuxiliaryPanelView: View {
     @State private var strongsLoadedKey = ""
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
-    /// Measured height of the tab bar, so the content can take the
-    /// rest of the panel's 30% of the total height.
+    /// Measured height of the control row, so the content can
+    /// take the rest of the panel's 30% of the total height.
     @State private var tabBarHeight: CGFloat = 49
 
     enum PanelTab: String, CaseIterable {
@@ -301,50 +301,201 @@ struct AuxiliaryPanelView: View {
             }
     }
 
-    /// The panel's tab bar: a horizontally scrollable row of pills, one
-    /// per tab, each at its label's natural width — a segmented control
-    /// squeezed all five labels into the panel width and truncated them
-    /// ("Comment..."). The selected tab scrolls into view whenever the
-    /// selection changes and when the panel opens.
-    private var panelTabBar: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(PanelTab.allCases, id: \.self) { t in
-                        Button {
-                            tab = t
-                        } label: {
-                            Text(t.rawValue)
-                                .font(.callout)
-                                .lineLimit(1)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule().fill(Color.primary.opacity(tab == t ? 0.24 : 0.07))
-                                )
-                                .foregroundStyle(tab == t ? Color.primary : Color.secondary)
+    /// The panel's one control row (REQ-AP-1): every control
+    /// lives here — no tab carries a header of its own. The
+    /// primary button at the left shows the current mode and
+    /// cycles to the next; beside it sit the active mode's
+    /// own controls: its sub-mode segmented control where it
+    /// has sub-modes, and its action buttons.
+    private var controlRow: some View {
+        HStack(spacing: 8) {
+            modeButton
+
+            switch tab {
+            case .notes:
+                if !visibleNotesTabs.isEmpty {
+                    Picker("Notes", selection: notesTabSelection) {
+                        ForEach(visibleNotesTabs, id: \.self) { t in
+                            Text(t.label).tag(t)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(tab == t ? [.isSelected] : [])
-                        .id(t)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                Spacer()
+                addNoteButton
+            case .commentary:
+                if commentaryHasEntries || commentaryLoading {
+                    scopePicker(selection: $commentaryScope)
+                } else {
+                    Spacer()
+                }
+                commentaryMenu
+                commentaryInfoButton
+            case .strongs:
+                Text(verseReference)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer()
+                strongsSourceControl
+            case .recents:
+                Spacer()
+                if !personalData.historyLog.isEmpty {
+                    clearHistoryButton
+                }
+            case .highlights:
+                if !visibleHighlightsTabs.isEmpty {
+                    Picker("Highlights", selection: highlightsTabSelection) {
+                        ForEach(visibleHighlightsTabs, id: \.self) { t in
+                            Text(t.label).tag(t)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                Spacer()
+            case .parallel:
+                parallelGearButton
+                parallelTitle
+                    .font(.callout)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                parallelChainButton
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+
+    /// The primary control: the current mode's name in a
+    /// capsule; tapping cycles to the next mode in PanelTab
+    /// order (Notes, Commentary, Strong's, Recents,
+    /// Highlights, Parallel).
+    private var modeButton: some View {
+        Button {
+            let all = PanelTab.allCases
+            guard let i = all.firstIndex(of: tab) else { return }
+            tab = all[(i + 1) % all.count]
+        } label: {
+            HStack(spacing: 5) {
+                Text(tab.rawValue)
+                    .font(.callout)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color.primary.opacity(0.24)))
+            .foregroundStyle(.primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Mode: \(tab.rawValue)")
+        .accessibilityHint("Tap to switch to the next mode")
+    }
+
+    /// The one add-note entry point: always available, even
+    /// when there are no notes at all (REQ-NT-18). It follows
+    /// the current context (see openAddNote). Always "Add
+    /// Note" — editing an existing note is what tapping the
+    /// note itself does (REQ-NT-21).
+    private var addNoteButton: some View {
+        Button {
+            openAddNote()
+        } label: {
+            Label("Add Note", systemImage: "square.and.pencil")
+                .font(.subheadline)
+        }
+    }
+
+    /// The commentary switcher: a menu of the installed
+    /// commentaries, showing the chosen one's short label.
+    private var commentaryMenu: some View {
+        Menu {
+            ForEach(commentaries) { mod in
+                Button {
+                    personalData.commentaryModuleID = mod.id
+                } label: {
+                    if mod.id == resolvedCommentary?.id {
+                        Label(mod.shortLabel, systemImage: "checkmark")
+                    } else {
+                        Text(mod.shortLabel)
                     }
                 }
-                .padding(.horizontal)
             }
-            .padding(.vertical, 8)
-            .onAppear {
-                proxy.scrollTo(tab, anchor: .center)
+        } label: {
+            HStack(spacing: 2) {
+                Text(resolvedCommentary?.shortLabel ?? "None")
+                Image(systemName: "chevron.down").font(.caption2)
             }
-            .onChange(of: tab) { _, newTab in
-                withAnimation {
-                    proxy.scrollTo(newTab, anchor: .center)
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The chosen commentary's information button.
+    @ViewBuilder
+    private var commentaryInfoButton: some View {
+        if let mod = resolvedCommentary {
+            Button { showingCommentaryInfo = true } label: {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .sheet(isPresented: $showingCommentaryInfo) {
+                CommentaryInfoView(module: mod)
+            }
+        }
+    }
+
+    /// The Strong's source control: the reading version's
+    /// own label when it provides the numbers, else a menu
+    /// of the versions that do (the fallback choice).
+    @ViewBuilder
+    private var strongsSourceControl: some View {
+        if let source = strongsSource {
+            if source.id == history.version.id {
+                Text(source.shortLabel)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                Menu {
+                    ForEach(strongsVersions) { version in
+                        Button {
+                            personalData.strongsFallbackVersionID = version.id
+                        } label: {
+                            if version.id == source.id {
+                                Label(version.shortLabel, systemImage: "checkmark")
+                            } else {
+                                Text(version.shortLabel)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 2) {
+                        Text(source.shortLabel)
+                        Image(systemName: "chevron.down").font(.caption2)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
             }
         }
     }
 
+    /// Clears the reading history (the Recents mode's
+    /// action).
+    private var clearHistoryButton: some View {
+        Button(role: .destructive) {
+            personalData.clearHistory()
+        } label: {
+            Label("Clear", systemImage: "trash")
+        }
+        .font(.subheadline)
+    }
+
     /// Height of the tab content: the whole expanded panel — divider,
-    /// tab bar, and content — is 30% of the total height. Before
+    /// control row, and content — is 30% of the total height. Before
     /// ReaderView's first measurement lands (totalHeight still zero),
     /// the content keeps the old fixed 264.
     private var contentHeight: CGFloat {
@@ -352,11 +503,12 @@ struct AuxiliaryPanelView: View {
         return max(totalHeight * 0.30 - tabBarHeight - 1, 80)
     }
 
-    /// The expanded panel: the tab bar plus the selected tab's content.
+    /// The expanded panel: the control row plus the selected
+    /// tab's content.
     private var expandedBody: some View {
         VStack(spacing: 0) {
             Divider()
-            panelTabBar
+            controlRow
                 .onGeometryChange(for: CGFloat.self, of: \.size.height) {
                     tabBarHeight = $0
                 }
@@ -768,37 +920,8 @@ struct AuxiliaryPanelView: View {
     /// The Notes tab's header row: the sub-tab picker plus the
     /// one Add Note button. Factored out of notesTab — the
     /// combined expression strained the type checker.
-    private var notesHeader: some View {
-        HStack(spacing: 8) {
-            if !visibleNotesTabs.isEmpty {
-                Picker("Notes", selection: notesTabSelection) {
-                    ForEach(visibleNotesTabs, id: \.self) { t in
-                        Text(t.label).tag(t)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-            Spacer()
-            // The one add-note entry point: always available,
-            // even when there are no notes at all (REQ-NT-18).
-            // It follows the current context (see openAddNote).
-            // Always "Add Note" — editing an existing note is
-            // what tapping the note itself does (REQ-NT-21).
-            Button {
-                openAddNote()
-            } label: {
-                Label("Add Note", systemImage: "square.and.pencil")
-                    .font(.subheadline)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-
     private var notesTab: some View {
         VStack(spacing: 0) {
-            notesHeader
-
             if let effectiveNotesTab {
                 switch effectiveNotesTab {
                 case .recents:
@@ -967,43 +1090,6 @@ struct AuxiliaryPanelView: View {
 
     private var commentaryTab: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                if commentaryHasEntries || commentaryLoading {
-                    scopePicker(selection: $commentaryScope)
-                } else {
-                    Spacer()
-                }
-                Menu {
-                    ForEach(commentaries) { mod in
-                        Button {
-                            personalData.commentaryModuleID = mod.id
-                        } label: {
-                            if mod.id == resolvedCommentary?.id {
-                                Label(mod.shortLabel, systemImage: "checkmark")
-                            } else {
-                                Text(mod.shortLabel)
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 2) {
-                        Text(resolvedCommentary?.shortLabel ?? "None")
-                        Image(systemName: "chevron.down").font(.caption2)
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
-                if let mod = resolvedCommentary {
-                    Button { showingCommentaryInfo = true } label: {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .sheet(isPresented: $showingCommentaryInfo) {
-                        CommentaryInfoView(module: mod)
-                    }
-                }
-            }
             if let mod = resolvedCommentary {
                 if let commentaryError {
                     // A module that failed to open is an error
@@ -1328,40 +1414,6 @@ struct AuxiliaryPanelView: View {
 
     private var strongsTab: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(verseReference)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if let source = strongsSource {
-                    if source.id == history.version.id {
-                        Text(source.shortLabel)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Menu {
-                            ForEach(strongsVersions) { version in
-                                Button {
-                                    personalData.strongsFallbackVersionID = version.id
-                                } label: {
-                                    if version.id == source.id {
-                                        Label(version.shortLabel, systemImage: "checkmark")
-                                    } else {
-                                        Text(version.shortLabel)
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack(spacing: 2) {
-                                Text(source.shortLabel)
-                                Image(systemName: "chevron.down").font(.caption2)
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
             if strongsSource == nil {
                 Text("No installed version has Strong's numbers. Download one (e.g. KJV) from the repository, or pick a fallback in Settings.")
                     .foregroundStyle(.secondary)
@@ -1437,22 +1489,6 @@ struct AuxiliaryPanelView: View {
     /// carries Clear instead.
     private var recentsTab: some View {
         VStack(spacing: 0) {
-            if !personalData.historyLog.isEmpty {
-                HStack {
-                    Text("Reading history")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button(role: .destructive) {
-                        personalData.clearHistory()
-                    } label: {
-                        Label("Clear", systemImage: "trash")
-                    }
-                    .font(.subheadline)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 4)
-            }
             HistoryView(onSelect: openHistoryEntry)
         }
         .background(Color.black)
@@ -1528,17 +1564,6 @@ struct AuxiliaryPanelView: View {
 
     private var highlightsTab: some View {
         VStack(spacing: 0) {
-            if !visibleHighlightsTabs.isEmpty {
-                Picker("Highlights", selection: highlightsTabSelection) {
-                    ForEach(visibleHighlightsTabs, id: \.self) { t in
-                        Text(t.label).tag(t)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-            }
-
             if let effectiveHighlightsTab {
                 switch effectiveHighlightsTab {
                 case .recents:
@@ -1703,8 +1728,6 @@ struct AuxiliaryPanelView: View {
             }
         }
         .pickerStyle(.segmented)
-        .padding(.horizontal)
-        .padding(.bottom, 8)
     }
 
     // MARK: - Parallel tab (REQ-PA)
@@ -1752,8 +1775,6 @@ struct AuxiliaryPanelView: View {
 
     private var parallelTab: some View {
         VStack(spacing: 0) {
-            parallelHeader
-            Divider()
             ParallelChapterView(
                 version: personalData.parallelSyncMode
                     ? parallelSyncVersion : parallelSeparateVersion,
@@ -1792,50 +1813,41 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// The header over the parallel chapter: the gear on the
-    /// left, the mode chain on the right, and the version and
-    /// passage centered over the whole header between them
-    /// (REQ-PA-1, REQ-PA-4).
-    private var parallelHeader: some View {
-        ZStack {
-            HStack(spacing: 10) {
-                Button {
-                    parallelSettings = personalData.parallelSyncMode
-                        ? .syncVersion : .separate
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.callout)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Parallel view settings")
-
-                Spacer()
-
-                Button {
-                    parallelSettings = personalData.parallelSyncMode
-                        ? .toSeparate : .toSync
-                } label: {
-                    if personalData.parallelSyncMode {
-                        Image(systemName: "link")
-                            .font(.callout)
-                            .foregroundStyle(.yellow)
-                    } else {
-                        brokenChainIcon
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(personalData.parallelSyncMode
-                                    ? "Switch to separate mode"
-                                    : "Switch to sync mode")
-            }
-
-            parallelTitle
+    /// The gear in the control row's Parallel segment:
+    /// opens the current mode's settings sheet (REQ-PA-1).
+    private var parallelGearButton: some View {
+        Button {
+            parallelSettings = personalData.parallelSyncMode
+                ? .syncVersion : .separate
+        } label: {
+            Image(systemName: "gearshape")
                 .font(.callout)
-                .lineLimit(1)
-                .padding(.horizontal, 44)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 6)
+        .buttonStyle(.plain)
+        .accessibilityLabel("Parallel view settings")
+    }
+
+    /// The chain in the control row's Parallel segment: a
+    /// yellow link in sync mode, a slashed gray link in
+    /// separate mode; opens the other mode's settings sheet
+    /// (REQ-PA-1, REQ-PA-4).
+    private var parallelChainButton: some View {
+        Button {
+            parallelSettings = personalData.parallelSyncMode
+                ? .toSeparate : .toSync
+        } label: {
+            if personalData.parallelSyncMode {
+                Image(systemName: "link")
+                    .font(.callout)
+                    .foregroundStyle(.yellow)
+            } else {
+                brokenChainIcon
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(personalData.parallelSyncMode
+                            ? "Switch to separate mode"
+                            : "Switch to sync mode")
     }
 
     /// The broken chain of separate mode (REQ-PA-4): a gray
@@ -1853,7 +1865,8 @@ struct AuxiliaryPanelView: View {
             }
     }
 
-    /// The header title, colored as the main view's title:
+    /// The title in the control row's Parallel segment,
+    /// colored as the main view's title:
     /// the version's short label — the module id, as the main
     /// view names the version, not its display name — in
     /// secondary, and the book and chapter in primary (white).
