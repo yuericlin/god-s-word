@@ -166,7 +166,8 @@ struct AuxiliaryPanelView: View {
     /// collapsed, the panel renders nothing at all.
     @Binding var collapsed: Bool
     /// The reader view's total height, passed by ReaderView: the
-    /// expanded panel — tab bar plus content — is 30% of it.
+    /// expanded panel — tab bar plus content — is the Panel height
+    /// setting's share of it (30% until the setting is changed).
     /// Zero until ReaderView's first measurement lands (and in
     /// previews), where the content keeps its old fixed height.
     var totalHeight: CGFloat = 0
@@ -174,7 +175,6 @@ struct AuxiliaryPanelView: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var tab: PanelTab = .notes
-    @State private var showingModeList = false
     @State private var notesSubTab: NotesSubTab = .recents
     @State private var commentaryScope: PanelScope = .verse
     @State private var editorItem: EditorItem?
@@ -236,7 +236,7 @@ struct AuxiliaryPanelView: View {
     @State private var strongsDefKey: String?
     @State private var highlightsSubTab: HighlightsSubTab = .recents
     /// Measured height of the control row, so the content can
-    /// take the rest of the panel's 30% of the total height.
+    /// take the rest of the panel's share of the total height.
     @State private var tabBarHeight: CGFloat = 49
 
     /// The panel's modes, in the alphabetical order the
@@ -369,14 +369,20 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The primary control: the current mode's name in a
-    /// capsule; tapping opens the list of modes to choose
-    /// from — alphabetical, the current one carrying a blue
-    /// check at its right. A custom popover, not a Menu: a
-    /// menu puts its check at the left and takes the width
-    /// it wants.
+    /// capsule; tapping opens the system's menu of modes to
+    /// choose from — alphabetical, the current one carrying
+    /// the system's check. The system menu it is: a custom
+    /// popover list could not be made to size itself to its
+    /// rows (PRs #110–#113), so the menu's own insets and
+    /// check placement stand.
     private var modeButton: some View {
-        Button {
-            showingModeList = true
+        Menu {
+            Picker("Mode", selection: $tab) {
+                ForEach(PanelTab.allCases, id: \.self) { t in
+                    Text(t.rawValue).tag(t)
+                }
+            }
+            .pickerStyle(.inline)
         } label: {
             HStack(spacing: 5) {
                 Text(tab.rawValue)
@@ -391,78 +397,8 @@ struct AuxiliaryPanelView: View {
             .background(Capsule().fill(Color.primary.opacity(0.24)))
             .foregroundStyle(.primary)
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Mode: \(tab.rawValue)")
         .accessibilityHint("Tap to choose a mode")
-        .popover(isPresented: $showingModeList, arrowEdge: .top) {
-            modeList
-                .presentationCompactAdaptation(.popover)
-        }
-    }
-
-    /// The mode list's two metrics, each defined once and used
-    /// by both the list's layout and its declared height
-    /// below, so the two can never drift apart: a row's
-    /// vertical padding, and the margin above the first row
-    /// and below the last.
-    private let modeRowPadding: CGFloat = 9
-    private let modeListMargin: CGFloat = 8
-
-    /// The mode list's declared height: every row (the callout
-    /// line height plus its padding above and below), the
-    /// hairlines between the rows, and the margins above the
-    /// first row and below the last. The popover
-    /// that presents the list does not infer its height from
-    /// the list's content — it clips the list to a height of
-    /// its own (diagnosed with PR #112's marked build, which
-    /// painted the rows and the margins in different colors
-    /// and showed the margins lying entirely outside the
-    /// popover's card) — so the list declares its whole size:
-    /// this height, and the 180 width in the frame below.
-    /// Counting the height from the callout line height keeps
-    /// it in step with the system text size, which is what
-    /// the rows render at.
-    private var modeListHeight: CGFloat {
-        let rowCount = CGFloat(PanelTab.allCases.count)
-        let row = UIFont.preferredFont(forTextStyle: .callout).lineHeight + 2 * modeRowPadding
-        let hairlines = (rowCount - 1) / UIScreen.main.scale
-        return rowCount * row + hairlines + 2 * modeListMargin
-    }
-
-    /// The mode list the primary button opens: one row per
-    /// mode, hairlines between, the current mode's row
-    /// carrying a blue check at its right; choosing a row
-    /// switches and dismisses.
-    private var modeList: some View {
-        VStack(spacing: 0) {
-            ForEach(PanelTab.allCases, id: \.self) { t in
-                Button {
-                    tab = t
-                    showingModeList = false
-                } label: {
-                    HStack {
-                        Text(t.rawValue)
-                            .font(.callout)
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        if t == tab {
-                            Image(systemName: "checkmark")
-                                .font(.callout)
-                                .foregroundStyle(.blue)
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, modeRowPadding)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                if t != PanelTab.allCases.last {
-                    Divider()
-                }
-            }
-        }
-        .padding(.vertical, modeListMargin)
-        .frame(width: 180, height: modeListHeight)
     }
 
     /// The one add-note entry point: always available, even
@@ -580,12 +516,15 @@ struct AuxiliaryPanelView: View {
     }
 
     /// Height of the tab content: the whole expanded panel — divider,
-    /// control row, and content — is 30% of the total height. Before
-    /// ReaderView's first measurement lands (totalHeight still zero),
-    /// the content keeps the old fixed 264.
+    /// control row, and content — is the Panel height setting's share
+    /// of the total height (30% until the setting is changed), the
+    /// same in every mode. Before ReaderView's first measurement
+    /// lands (totalHeight still zero), the content keeps the old
+    /// fixed 264.
     private var contentHeight: CGFloat {
         guard totalHeight > 0 else { return 264 }
-        return max(totalHeight * 0.30 - tabBarHeight - 1, 80)
+        let share = totalHeight * CGFloat(personalData.panelHeightPercent) / 100
+        return max(share - tabBarHeight - 1, 80)
     }
 
     /// The expanded panel: the control row plus the selected
@@ -1585,7 +1524,6 @@ struct AuxiliaryPanelView: View {
         VStack(spacing: 0) {
             HistoryView(onSelect: openHistoryEntry)
         }
-        .background(Color.black)
     }
 
     /// Tapping a history entry views its chapter in the
@@ -1681,7 +1619,6 @@ struct AuxiliaryPanelView: View {
                 .padding(.horizontal)
             }
         }
-        .background(Color.black)
     }
 
     /// Every highlight, newest first (the Recents sub-tab).
@@ -1708,7 +1645,6 @@ struct AuxiliaryPanelView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.black)
     }
 
     private func highlightList(_ highlights: [Highlight]) -> some View {
@@ -1719,7 +1655,6 @@ struct AuxiliaryPanelView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.black)
     }
 
     private func highlightReference(_ h: Highlight) -> String {
@@ -1731,8 +1666,9 @@ struct AuxiliaryPanelView: View {
 
     /// One highlight row in any sub-tab: a yellow swatch and the
     /// reference with the version it was made in and its date
-    /// (the note-row format), blue on black — the same rendering
-    /// as the Recents tab's history entries (REQ-AP-11). Tap views the passage in the
+    /// (the note-row format), blue on the panel's background —
+    /// the same rendering as the Recents tab's history entries
+    /// (REQ-AP-11). Tap views the passage in the
     /// reference chapter sheet; swipe deletes. Built
     /// exactly like a HistoryView row — default button style, no
     /// content-shape override — so the List makes the whole row
@@ -1774,7 +1710,7 @@ struct AuxiliaryPanelView: View {
         .listRowInsets(EdgeInsets(top: 11, leading: 16,
                                   bottom: 0, trailing: 0))
         .listRowSeparator(.hidden)
-        .listRowBackground(Color.black)
+        .listRowBackground(Color.clear)
         .swipeActions {
             Button(role: .destructive) {
                 personalData.removeHighlight(id: h.id)

@@ -17,7 +17,7 @@ struct HistoryView: View {
                 Text("No reading history yet. Chapters you read will appear here.")
                     .foregroundStyle(.secondary)
                     .listRowSeparator(.hidden)
-                    .listRowBackground(Color.black)
+                    .listRowBackground(Color.clear)
             } else {
                 ForEach(ReadingHistoryLog.visible(personalData.historyLog).entries) { entry in
                     Button {
@@ -50,7 +50,7 @@ struct HistoryView: View {
                     .listRowInsets(EdgeInsets(top: 11, leading: 16,
                                               bottom: 0, trailing: 0))
                     .listRowSeparator(.hidden)
-                    .listRowBackground(Color.black)
+                    .listRowBackground(Color.clear)
                 }
                 .onDelete { offsets in
                     // The visible entries are the log's first 20, so the
@@ -61,7 +61,7 @@ struct HistoryView: View {
                     Text("…")
                         .foregroundStyle(.secondary)
                         .listRowSeparator(.hidden)
-                        .listRowBackground(Color.black)
+                        .listRowBackground(Color.clear)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityLabel("Older history not shown")
                 }
@@ -69,7 +69,6 @@ struct HistoryView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.black)
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
         // No toolbar of its own: this list is embedded in the

@@ -682,20 +682,8 @@ Multiple (KJV Gen 1:1-2):
   All of the panel's controls live in a single row at its top, and
   no tab's content carries a header of its own. The row's leftmost
   control is the primary button: it shows the current mode, and
-  tapping it opens the modes as a compact list to choose from,
-  the current one carrying a blue check at the right of its
-  row. The list keeps a margin above its first row and below
-  its last, so no row touches the list's top or bottom edge.
-  The list declares its whole size to the popover that
-  presents it — 180 wide, and a height counted from its own
-  parts: each row is the callout line height plus its
-  padding, and the hairlines between the rows and the two
-  margins make up the rest — because the popover does not
-  infer the list's height from its content. Counted from
-  the line height, the height follows the system text size;
-  the row padding and the margins are defined once each and
-  shared by the layout and the count, so the two cannot
-  drift apart.
+  tapping it opens the system's menu of the modes to choose
+  from, the current one carrying the system's check.
   Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
@@ -707,8 +695,9 @@ Multiple (KJV Gen 1:1-2):
   when the source is a fallback choice; Clear for Recents; and
   for Parallel the gear, the version-and-passage title, and the
   chain (REQ-PA-1). The expanded
-  panel's total height (control row plus content) is 30% of the
-  reader view's total height, not a fixed point size.
+  panel's total height (control row plus content) is the Panel
+  height setting's share of the reader view's total height
+  (REQ-AP-22), not a fixed point size.
 - **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
   Each shows the scoped note for the book / chapter / selected verse
   being read (REQ-NT-14) with an Add/Edit action opening the note
@@ -784,8 +773,8 @@ Multiple (KJV Gen 1:1-2):
   tab header clears the log. Each entry renders on one line —
   book and chapter, every version read, and the earliest visit's
   date and time, nothing dropped — in the Highlights row format
-  (REQ-HL-4): blue text with the yellow bar, on a black
-  background.
+  (REQ-HL-4): blue text with the yellow bar, on the panel's
+  background — the same background as every other mode.
 - **REQ-AP-12:** Module downloads (both "Add Bible" and
   "Add Commentary") show progress with a cancel button
   (`PackageDownloader`): the row shows the fraction downloaded,
@@ -898,6 +887,16 @@ Multiple (KJV Gen 1:1-2):
   stored, the panel opens on **Notes**. The stored mode is
   also shown by, and changeable in, Settings > Auxiliary >
   Current mode.
+- **REQ-AP-22:** The panel's height is a setting: a share
+  of the reader view's total height, from 25% to 50% in 5%
+  steps — 30% until the setting is changed. The one height
+  serves every mode: the panel's content height is computed
+  from it whichever mode is showing. It is a PersonalData
+  setting, carried in backups and iCloud settings like the
+  panel's other settings, and is shown by, and changeable
+  in, Settings > Auxiliary > Panel height, as a slider
+  snapping to the steps. A stored or restored value outside
+  the steps snaps to the nearest one.
 
 ## 16. Module sources
 
@@ -1084,8 +1083,9 @@ Multiple (KJV Gen 1:1-2):
   all the tab shows its empty state. Every row shows the
   reference, the version the highlight was made in, and its
   date (the note-row format), on one line: blue text with the
-  yellow bar on a black background — the same rendering as a
-  Recents history entry (REQ-AP-11). Tapping a row views the passage
+  yellow bar on the panel's background — the same background
+  as every other mode, and the same rendering as a Recents
+  history entry (REQ-AP-11). Tapping a row views the passage
   in the reference chapter sheet (REQ-AP-20) in the version
   being read — never switching version — with the highlight's
   verses selected; the sheet's Read More moves the reader to
