@@ -918,10 +918,16 @@ struct ReaderView: View {
         }
     }
 
-    /// Light sky blue background on a selected verse.
+    /// Light sky blue background on a selected verse, painted
+    /// as one range over the whole verse: setting the color
+    /// on the string as a whole leaves runs in another font —
+    /// the bold red-letter spans — in their own smaller boxes,
+    /// with a gap after them (the reference sheet's lesson,
+    /// REQ-AP-20).
     private func applySelectionHighlight(to attr: inout AttributedString, verse: Int) {
         guard selectedVerses.contains(verse) else { return }
-        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        attr[attr.startIndex..<attr.endIndex].backgroundColor =
+            UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
     /// The verses of the chapter being read that carry a

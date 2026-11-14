@@ -2595,10 +2595,15 @@ private struct ReferenceChapterView: View {
     /// over the whole verse — its number, the spaces around
     /// the number, and its text — the treatment a selected
     /// verse gets in the reader (REQ-AP-20, REQ-VP-1), so
-    /// consecutive referenced verses read as one band.
+    /// consecutive referenced verses read as one band. The
+    /// blue is painted as one range over the whole verse:
+    /// setting it on the string as a whole leaves runs in
+    /// another font — the bold red-letter spans — in their
+    /// own smaller boxes, with a gap after them.
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        attr[attr.startIndex..<attr.endIndex].backgroundColor =
+            UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
     /// Red-letter color (REQ-RL-3): deep red on light
