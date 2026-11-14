@@ -799,7 +799,9 @@ struct ReaderView: View {
                 if i > 0 { out += AttributedString("\n\n") }
                 out += attributedHeading(heading)
                 out += AttributedString("\n")
-            } else if i > 0 { out += AttributedString(" ") }
+            } else if i > 0 {
+                out += paragraphJoin(after: verses[i - 1].verse, before: v.verse)
+            }
             out += attributedVerse(number: v.verse, text: v.text)
         }
         return out
@@ -878,7 +880,9 @@ struct ReaderView: View {
                 if i > 0 { out += AttributedString("\n\n") }
                 out += attributedHeading(heading)
                 out += AttributedString("\n")
-            } else if i > 0 { out += AttributedString(" ") }
+            } else if i > 0 {
+                out += paragraphJoin(after: verseTokens[i - 1].verse, before: v.verse)
+            }
             out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
         }
         return out
@@ -966,20 +970,45 @@ struct ReaderView: View {
         }
     }
 
-    /// Bright yellow background on a highlighted verse's text
-    /// (REQ-HL-2). The verse number keeps its own styling, so a
-    /// note's pale-yellow number stays visible; the selection's
-    /// sky blue, applied after this, covers the yellow while the
+    /// The space joining two verses in a paragraph: painted
+    /// with the highlight yellow when both neighbors are
+    /// highlighted, so the band runs unbroken from the first
+    /// verse's number through the last verse's text (REQ-HL-2).
+    private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
+        var join = AttributedString(" ")
+        if highlightedInChapter.contains(previous),
+           highlightedInChapter.contains(next) {
+            join.backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
+        }
+        return join
+    }
+
+    /// Bright yellow background on a highlighted verse
+    /// (REQ-HL-2): the whole verse — its number, the spaces
+    /// around the number, and its text — so consecutive
+    /// highlighted verses read as one band. The one exception
+    /// is a noted verse's number, which keeps the note's pale
+    /// yellow so the note stays visible; the selection's sky
+    /// blue, applied after this, covers the yellow while the
     /// verse is selected.
     private func applyHighlight(to attr: inout AttributedString, verse: Int) {
         guard highlightedInChapter.contains(verse) else { return }
-        // Skip the number run ("\(verse) ") and the space after it:
-        // the highlight belongs to the verse's text.
-        let prefix = "\(verse) ".count + 1
+        let yellow = UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
+        // The number run ("\(verse) ", digits plus its own
+        // trailing space) heads the string; one more space
+        // separates it from the text.
+        let numberLength = "\(verse) ".count
+        let prefix = numberLength + 1
         guard attr.characters.count > prefix else { return }
-        let start = attr.index(attr.startIndex, offsetByCharacters: prefix)
-        attr[start ..< attr.endIndex].backgroundColor =
-            UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
+        let textStart = attr.index(attr.startIndex, offsetByCharacters: prefix)
+        attr[textStart ..< attr.endIndex].backgroundColor = yellow
+        // The separator space always joins the band; the
+        // number itself joins unless a note claims it.
+        let numberEnd = attr.index(attr.startIndex, offsetByCharacters: numberLength)
+        attr[numberEnd ..< textStart].backgroundColor = yellow
+        if !hasNote(verse: verse) {
+            attr[attr.startIndex ..< numberEnd].backgroundColor = yellow
+        }
     }
 
     /// Repaints the background of a highlighted verse's

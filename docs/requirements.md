@@ -1022,10 +1022,14 @@ Multiple (KJV Gen 1:1-2):
   bright yellow background in **every** version — highlights
   belong to the passage, not to a version (like bookmarks,
   REQ-BM-11). The rendering applies in verse-by-verse,
-  paragraph, and Strong's modes; the verse number keeps its
-  own styling (a note's pale-yellow number stays visible),
-  and the selection's sky blue covers the yellow while the
-  verse is selected. Where a highlighted verse's text is
+  paragraph, and Strong's modes. The yellow covers the
+  whole verse — its number and the spaces around it, and
+  the space joining it to a highlighted neighbor — so
+  consecutive highlighted verses read as one band; the one
+  exception is a noted verse's number, which keeps the
+  note's pale yellow so the note stays visible. The
+  selection's sky blue covers the yellow while the verse
+  is selected. Where a highlighted verse's text is
   Jesus's speech and red letters are on, the speech spans
   render on a blue-gray background instead of the yellow —
   red on bright yellow is low-contrast. This applies in the
