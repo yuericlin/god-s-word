@@ -659,7 +659,7 @@ Multiple (KJV Gen 1:1-2):
 ### Setting
 - **REQ-CM-6:** The setting is a multi-select list of every installed version
   (downloaded and private). It is reachable from Settings > Bible >
-  Compare version and from
+  Compare versions and from
   the Compare panel's Versions button, and changing it updates the open
   panel.
 - **REQ-CM-7:** The setting persists in `UserDefaults`

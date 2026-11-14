@@ -69,7 +69,7 @@ struct SettingsView: View {
                         CompareVersionsPicker()
                     } label: {
                         HStack {
-                            Text("Compare version")
+                            Text("Compare versions")
                             Spacer()
                             Text(personalData.compareVersionIDs.isEmpty
                                  ? "Current only"
