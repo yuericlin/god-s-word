@@ -679,7 +679,8 @@ Multiple (KJV Gen 1:1-2):
   All of the panel's controls live in a single row at its top, and
   no tab's content carries a header of its own. The row's leftmost
   control is the primary button: it shows the current mode, and
-  tapping it cycles to the next mode in the order above. Beside it
+  tapping it opens a list of the modes to choose from, the
+  current one checked. Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
   its action buttons: Add Note for Notes; the commentary switcher

@@ -303,8 +303,9 @@ struct AuxiliaryPanelView: View {
 
     /// The panel's one control row (REQ-AP-1): every control
     /// lives here — no tab carries a header of its own. The
-    /// primary button at the left shows the current mode and
-    /// cycles to the next; beside it sit the active mode's
+    /// primary button at the left shows the current mode;
+    /// tapping it opens the list of modes. Beside it sit
+    /// the active mode's
     /// own controls: its sub-mode segmented control where it
     /// has sub-modes, and its action buttons.
     private var controlRow: some View {
@@ -367,20 +368,27 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The primary control: the current mode's name in a
-    /// capsule; tapping cycles to the next mode in PanelTab
-    /// order (Notes, Commentary, Strong's, Recents,
-    /// Highlights, Parallel).
+    /// capsule; tapping opens the list of modes to choose
+    /// from, the current one checked.
     private var modeButton: some View {
-        Button {
-            let all = PanelTab.allCases
-            guard let i = all.firstIndex(of: tab) else { return }
-            tab = all[(i + 1) % all.count]
+        Menu {
+            ForEach(PanelTab.allCases, id: \.self) { t in
+                Button {
+                    tab = t
+                } label: {
+                    if t == tab {
+                        Label(t.rawValue, systemImage: "checkmark")
+                    } else {
+                        Text(t.rawValue)
+                    }
+                }
+            }
         } label: {
             HStack(spacing: 5) {
                 Text(tab.rawValue)
                     .font(.callout)
                     .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
+                Image(systemName: "chevron.down")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -389,9 +397,8 @@ struct AuxiliaryPanelView: View {
             .background(Capsule().fill(Color.primary.opacity(0.24)))
             .foregroundStyle(.primary)
         }
-        .buttonStyle(.plain)
         .accessibilityLabel("Mode: \(tab.rawValue)")
-        .accessibilityHint("Tap to switch to the next mode")
+        .accessibilityHint("Tap to choose a mode")
     }
 
     /// The one add-note entry point: always available, even
