@@ -174,6 +174,7 @@ struct AuxiliaryPanelView: View {
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
     @State private var tab: PanelTab = .notes
+    @State private var showingModeList = false
     @State private var notesSubTab: NotesSubTab = .recents
     @State private var commentaryScope: PanelScope = .verse
     @State private var editorItem: EditorItem?
@@ -235,13 +236,15 @@ struct AuxiliaryPanelView: View {
     /// take the rest of the panel's 30% of the total height.
     @State private var tabBarHeight: CGFloat = 49
 
+    /// The panel's modes, in the alphabetical order the
+    /// mode list shows them (REQ-AP-1).
     enum PanelTab: String, CaseIterable {
-        case notes = "Notes"
         case commentary = "Commentary"
-        case strongs = "Strong's"
-        case recents = "Recents"
         case highlights = "Highlights"
+        case notes = "Notes"
         case parallel = "Parallel"
+        case recents = "Recents"
+        case strongs = "Strong's"
     }
 
     enum PanelScope: String, CaseIterable {
@@ -369,20 +372,13 @@ struct AuxiliaryPanelView: View {
 
     /// The primary control: the current mode's name in a
     /// capsule; tapping opens the list of modes to choose
-    /// from, the current one checked.
+    /// from — alphabetical, the current one carrying a blue
+    /// check at its right. A custom popover, not a Menu: a
+    /// menu puts its check at the left and takes the width
+    /// it wants.
     private var modeButton: some View {
-        Menu {
-            ForEach(PanelTab.allCases, id: \.self) { t in
-                Button {
-                    tab = t
-                } label: {
-                    if t == tab {
-                        Label(t.rawValue, systemImage: "checkmark")
-                    } else {
-                        Text(t.rawValue)
-                    }
-                }
-            }
+        Button {
+            showingModeList = true
         } label: {
             HStack(spacing: 5) {
                 Text(tab.rawValue)
@@ -397,8 +393,48 @@ struct AuxiliaryPanelView: View {
             .background(Capsule().fill(Color.primary.opacity(0.24)))
             .foregroundStyle(.primary)
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("Mode: \(tab.rawValue)")
         .accessibilityHint("Tap to choose a mode")
+        .popover(isPresented: $showingModeList, arrowEdge: .top) {
+            modeList
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// The mode list the primary button opens: one row per
+    /// mode, hairlines between, the current mode's row
+    /// carrying a blue check at its right; choosing a row
+    /// switches and dismisses.
+    private var modeList: some View {
+        VStack(spacing: 0) {
+            ForEach(PanelTab.allCases, id: \.self) { t in
+                Button {
+                    tab = t
+                    showingModeList = false
+                } label: {
+                    HStack {
+                        Text(t.rawValue)
+                            .font(.callout)
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        if t == tab {
+                            Image(systemName: "checkmark")
+                                .font(.callout)
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if t != PanelTab.allCases.last {
+                    Divider()
+                }
+            }
+        }
+        .frame(width: 180)
     }
 
     /// The one add-note entry point: always available, even
