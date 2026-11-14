@@ -438,6 +438,7 @@ struct AuxiliaryPanelView: View {
             }
         }
         .frame(width: 180)
+        .padding(.vertical, 8)
     }
 
     /// The one add-note entry point: always available, even

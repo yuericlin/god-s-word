@@ -683,7 +683,9 @@ Multiple (KJV Gen 1:1-2):
   control is the primary button: it shows the current mode, and
   tapping it opens the modes as a compact list to choose from,
   the current one carrying a blue check at the right of its
-  row. Beside it
+  row. The list keeps a margin above its first row and below
+  its last, so no row touches the list's top or bottom edge.
+  Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
   its action buttons: Add Note for Notes; the commentary switcher
