@@ -670,16 +670,25 @@ Multiple (KJV Gen 1:1-2):
 
 - **REQ-AP-1:** Below the main reading panel sits an auxiliary panel
   (a real panel under the chapter text, not an overlay; the main text
-  rendering is untouched). It has four tabs — **Notes**, **Commentary**,
-  **Strong's**, **Recents**. The panel starts collapsed; collapsed, it
+  rendering is untouched). It has six modes — **Notes**, **Commentary**,
+  **Strong's**, **Recents**, **Highlights**, **Parallel** (REQ-PA-1).
+  The panel starts collapsed; collapsed, it
   renders nothing at all — the only trace is a toggle button in the
   reader's bottom bar, next to the chapter controls: an up arrow when
   collapsed (tap to expand), a down arrow when open (tap to collapse).
-  The tab bar is a horizontally scrollable row of pills, each at its
-  label's full natural width — never a fixed-width segmented control
-  that truncates labels — and it scrolls the selected tab into view
-  when the selection changes and when the panel opens. The expanded
-  panel's total height (tab bar plus content) is 30% of the
+  All of the panel's controls live in a single row at its top, and
+  no tab's content carries a header of its own. The row's leftmost
+  control is the primary button: it shows the current mode, and
+  tapping it opens a list of the modes to choose from, the
+  current one checked. Beside it
+  sit the active mode's own controls — its sub-mode segmented
+  control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
+  its action buttons: Add Note for Notes; the commentary switcher
+  and the information button for Commentary; the verse reference
+  and the source switcher for Strong's; Clear for Recents; and
+  for Parallel the gear, the version-and-passage title, and the
+  chain (REQ-PA-1). The expanded
+  panel's total height (control row plus content) is 30% of the
   reader view's total height, not a fixed point size.
 - **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
   Each shows the scoped note for the book / chapter / selected verse
@@ -1142,9 +1151,10 @@ Multiple (KJV Gen 1:1-2):
 ## 20. Parallel view
 
 - **REQ-PA-1:** The auxiliary panel (§15) gains a **Parallel**
-  tab: a second chapter view under a header row. The header
-  carries a gear button on the left, a chain button on the
-  right, and between them, centered, the parallel view's
+  tab: a second chapter view. In the panel's control row
+  (REQ-AP-1), Parallel's segment carries a gear button on
+  the left, a chain button on the right, and between them,
+  centered, the parallel view's
   version — its short label (the module id), as the main view
   names the version, in secondary — and its book and chapter
   in the primary color (white), as the main view's title
