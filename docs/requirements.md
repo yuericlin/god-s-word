@@ -690,8 +690,11 @@ Multiple (KJV Gen 1:1-2):
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
   its action buttons: Add Note for Notes; the commentary switcher
-  and the information button for Commentary; the verse reference
-  and the source switcher for Strong's; Clear for Recents; and
+  and the information button for Commentary; for Strong's a
+  centered title in the Parallel form (REQ-PA-1) — the source
+  version and the verse reference, "{version} - {book}
+  {chapter}:{verse}" — which is itself the source switcher
+  when the source is a fallback choice; Clear for Recents; and
   for Parallel the gear, the version-and-passage title, and the
   chain (REQ-PA-1). The expanded
   panel's total height (control row plus content) is 30% of the
@@ -1174,9 +1177,10 @@ Multiple (KJV Gen 1:1-2):
   tab: a second chapter view. In the panel's control row
   (REQ-AP-1), Parallel's segment carries a gear button on
   the left, a chain button on the right, and between them,
-  centered, the parallel view's
-  version — its short label (the module id), as the main view
-  names the version, in secondary — and its book and chapter
+  centered, the parallel view's title in the form
+  "{version} - {book} {chapter}" — the version, its short
+  label (the module id), as the main view names the version,
+  in secondary, and its book and chapter
   in the primary color (white), as the main view's title
   shows them. The
   parallel view lives in the panel only; the main reading
