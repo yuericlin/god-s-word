@@ -869,6 +869,12 @@ Multiple (KJV Gen 1:1-2):
   buttons — dismisses and moves the main reader to that
   chapter, landing on the first referenced verse when the
   entry named verses.
+- **REQ-AP-21:** The panel remembers its current mode
+  across launches. Switching modes stores the mode (a
+  PersonalData setting, carried in backups and iCloud
+  settings like the panel's other settings), and the panel
+  opens on the stored mode. When no mode has ever been
+  stored, the panel opens on **Notes**.
 
 ## 16. Module sources
 
