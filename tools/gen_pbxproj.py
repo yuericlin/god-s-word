@@ -281,7 +281,7 @@ common_target = {
     "DEVELOPMENT_TEAM": '""',
     "INFOPLIST_FILE": "GodsWord/Info.plist",
     "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
-    "MARKETING_VERSION": "1.2.0",
+    "MARKETING_VERSION": "1.2.1",
     "CURRENT_PROJECT_VERSION": "6",
     "PRODUCT_BUNDLE_IDENTIFIER": "com.lys.godsword",
     "PRODUCT_NAME": '"$(TARGET_NAME)"',
