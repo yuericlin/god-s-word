@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 13
+    public var version: Int = 14
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -89,6 +89,11 @@ public struct BackupPayload: Codable, Sendable {
     /// PanelTab raw value; "" = never set — the panel starts
     /// on Notes. Payload v13+; older payloads decode to "".
     public var panelTab: String
+    /// The auxiliary panel's height as a percentage of the
+    /// reader's height (REQ-AP-22): one of the 25–50 stops in
+    /// 5% steps. Payload v14+; older payloads decode to 0,
+    /// which reads as "leave the current height alone".
+    public var panelHeightPercent: Int
     public var backedUpAt: Date
 
     public init(fontSize: Double, verseByVerse: Bool = false, showStrongs: Bool = false,
@@ -113,6 +118,7 @@ public struct BackupPayload: Codable, Sendable {
                 parallelSyncVersionID: String = "",
                 parallelSeparateVersionID: String = "",
                 panelTab: String = "",
+                panelHeightPercent: Int = 30,
                 backedUpAt: Date) {
         self.fontSize = fontSize
         self.verseByVerse = verseByVerse
@@ -140,6 +146,7 @@ public struct BackupPayload: Codable, Sendable {
         self.parallelSyncVersionID = parallelSyncVersionID
         self.parallelSeparateVersionID = parallelSeparateVersionID
         self.panelTab = panelTab
+        self.panelHeightPercent = panelHeightPercent
         self.backedUpAt = backedUpAt
     }
 
@@ -174,6 +181,7 @@ public struct BackupPayload: Codable, Sendable {
         parallelSyncVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSyncVersionID) ?? ""
         parallelSeparateVersionID = try c.decodeIfPresent(String.self, forKey: .parallelSeparateVersionID) ?? ""
         panelTab = try c.decodeIfPresent(String.self, forKey: .panelTab) ?? ""
+        panelHeightPercent = try c.decodeIfPresent(Int.self, forKey: .panelHeightPercent) ?? 0
         backedUpAt = try c.decode(Date.self, forKey: .backedUpAt)
     }
 }
@@ -208,6 +216,7 @@ public final class PersonalData: ObservableObject {
     private let parallelSyncVersionKey = "gw.parallelSyncVersion.v1"
     private let parallelSeparateVersionKey = "gw.parallelSeparateVersion.v1"
     private let panelTabKey = "gw.panelTab.v1"
+    private let panelHeightPercentKey = "gw.panelHeightPercent.v1"
     private let maxHistoryEntries = 100
 
     public init(defaults: UserDefaults = .standard) {
@@ -263,6 +272,8 @@ public final class PersonalData: ObservableObject {
         self.parallelSyncVersionID = defaults.string(forKey: parallelSyncVersionKey) ?? ""
         self.parallelSeparateVersionID = defaults.string(forKey: parallelSeparateVersionKey) ?? ""
         self.panelTab = defaults.string(forKey: panelTabKey) ?? ""
+        self.panelHeightPercent = Self.clampedPanelHeightPercent(
+            defaults.object(forKey: panelHeightPercentKey) as? Int ?? 30)
         // REQ-NT-19: fold any legacy per-version note keys into the
         // version-less ones. didSet does not fire during init, so
         // persist the note stores explicitly afterwards.
@@ -438,6 +449,22 @@ public final class PersonalData: ObservableObject {
     /// on Notes. Persisted in UserDefaults.
     @Published public var panelTab: String {
         didSet { defaults.set(panelTab, forKey: panelTabKey) }
+    }
+
+    /// The Panel height stops (REQ-AP-22): 25% to 50% in 5%
+    /// steps. A stored or restored value snaps to the nearest
+    /// stop, so the setting always holds one of them.
+    public static func clampedPanelHeightPercent(_ value: Int) -> Int {
+        let snapped = Int((Double(value) / 5).rounded()) * 5
+        return min(50, max(25, snapped))
+    }
+
+    /// The auxiliary panel's height (REQ-AP-22) as a
+    /// percentage of the reader's height — 25% to 50% in 5%
+    /// steps, 30% until changed. The one height serves every
+    /// mode. Persisted in UserDefaults.
+    @Published public var panelHeightPercent: Int {
+        didSet { defaults.set(panelHeightPercent, forKey: panelHeightPercentKey) }
     }
 
     /// Book-level notes (REQ-NT-14), keyed by
@@ -930,6 +957,7 @@ public final class PersonalData: ObservableObject {
                       parallelSyncVersionID: parallelSyncVersionID,
                       parallelSeparateVersionID: parallelSeparateVersionID,
                       panelTab: panelTab,
+                      panelHeightPercent: panelHeightPercent,
                       backedUpAt: Date())
     }
 
@@ -1006,6 +1034,11 @@ public final class PersonalData: ObservableObject {
         if !payload.panelTab.isEmpty {
             panelTab = payload.panelTab
         }
+        // Panel height (payload v14+; older payloads decode to
+        // 0 and leave the current height alone).
+        if payload.panelHeightPercent > 0 {
+            panelHeightPercent = Self.clampedPanelHeightPercent(payload.panelHeightPercent)
+        }
         // Note sources (payload v10+; older payloads decode to [:]
         // and leave current sources alone).
         if !payload.noteSources.isEmpty {
@@ -1055,6 +1088,9 @@ public final class PersonalData: ObservableObject {
         /// The panel's remembered mode (REQ-AP-21); optional
         /// for the same reason.
         public var panelTab: String?
+        /// The panel's height percentage (REQ-AP-22); optional
+        /// for the same reason.
+        public var panelHeightPercent: Int?
     }
 
     private func syncBookmarksToiCloud() {
@@ -1146,7 +1182,8 @@ public final class PersonalData: ObservableObject {
             parallelSyncMode: parallelSyncMode,
             parallelSyncVersionID: parallelSyncVersionID,
             parallelSeparateVersionID: parallelSeparateVersionID,
-            panelTab: panelTab)
+            panelTab: panelTab,
+            panelHeightPercent: panelHeightPercent)
         try? iCloudSync.shared.save(settings, as: .settings)
     }
 
@@ -1250,7 +1287,8 @@ public final class PersonalData: ObservableObject {
             parallelSyncMode: parallelSyncMode,
             parallelSyncVersionID: parallelSyncVersionID,
             parallelSeparateVersionID: parallelSeparateVersionID,
-            panelTab: panelTab)
+            panelTab: panelTab,
+            panelHeightPercent: panelHeightPercent)
         try encoder.encode(settings)
             .write(to: folder.appendingPathComponent("settings.json"))
         return folder
@@ -1349,6 +1387,9 @@ public final class PersonalData: ObservableObject {
                 }
                 if let pt = s.panelTab, !pt.isEmpty {
                     panelTab = pt
+                }
+                if let ph = s.panelHeightPercent {
+                    panelHeightPercent = Self.clampedPanelHeightPercent(ph)
                 }
             default:
                 continue

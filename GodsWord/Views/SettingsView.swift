@@ -123,6 +123,16 @@ struct SettingsView: View {
                         }
                     }
                     NavigationLink {
+                        PanelHeightSettingsView()
+                    } label: {
+                        HStack {
+                            Text("Panel height")
+                            Spacer()
+                            Text("\(personalData.panelHeightPercent)%")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    NavigationLink {
                         DictionarySettingsView()
                     } label: {
                         HStack {
@@ -575,6 +585,47 @@ struct PanelModePicker: View {
             }
         }
         .navigationTitle("Current Mode")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// The auxiliary panel's height (REQ-AP-22): a slider from
+/// 25% to 50% of the reader's height, snapping to the 5%
+/// stops, writing `PersonalData.panelHeightPercent`. The
+/// one height serves every mode — the panel's content
+/// height is computed from it whichever mode is showing.
+struct PanelHeightSettingsView: View {
+    @EnvironmentObject private var personalData: PersonalData
+
+    private var percent: Binding<Double> {
+        Binding(
+            get: { Double(personalData.panelHeightPercent) },
+            set: { personalData.panelHeightPercent =
+                PersonalData.clampedPanelHeightPercent(Int($0.rounded())) }
+        )
+    }
+
+    var body: some View {
+        List {
+            Section {
+                VStack(spacing: 12) {
+                    Text("\(personalData.panelHeightPercent)%")
+                        .font(.largeTitle)
+                    Slider(value: percent, in: 25...50, step: 5)
+                    HStack {
+                        Text("25%")
+                        Spacer()
+                        Text("50%")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+            } footer: {
+                Text("The auxiliary panel's height as a share of the reading view — the same for every mode. The panel uses the new height as soon as you return to it.")
+            }
+        }
+        .navigationTitle("Panel Height")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
