@@ -2574,14 +2574,18 @@ private struct ReferenceChapterView: View {
     }
 
     /// The space joining two verses in a paragraph: painted
-    /// with the selection blue when both neighbors are
-    /// referenced, so the band runs unbroken from the first
-    /// verse's number through the last verse's text — the
-    /// reader's own join treatment (REQ-AP-20, REQ-VP-1).
+    /// with the selection blue whenever the following verse
+    /// is referenced. Between two referenced verses it joins
+    /// the band (REQ-VP-1); before the first referenced verse
+    /// it gives that verse's number a full-height start —
+    /// a number left as a line's only painted run (its text
+    /// wrapped to the next line) draws at its own smaller,
+    /// raised size and steps against the band, so the number
+    /// must always sit inside a painted stretch that includes
+    /// a full-height run (REQ-AP-20).
     private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
         var join = AttributedString(" ")
-        if target.verses.contains(previous),
-           target.verses.contains(next) {
+        if target.verses.contains(next) {
             join.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
         }
         return join

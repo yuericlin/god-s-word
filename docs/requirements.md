@@ -879,6 +879,11 @@ Multiple (KJV Gen 1:1-2):
   bookmarks, highlights, or notes). Every referenced verse is
   highlighted the way a selection is highlighted in the
   reader, scrolled so the first referenced verse is in view.
+  The space before a referenced verse is painted with the
+  same blue, so a verse number that sits alone at a line's
+  end — the first referenced verse's, typically — takes the
+  band's full height rather than its own smaller, raised
+  box, which would step against the band.
   "Done" sits at the top-left (the cancellation action, where
   the Strong's dictionary view puts it) and dismisses back to
   the commentary; a bottom "Read More" button — a bottom-bar
