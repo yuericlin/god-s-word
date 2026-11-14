@@ -670,8 +670,10 @@ Multiple (KJV Gen 1:1-2):
 
 - **REQ-AP-1:** Below the main reading panel sits an auxiliary panel
   (a real panel under the chapter text, not an overlay; the main text
-  rendering is untouched). It has six modes — **Notes**, **Commentary**,
-  **Strong's**, **Recents**, **Highlights**, **Parallel** (REQ-PA-1).
+  rendering is untouched). It has six modes — **Commentary**,
+  **Highlights**, **Notes**, **Parallel**, **Recents**, **Strong's**
+  (REQ-PA-1) — named here, as everywhere they are listed, in
+  alphabetical order.
   The panel starts collapsed; collapsed, it
   renders nothing at all — the only trace is a toggle button in the
   reader's bottom bar, next to the chapter controls: an up arrow when
@@ -679,8 +681,9 @@ Multiple (KJV Gen 1:1-2):
   All of the panel's controls live in a single row at its top, and
   no tab's content carries a header of its own. The row's leftmost
   control is the primary button: it shows the current mode, and
-  tapping it opens a list of the modes to choose from, the
-  current one checked. Beside it
+  tapping it opens the modes as a compact list to choose from,
+  the current one carrying a blue check at the right of its
+  row. Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
   its action buttons: Add Note for Notes; the commentary switcher
