@@ -568,12 +568,12 @@ Multiple (KJV Gen 1:1-2):
   missing timestamps decode as absent and never wipe existing ones,
   and times for notes that don't exist are dropped on apply. Older
   app versions ignore the new fields.
-- **REQ-BK-5:** The Google Drive backup and iCloud sections are
-  hidden in Settings for now; of the backup/sync sections only
-  Manual backup (export/import) shows. The features and their
-  code stay in place (payload, sync, and restore paths
+- **REQ-BK-5:** The Google Drive backup and iCloud blocks are
+  hidden in Settings for now; within the Backup section only
+  the manual backup (export/import) shows. The features and
+  their code stay in place (payload, sync, and restore paths
   unchanged); only the settings UI is not shown. Re-enable by
-  flipping the sections' visibility flags in Settings.
+  flipping the blocks' visibility flags in Settings.
 - **REQ-BK-6:** Payload v10 adds the note-sources store
   (REQ-NT-19). Payload v9 and older still load; a payload without
   sources leaves existing sources alone, and the REQ-NT-19
@@ -585,7 +585,7 @@ Multiple (KJV Gen 1:1-2):
 ## 13. iCloud sync
 
 - **REQ-IC-1:** iCloud sync is offered BEFORE Google Drive (preferred method).
-  Toggle in Settings > iCloud. Requires iCloud account sign-in.
+  Toggle in Settings > Backup. Requires iCloud account sign-in.
 - **REQ-IC-2:** When enabled, all data syncs to the `god-s-word/` folder in
   iCloud Drive.
 - **REQ-IC-3:** Data is stored in **JSON format** (not binary):
@@ -658,7 +658,8 @@ Multiple (KJV Gen 1:1-2):
 
 ### Setting
 - **REQ-CM-6:** The setting is a multi-select list of every installed version
-  (downloaded and private). It is reachable from Settings > Compare and from
+  (downloaded and private). It is reachable from Settings > Bible >
+  Compare versions and from
   the Compare panel's Versions button, and changing it updates the open
   panel.
 - **REQ-CM-7:** The setting persists in `UserDefaults`
@@ -683,7 +684,9 @@ Multiple (KJV Gen 1:1-2):
   control is the primary button: it shows the current mode, and
   tapping it opens the modes as a compact list to choose from,
   the current one carrying a blue check at the right of its
-  row. Beside it
+  row. The list keeps a margin above its first row and below
+  its last, so no row touches the list's top or bottom edge.
+  Beside it
   sit the active mode's own controls — its sub-mode segmented
   control where the mode has sub-modes (REQ-AP-2, REQ-AP-3), and
   its action buttons: Add Note for Notes; the commentary switcher
@@ -719,7 +722,7 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-AP-6:** The commentary shown is `PersonalData.commentaryModuleID`
   (persisted, in backups and `settings.json` like the Compare setting).
   Empty/uninstalled means the first installed renderable commentary.
-  It is chosen in Settings > Commentary > Current commentary or in the
+  It is chosen in Settings > Auxiliary > Current commentary or in the
   panel's own header menu. With no commentary installed, the tab shows
   an empty state offering the Repository.
 - **REQ-AP-7:** The Strong's tab renders the selected verse (lowest
@@ -727,7 +730,8 @@ Multiple (KJV Gen 1:1-2):
   exactly like the main reader's Strong's mode; tapping a number opens
   its dictionary entry. The rendering comes from the version being read
   when it supports Strong's; otherwise from the fallback version in
-  `PersonalData.strongsFallbackVersionID` (Settings > Strong's, or the
+  `PersonalData.strongsFallbackVersionID` (Settings > Auxiliary >
+  Strong's fallback version, or the
   panel's own menu); when that is unset or uninstalled, the first
   installed Strong's version. Resolution is `StrongsVerseSource.resolve`.
   Private versions never supply Strong's. With no Strong's version
@@ -752,7 +756,8 @@ Multiple (KJV Gen 1:1-2):
   titled "Add Commentary" (`CommentaryRepositoryView`): the repository
   browser listing only renderable commentaries, each with its declared
   license. It is reached from the panel's Commentary empty state and
-  from Settings > Commentary. The "Add Bible" page is unchanged.
+  from Settings > Auxiliary > Current commentary. The "Add Bible"
+  page is unchanged.
 - **REQ-AP-11:** The Recents tab is the reading history (REQ-HI-1),
   moved here from the reader's left drawer (the drawer's History
   button is gone; the Settings screen's History section, REQ-HI-5,
@@ -877,7 +882,9 @@ Multiple (KJV Gen 1:1-2):
   PersonalData setting, carried in backups and iCloud
   settings like the panel's other settings), and the panel
   opens on the stored mode. When no mode has ever been
-  stored, the panel opens on **Notes**.
+  stored, the panel opens on **Notes**. The stored mode is
+  also shown by, and changeable in, Settings > Auxiliary >
+  Current mode.
 
 ## 16. Module sources
 
@@ -939,7 +946,7 @@ Multiple (KJV Gen 1:1-2):
 
 ## 17. Download languages and dictionaries
 
-- **REQ-LG-1:** Settings > Languages lists the languages the user
+- **REQ-LG-1:** Settings > Bible > Languages lists the languages the user
   is interested in (primary language codes, e.g. `en`, `zh`). When
   the list is non-empty, every download list — Add Bible, Add
   Commentary, and Add Dictionary — shows only modules in those
@@ -995,7 +1002,7 @@ Multiple (KJV Gen 1:1-2):
   dictionaries, including Easton, ISBE, Nave, Webster's, and the
   Strong's lexicons in many languages. Installed dictionaries
   never appear in the library's version lists.
-- **REQ-DC-2:** Settings > Dictionary chooses the dictionary
+- **REQ-DC-2:** Settings > Auxiliary > Dictionary chooses the dictionary
   Strong's definitions come from, separately for Hebrew ("H")
   and Greek ("G") keys, from the installed dictionaries. The
   default (no choice) is unchanged: StrongsHebrew / StrongsGreek,
@@ -1223,8 +1230,9 @@ Multiple (KJV Gen 1:1-2):
   isn't the one being read (the current version itself when
   it is the only one installed). A remembered version that
   is no longer installed falls back the same way.
-- **REQ-PA-8:** Settings carries a **Parallel** section: a
-  link (labeled with the current mode) to a Parallel settings
+- **REQ-PA-8:** Settings' **Auxiliary** section carries a
+  **Current parallel mode** link (labeled with the current mode)
+  to a Parallel settings
   page holding the mode (Sync / Separate) and each mode's
   version, as checkmark lists whose check marks the version
   in effect (REQ-PA-7). These are the same remembered

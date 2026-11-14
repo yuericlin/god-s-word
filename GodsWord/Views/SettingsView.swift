@@ -40,7 +40,7 @@ struct SettingsView: View {
                     ReadingSettingsView()
                 }
 
-                Section {
+                Section("Bible") {
                     NavigationLink {
                         LanguagesSettingsView()
                     } label: {
@@ -55,13 +55,6 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Languages")
-                } footer: {
-                    Text("When languages are chosen here, the download lists for Bibles, commentaries, and dictionaries show only modules in those languages.")
-                }
-
-                Section {
                     NavigationLink {
                         CurrentVersionPicker(history: history)
                     } label: {
@@ -72,13 +65,6 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Bible version")
-                } footer: {
-                    Text("The version you are reading. Pick another installed version, or download a new one.")
-                }
-
-                Section {
                     NavigationLink {
                         CompareVersionsPicker()
                     } label: {
@@ -91,49 +77,29 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Compare")
-                } footer: {
-                    Text("The Compare action on selected verses shows them in the version you are reading plus the versions chosen here.")
-                }
-
-                Section {
                     NavigationLink {
-                        DictionarySettingsView()
+                        SourcesSettingsView()
                     } label: {
                         HStack {
-                            Text("Dictionary")
+                            Text("Sources")
                             Spacer()
-                            Text(dictionarySummary)
+                            Text(BibleSourceStore.shared.source(withID: BibleSourceStore.shared.defaultSourceID)?.name ?? "CrossWire")
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Dictionary")
-                } footer: {
-                    Text("The dictionaries Strong's definitions come from, one for Hebrew and one for Greek. More dictionaries download from the same repositories as Bibles.")
                 }
 
-                Section {
+                Section("Auxiliary") {
                     NavigationLink {
-                        StrongsFallbackPicker()
+                        PanelModePicker()
                     } label: {
                         HStack {
-                            Text("Strong's fallback version")
+                            Text("Current mode")
                             Spacer()
-                            Text(personalData.strongsFallbackVersionID.isEmpty
-                                 ? "Automatic"
-                                 : personalData.strongsFallbackVersionID)
+                            Text(currentModeSummary)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Strong's")
-                } footer: {
-                    Text("When the version you are reading has no Strong's numbers, the panel's Strong's tab renders the selected verse from this version instead.")
-                }
-
-                Section {
                     NavigationLink {
                         CommentaryModulePicker()
                     } label: {
@@ -146,44 +112,38 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Commentary")
-                } footer: {
-                    Text("The commentary the panel's Commentary tab shows for the book, chapter, or verse being read. Automatic uses the first installed commentary; more download from the same repositories as Bibles.")
-                }
-
-                Section {
                     NavigationLink {
                         ParallelSettingsView(history: history)
                     } label: {
                         HStack {
-                            Text("Parallel mode")
+                            Text("Current parallel mode")
                             Spacer()
                             Text(personalData.parallelSyncMode ? "Sync" : "Separate")
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Parallel")
-                } footer: {
-                    Text("The panel's Parallel tab shows a second version alongside the reading. Choose its mode and each mode's version here, or from the tab's own settings.")
-                }
-
-                Section {
                     NavigationLink {
-                        SourcesSettingsView()
+                        DictionarySettingsView()
                     } label: {
                         HStack {
-                            Text("Sources")
+                            Text("Dictionary")
                             Spacer()
-                            Text(BibleSourceStore.shared.source(withID: BibleSourceStore.shared.defaultSourceID)?.name ?? "CrossWire")
+                            Text(dictionarySummary)
                                 .foregroundStyle(.secondary)
                         }
                     }
-                } header: {
-                    Text("Sources")
-                } footer: {
-                    Text("Public repositories you can download Bibles and commentaries from. Pick the default, add your own, or update the public list.")
+                    NavigationLink {
+                        StrongsFallbackPicker()
+                    } label: {
+                        HStack {
+                            Text("Strong's fallback version")
+                            Spacer()
+                            Text(personalData.strongsFallbackVersionID.isEmpty
+                                 ? "Automatic"
+                                 : personalData.strongsFallbackVersionID)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Section {
@@ -204,79 +164,70 @@ struct SettingsView: View {
                        msg.hasPrefix("Export") || msg.hasPrefix("Import") {
                         Text(msg).font(.callout).foregroundStyle(.secondary)
                     }
+
+                    if Self.showICloudSync {
+                        Toggle("iCloud Sync", isOn: Binding(
+                            get: { iCloudSync.shared.isEnabled },
+                            set: { newValue in
+                                iCloudSync.shared.isEnabled = newValue
+                                if newValue {
+                                    // Immediately sync all data so the JSON files
+                                    // (and the folder) appear in iCloud Drive.
+                                    personalData.syncAllToiCloud(
+                                        repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
+                                        installedModuleIDs: store.installedModules().map { $0.id })
+                                }
+                            }
+                        ))
+                        .disabled(!iCloudSync.shared.isAvailable)
+                        if !iCloudSync.shared.isAvailable {
+                            Text("Sign in to iCloud in the iOS Settings app to enable sync. " +
+                                 "The developer must also enable the iCloud capability in Xcode " +
+                                 "(Signing & Capabilities).")
+                                .font(.callout).foregroundStyle(.secondary)
+                        } else if iCloudSync.shared.isEnabled {
+                            Text("Bookmarks, notes, settings, and history sync as JSON to the god-s-word folder in iCloud Drive. Private Bible versions go in god-s-word/private-repo/. " +
+                                 "The folder appears in the Files app under iCloud Drive once sync is active.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        } else {
+                            Text("Enable to sync your data to the god-s-word folder in iCloud Drive.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if Self.showGoogleDriveBackup {
+                        if !GoogleDriveBackup.isConfigured {
+                            Text("Google sign-in isn't configured in this build yet. " +
+                                 "Add your GoogleOAuth.plist (see README) to enable Drive backup.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        } else if driveBackup.isSignedIn {
+                            HStack {
+                                Text("Signed in")
+                                Spacer()
+                                Text(driveBackup.accountEmail ?? "").foregroundStyle(.secondary)
+                            }
+                            Button("Back up now") { Task { await doBackup() } }
+                                .disabled(working)
+                            Button("Restore from Drive") { Task { await doRestore() } }
+                                .disabled(working)
+                            Button("Sign out", role: .destructive) { driveBackup.signOut() }
+                        } else {
+                            Text("Back up your reading data — text size, layout, reading positions, " +
+                                 "and which Bibles you installed — to a private folder in your " +
+                                 "Google Drive. Nothing is uploaded until you sign in and tap Back up.")
+                                .font(.callout).foregroundStyle(.secondary)
+                            Button("Sign in with Google") { Task { await doSignIn() } }
+                                .disabled(working)
+                        }
+                        if working { ProgressView().controlSize(.small) }
+                        if let message {
+                            Text(message).font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
                 } header: {
-                    Text("Manual backup")
+                    Text("Backup")
                 } footer: {
                     Text("Export saves your data as JSON files, plus every downloaded module (Bibles, commentaries, dictionaries) as a .zip in the modules folder, to On My iPhone > GodsWord > god-s-word-export/. Share the folder via AirDrop or Files. After a reinstall, Import and select the JSON files and module .zip files to restore everything without downloading again. Modules already installed are skipped.")
-                }
-
-                if Self.showICloudSync {
-                Section {
-                    Toggle("iCloud Sync", isOn: Binding(
-                        get: { iCloudSync.shared.isEnabled },
-                        set: { newValue in
-                            iCloudSync.shared.isEnabled = newValue
-                            if newValue {
-                                // Immediately sync all data so the JSON files
-                                // (and the folder) appear in iCloud Drive.
-                                personalData.syncAllToiCloud(
-                                    repositoryURL: "https://crosswire.org/ftpmirror/pub/sword/raw",
-                                    installedModuleIDs: store.installedModules().map { $0.id })
-                            }
-                        }
-                    ))
-                    .disabled(!iCloudSync.shared.isAvailable)
-                    if !iCloudSync.shared.isAvailable {
-                        Text("Sign in to iCloud in the iOS Settings app to enable sync. " +
-                             "The developer must also enable the iCloud capability in Xcode " +
-                             "(Signing & Capabilities).")
-                            .font(.callout).foregroundStyle(.secondary)
-                    } else if iCloudSync.shared.isEnabled {
-                        Text("Bookmarks, notes, settings, and history sync as JSON to the god-s-word folder in iCloud Drive. Private Bible versions go in god-s-word/private-repo/. " +
-                             "The folder appears in the Files app under iCloud Drive once sync is active.")
-                            .font(.callout).foregroundStyle(.secondary)
-                    } else {
-                        Text("Enable to sync your data to the god-s-word folder in iCloud Drive.")
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("iCloud")
-                }
-                }
-
-
-                if Self.showGoogleDriveBackup {
-                Section {
-                    if !GoogleDriveBackup.isConfigured {
-                        Text("Google sign-in isn't configured in this build yet. " +
-                             "Add your GoogleOAuth.plist (see README) to enable Drive backup.")
-                            .font(.callout).foregroundStyle(.secondary)
-                    } else if driveBackup.isSignedIn {
-                        HStack {
-                            Text("Signed in")
-                            Spacer()
-                            Text(driveBackup.accountEmail ?? "").foregroundStyle(.secondary)
-                        }
-                        Button("Back up now") { Task { await doBackup() } }
-                            .disabled(working)
-                        Button("Restore from Drive") { Task { await doRestore() } }
-                            .disabled(working)
-                        Button("Sign out", role: .destructive) { driveBackup.signOut() }
-                    } else {
-                        Text("Back up your reading data — text size, layout, reading positions, " +
-                             "and which Bibles you installed — to a private folder in your " +
-                             "Google Drive. Nothing is uploaded until you sign in and tap Back up.")
-                            .font(.callout).foregroundStyle(.secondary)
-                        Button("Sign in with Google") { Task { await doSignIn() } }
-                            .disabled(working)
-                    }
-                    if working { ProgressView().controlSize(.small) }
-                    if let message {
-                        Text(message).font(.callout).foregroundStyle(.secondary)
-                    }
-                } header: {
-                    Text("Google Drive backup")
-                }
                 }
 
                 Section("About") {
@@ -346,6 +297,12 @@ struct SettingsView: View {
         let greek = personalData.dictionaryGreekID
         if hebrew.isEmpty && greek.isEmpty { return "Automatic" }
         return [hebrew, greek].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// The Current mode row's value: the auxiliary panel's
+    /// remembered start mode (REQ-AP-21), Notes when unset.
+    private var currentModeSummary: String {
+        (AuxiliaryPanelView.PanelTab(rawValue: personalData.panelTab) ?? .notes).rawValue
     }
 
     /// Manual export (REQ-BK-6): the JSON data files, and every installed
@@ -580,6 +537,45 @@ struct CurrentVersionPicker: View {
             personalData.saveLastReading(moduleID: version.id,
                                          testament: 1, book: 1, chapter: 1)
         }
+    }
+}
+
+/// The auxiliary panel's start mode (REQ-AP-21): the mode
+/// the panel opens with, restored from `PersonalData.panelTab`.
+/// The panel writes the same setting whenever its mode
+/// changes, so a pick here and a change there stay in sync.
+struct PanelModePicker: View {
+    @EnvironmentObject private var personalData: PersonalData
+
+    private var current: AuxiliaryPanelView.PanelTab {
+        AuxiliaryPanelView.PanelTab(rawValue: personalData.panelTab) ?? .notes
+    }
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(AuxiliaryPanelView.PanelTab.allCases, id: \.self) { mode in
+                    Button {
+                        personalData.panelTab = mode.rawValue
+                    } label: {
+                        HStack {
+                            Text(mode.rawValue)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if mode == current {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.tint)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                }
+            } footer: {
+                Text("The mode the auxiliary panel opens with. Switching modes in the panel itself updates this too.")
+            }
+        }
+        .navigationTitle("Current Mode")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
