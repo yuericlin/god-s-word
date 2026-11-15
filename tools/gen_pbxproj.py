@@ -282,7 +282,7 @@ common_target = {
     "INFOPLIST_FILE": "GodsWord/Info.plist",
     "IPHONEOS_DEPLOYMENT_TARGET": "17.0",
     "MARKETING_VERSION": "1.2.9",
-    "CURRENT_PROJECT_VERSION": "14",
+    "CURRENT_PROJECT_VERSION": "15",
     "PRODUCT_BUNDLE_IDENTIFIER": "com.lys.godsword",
     "PRODUCT_NAME": '"$(TARGET_NAME)"',
     "SWIFT_EMIT_LOC_STRINGS": "YES",
