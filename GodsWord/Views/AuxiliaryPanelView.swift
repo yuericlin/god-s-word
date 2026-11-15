@@ -2522,8 +2522,8 @@ private struct ReferenceChapterView: View {
         for token in tokens {
             var seg = AttributedString(token.text)
             if personalData.showRedLetters, token.isJesusSpeech {
+                // Color only, no bold — see applyRedLetters.
                 seg.foregroundColor = Self.redLetterColor
-                seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
             }
             out += seg
             for key in token.strongs {
@@ -2576,13 +2576,10 @@ private struct ReferenceChapterView: View {
     /// The space joining two verses in a paragraph: painted
     /// with the selection blue whenever the following verse
     /// is referenced. Between two referenced verses it joins
-    /// the band (REQ-VP-1); before the first referenced verse
-    /// it gives that verse's number a full-height start —
-    /// a number left as a line's only painted run (its text
-    /// wrapped to the next line) draws at its own smaller,
-    /// raised size and steps against the band, so the number
-    /// must always sit inside a painted stretch that includes
-    /// a full-height run (REQ-AP-20).
+    /// the band (REQ-VP-1); before the first referenced
+    /// verse it starts the band ahead of the verse's
+    /// unpainted number, so the band's first box is a
+    /// full-height one (REQ-AP-20).
     private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
         var join = AttributedString(" ")
         if target.verses.contains(next) {
@@ -2592,17 +2589,21 @@ private struct ReferenceChapterView: View {
     }
 
     /// A referenced verse wears the reader's selection blue
-    /// over the whole verse — its number, the spaces around
-    /// the number, and its text — the treatment a selected
-    /// verse gets in the reader (REQ-AP-20, REQ-VP-1), so
+    /// (REQ-AP-20, REQ-VP-1), painted as one range from the
+    /// space after the verse's number through its text, so
     /// consecutive referenced verses read as one band. The
-    /// blue is painted as one range over the whole verse:
-    /// setting it on the string as a whole leaves runs in
-    /// another font — the bold red-letter spans — in their
-    /// own smaller boxes, with a gap after them.
+    /// number itself is not painted: smaller and raised, it
+    /// draws any background at its own shifted metrics —
+    /// stepped against the band or protruding above it,
+    /// both seen on device — so the band starts ahead of
+    /// it (paragraphJoin paints the space before a
+    /// referenced verse) and runs from the separator on.
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        attr[attr.startIndex..<attr.endIndex].backgroundColor =
+        let numberLength = "\(verse) ".count
+        guard attr.characters.count > numberLength else { return }
+        let start = attr.index(attr.startIndex, offsetByCharacters: numberLength)
+        attr[start..<attr.endIndex].backgroundColor =
             UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
@@ -2614,8 +2615,15 @@ private struct ReferenceChapterView: View {
             : UIColor(red: 0.76, green: 0.09, blue: 0.07, alpha: 1)
     })
 
-    /// Paints the verse's Jesus-speech spans red and bold
-    /// (REQ-RL-3), in the reader's span coordinates.
+    /// Paints the verse's Jesus-speech spans red
+    /// (REQ-RL-3), in the reader's span coordinates. Color
+    /// only — no bold in this view: a run carrying its own
+    /// font draws its background at that font's metrics, so
+    /// a bold span inside a referenced verse's blue band
+    /// renders in a smaller inset box with a gap after it
+    /// (device-verified); with no font of its own, the span
+    /// takes the band's full height like the rest of the
+    /// verse.
     private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
         guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
         let prefix = "\(verse) ".count + 1
@@ -2626,7 +2634,6 @@ private struct ReferenceChapterView: View {
             let r = attr.index(attr.startIndex, offsetByCharacters: start)
                 ..< attr.index(attr.startIndex, offsetByCharacters: end)
             attr[r].foregroundColor = Self.redLetterColor
-            attr[r].font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
         }
     }
 }
