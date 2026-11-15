@@ -2335,15 +2335,11 @@ private struct ReferenceChapterView: View {
                                             if let heading = headings[v.verse] {
                                                 headingRow(heading)
                                             }
-                                            ZStack(alignment: .topLeading) {
-                                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens, overlay: false))
-                                                Text(attributedVerseTokens(number: v.verse, tokens: v.tokens, overlay: true))
-                                                    .accessibilityHidden(true)
-                                            }
-                                            .id(v.verse)
-                                            .font(.system(size: personalData.fontSize, design: .serif))
-                                            .lineSpacing(6)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            Text(attributedVerseTokens(number: v.verse, tokens: v.tokens))
+                                                .id(v.verse)
+                                                .font(.system(size: personalData.fontSize, design: .serif))
+                                                .lineSpacing(6)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
                                         }
                                     }
                                 } else {
@@ -2352,15 +2348,11 @@ private struct ReferenceChapterView: View {
                                             if let heading = headings[v.verse] {
                                                 headingRow(heading)
                                             }
-                                            ZStack(alignment: .topLeading) {
-                                                Text(attributedVerse(number: v.verse, text: v.text, overlay: false))
-                                                Text(attributedVerse(number: v.verse, text: v.text, overlay: true))
-                                                    .accessibilityHidden(true)
-                                            }
-                                            .id(v.verse)
-                                            .font(.system(size: personalData.fontSize, design: .serif))
-                                            .lineSpacing(6)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            Text(attributedVerse(number: v.verse, text: v.text))
+                                                .id(v.verse)
+                                                .font(.system(size: personalData.fontSize, design: .serif))
+                                                .lineSpacing(6)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
                                         }
                                     }
                                 }
@@ -2376,14 +2368,10 @@ private struct ReferenceChapterView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            ZStack(alignment: .topLeading) {
-                                Text(useStrongs ? attributedParagraphTokens(overlay: false) : attributedParagraph(overlay: false))
-                                Text(useStrongs ? attributedParagraphTokens(overlay: true) : attributedParagraph(overlay: true))
-                                    .accessibilityHidden(true)
-                            }
-                            .font(.system(size: personalData.fontSize, design: .serif))
-                            .lineSpacing(6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(useStrongs ? attributedParagraphTokens() : attributedParagraph())
+                                .font(.system(size: personalData.fontSize, design: .serif))
+                                .lineSpacing(6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 // Invisible ladder of 20 equal slices
                                 // spanning the text's height: paragraph
                                 // mode has no per-verse anchors, so the
@@ -2438,6 +2426,12 @@ private struct ReferenceChapterView: View {
                     strongsKey = key
                     return .handled
                 }
+                // The verse:// links are rendering structure
+                // (see applyVerseLink), not navigation: a tap
+                // on the text does nothing.
+                if url.scheme == "verse" {
+                    return .handled
+                }
                 return .systemAction
             })
             .sheet(isPresented: Binding(
@@ -2489,61 +2483,64 @@ private struct ReferenceChapterView: View {
         return run
     }
 
-    /// A section heading in the overlay layer: the base
-    /// heading's exact run with its color cleared, so the
-    /// overlay lays out identically and shows nothing.
-    private func clearedHeading(_ heading: String) -> AttributedString {
-        var run = attributedHeading(heading)
-        run.foregroundColor = .clear
-        return run
-    }
-
-    /// One verse, in one of the sheet's two layers. The
-    /// base layer carries the referenced band and no
-    /// red-letter runs; the overlay layer is the same
-    /// string with every color cleared and the red letters
-    /// painted on top of the clear, so the two render
-    /// glyph-for-glyph over each other. The split exists
-    /// because a colored run's background is drawn trimmed
-    /// at the run's trailing edge — inside the band, a
-    /// Jesus-speech span left a dark gap before the text
-    /// after it (device-verified) — while a background on
-    /// a run-free stretch of text draws unbroken, and a
-    /// colored run with no background shows no box at all.
-    private func attributedVerse(number: Int, text: String, overlay: Bool) -> AttributedString {
+    private func attributedVerse(number: Int, text: String) -> AttributedString {
         var out = attributedVerseNumber(number)
         out += AttributedString(" ")
         out += AttributedString(text)
-        if overlay {
-            out.foregroundColor = .clear
-            applyRedLetters(to: &out, verse: number)
-        } else {
-            applyReferencedHighlight(to: &out, verse: number)
-        }
+        applyVerseLink(to: &out, verse: number)
+        applyRedLetters(to: &out, verse: number)
+        applyReferencedHighlight(to: &out, verse: number)
         return out
+    }
+
+    /// The reader's applyVerseLink, verbatim — a verse://
+    /// link and an empty underline style on every run, plus
+    /// .primary on any run without a color of its own. The
+    /// link is load-bearing for rendering, not navigation:
+    /// runs that share a link draw their background as one,
+    /// so a referenced verse's band runs unbroken across
+    /// its red-letter spans, across line wraps, and over
+    /// its number — without it the band breaks at a red
+    /// span's trailing edge and at a number standing alone
+    /// at a line's end (device-verified). Taps on the link
+    /// are absorbed by this view's openURL action.
+    private func applyVerseLink(to attr: inout AttributedString, verse: Int) {
+        let url = URL(string: "verse://\(verse)")
+        struct Item { let range: Range<AttributedString.Index>; let hasColor: Bool }
+        let items = attr.runs.compactMap { run -> Item? in
+            guard run.link == nil else { return nil }
+            return Item(range: run.range, hasColor: run.foregroundColor != nil)
+        }
+        for item in items {
+            attr[item.range].link = url
+            attr[item.range].underlineStyle = []
+            if !item.hasColor {
+                attr[item.range].foregroundColor = .primary
+            }
+        }
     }
 
     /// Whole chapter as one flowing paragraph (paragraph
     /// mode), headings breaking the flow as in the reader.
-    private func attributedParagraph(overlay: Bool) -> AttributedString {
+    private func attributedParagraph() -> AttributedString {
         var out = AttributedString("")
         for (i, v) in verses.enumerated() {
             if let heading = headings[v.verse] {
                 if i > 0 { out += AttributedString("\n\n") }
-                out += overlay ? clearedHeading(heading) : attributedHeading(heading)
+                out += attributedHeading(heading)
                 out += AttributedString("\n")
-            } else if i > 0 { out += overlay ? AttributedString(" ") : paragraphJoin(after: verses[i - 1].verse, before: v.verse) }
-            out += attributedVerse(number: v.verse, text: v.text, overlay: overlay)
+            } else if i > 0 { out += paragraphJoin(after: verses[i - 1].verse, before: v.verse) }
+            out += attributedVerse(number: v.verse, text: v.text)
         }
         return out
     }
 
     /// One Strong's number as small raised blue underlined
     /// linked text, exactly as the reader renders it.
-    private func attributedStrongsNumber(_ key: String, overlay: Bool = false) -> AttributedString {
+    private func attributedStrongsNumber(_ key: String) -> AttributedString {
         var num = AttributedString(" \(key)")
         num.font = .system(size: personalData.fontSize * 0.55, design: .serif)
-        num.foregroundColor = overlay ? .clear : .blue
+        num.foregroundColor = .blue
         num.baselineOffset = personalData.fontSize * 0.22
         num.underlineStyle = .single
         num.link = URL(string: "strongs://\(key)")
@@ -2553,40 +2550,36 @@ private struct ReferenceChapterView: View {
     /// Verse text from word tokens, with Strong's numbers
     /// after the segment they belong to and Jesus's speech
     /// red and bold, as in the reader.
-    private func attributedVerseTokens(number: Int, tokens: [WordToken], overlay: Bool) -> AttributedString {
+    private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
         var out = attributedVerseNumber(number)
-        if overlay { out.foregroundColor = .clear }
         out += AttributedString(" ")
         for token in tokens {
             var seg = AttributedString(token.text)
             if personalData.showRedLetters, token.isJesusSpeech {
-                if overlay {
-                    seg.foregroundColor = Self.redLetterColor
-                    seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
-                }
-            } else if overlay {
-                seg.foregroundColor = .clear
+                seg.foregroundColor = Self.redLetterColor
+                seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
             }
             out += seg
             for key in token.strongs {
-                out += attributedStrongsNumber(key, overlay: overlay)
+                out += attributedStrongsNumber(key)
             }
         }
-        if !overlay { applyReferencedHighlight(to: &out, verse: number) }
+        applyVerseLink(to: &out, verse: number)
+        applyReferencedHighlight(to: &out, verse: number)
         return out
     }
 
     /// Whole chapter as one flowing paragraph from word
     /// tokens, headings breaking the flow as in the reader.
-    private func attributedParagraphTokens(overlay: Bool) -> AttributedString {
+    private func attributedParagraphTokens() -> AttributedString {
         var out = AttributedString("")
         for (i, v) in verseTokens.enumerated() {
             if let heading = headings[v.verse] {
                 if i > 0 { out += AttributedString("\n\n") }
-                out += overlay ? clearedHeading(heading) : attributedHeading(heading)
+                out += attributedHeading(heading)
                 out += AttributedString("\n")
-            } else if i > 0 { out += overlay ? AttributedString(" ") : paragraphJoin(after: verseTokens[i - 1].verse, before: v.verse) }
-            out += attributedVerseTokens(number: v.verse, tokens: v.tokens, overlay: overlay)
+            } else if i > 0 { out += paragraphJoin(after: verseTokens[i - 1].verse, before: v.verse) }
+            out += attributedVerseTokens(number: v.verse, tokens: v.tokens)
         }
         return out
     }
@@ -2616,37 +2609,28 @@ private struct ReferenceChapterView: View {
     }
 
     /// The space joining two verses in a paragraph: painted
-    /// with the selection blue when both neighbors are
-    /// referenced, so consecutive referenced verses read
-    /// as one band around the second verse's unpainted
-    /// number (REQ-VP-1, REQ-AP-20). Before the first
-    /// referenced verse it stays unpainted: painted, it
-    /// strands at a line's end as a stray blue tick ahead
-    /// of the number when the number wraps (device-
-    /// verified).
+    /// with the selection blue whenever the following verse
+    /// is referenced. Between two referenced verses it joins
+    /// the band (REQ-VP-1); before the first referenced
+    /// verse it starts the band ahead of the verse's
+    /// unpainted number, so the band's first box is a
+    /// full-height one (REQ-AP-20).
     private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
         var join = AttributedString(" ")
-        if target.verses.contains(previous) && target.verses.contains(next) {
+        if target.verses.contains(next) {
             join.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
         }
         return join
     }
 
     /// A referenced verse wears the reader's selection blue
-    /// (REQ-AP-20, REQ-VP-1), painted as one range from the
-    /// space after the verse's number through its text, so
-    /// consecutive referenced verses read as one band. The
-    /// number itself is not painted: smaller and raised, it
-    /// draws any background at its own shifted metrics —
-    /// stepped against the band or protruding above it,
-    /// both seen on device — so the band runs from the
-    /// separator on, the number ahead of it unpainted.
+    /// (REQ-AP-20, REQ-VP-1), painted as one range over the
+    /// whole verse, its number included, so consecutive
+    /// referenced verses read as one band.
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        let numberLength = "\(verse) ".count
-        guard attr.characters.count > numberLength else { return }
-        let start = attr.index(attr.startIndex, offsetByCharacters: numberLength)
-        attr[start..<attr.endIndex].backgroundColor =
+        guard attr.characters.count > 0 else { return }
+        attr[attr.startIndex..<attr.endIndex].backgroundColor =
             UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
@@ -2659,11 +2643,7 @@ private struct ReferenceChapterView: View {
     })
 
     /// Paints the verse's Jesus-speech spans red and bold
-    /// (REQ-RL-3), in the reader's span coordinates. Only
-    /// the overlay layer calls this: it carries no
-    /// background, so the spans paint no boxes of their
-    /// own and the base layer's band runs unbroken beneath
-    /// them (see attributedVerse).
+    /// (REQ-RL-3), in the reader's span coordinates.
     private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
         guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
         let prefix = "\(verse) ".count + 1
