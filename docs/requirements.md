@@ -54,7 +54,7 @@ outside SwiftUI).
   in paragraph mode the space joining it to a selected neighbor — so
   consecutive selected verses read as one band, as consecutive highlighted
   verses do (REQ-HL-2). The reference chapter sheet's referenced verses wear
-  exactly this treatment (REQ-AP-20).
+  this same treatment (REQ-AP-20).
 - **REQ-VP-2:** Tapping a selected verse again unselects it.
 - **REQ-VP-3:** Multiple verses can be selected at once.
 - **REQ-VP-4:** Selection is cleared when the testament, book, or chapter changes.
@@ -878,7 +878,18 @@ Multiple (KJV Gen 1:1-2):
   show them — but none of the reader's own marks (no
   bookmarks, highlights, or notes). Every referenced verse is
   highlighted the way a selection is highlighted in the
-  reader, scrolled so the first referenced verse is in view.
+  reader, scrolled so the first referenced verse is in view:
+  the blue covers the whole verse, its number included, and
+  the space joining it to the next referenced verse is
+  painted with the same blue, so consecutive referenced
+  verses read as one unbroken band. The sheet builds each
+  verse's string the way the reader builds it, every run
+  carrying the verse's `verse://` link (absorbed by the
+  sheet's openURL action, never acted on), because runs
+  that share a link draw their background as one — without
+  the link the band breaks at a red-letter span's trailing
+  edge and at a verse number standing alone at a line's
+  end (both device-verified).
   "Done" sits at the top-left (the cancellation action, where
   the Strong's dictionary view puts it) and dismisses back to
   the commentary; a bottom "Read More" button — a bottom-bar

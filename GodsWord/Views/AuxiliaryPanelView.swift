@@ -2426,6 +2426,12 @@ private struct ReferenceChapterView: View {
                     strongsKey = key
                     return .handled
                 }
+                // The verse:// links are rendering structure
+                // (see applyVerseLink), not navigation: a tap
+                // on the text does nothing.
+                if url.scheme == "verse" {
+                    return .handled
+                }
                 return .systemAction
             })
             .sheet(isPresented: Binding(
@@ -2481,9 +2487,37 @@ private struct ReferenceChapterView: View {
         var out = attributedVerseNumber(number)
         out += AttributedString(" ")
         out += AttributedString(text)
+        applyVerseLink(to: &out, verse: number)
         applyRedLetters(to: &out, verse: number)
         applyReferencedHighlight(to: &out, verse: number)
         return out
+    }
+
+    /// The reader's applyVerseLink, verbatim — a verse://
+    /// link and an empty underline style on every run, plus
+    /// .primary on any run without a color of its own. The
+    /// link is load-bearing for rendering, not navigation:
+    /// runs that share a link draw their background as one,
+    /// so a referenced verse's band runs unbroken across
+    /// its red-letter spans, across line wraps, and over
+    /// its number — without it the band breaks at a red
+    /// span's trailing edge and at a number standing alone
+    /// at a line's end (device-verified). Taps on the link
+    /// are absorbed by this view's openURL action.
+    private func applyVerseLink(to attr: inout AttributedString, verse: Int) {
+        let url = URL(string: "verse://\(verse)")
+        struct Item { let range: Range<AttributedString.Index>; let hasColor: Bool }
+        let items = attr.runs.compactMap { run -> Item? in
+            guard run.link == nil else { return nil }
+            return Item(range: run.range, hasColor: run.foregroundColor != nil)
+        }
+        for item in items {
+            attr[item.range].link = url
+            attr[item.range].underlineStyle = []
+            if !item.hasColor {
+                attr[item.range].foregroundColor = .primary
+            }
+        }
     }
 
     /// Whole chapter as one flowing paragraph (paragraph
@@ -2530,6 +2564,7 @@ private struct ReferenceChapterView: View {
                 out += attributedStrongsNumber(key)
             }
         }
+        applyVerseLink(to: &out, verse: number)
         applyReferencedHighlight(to: &out, verse: number)
         return out
     }
@@ -2574,27 +2609,29 @@ private struct ReferenceChapterView: View {
     }
 
     /// The space joining two verses in a paragraph: painted
-    /// with the selection blue when both neighbors are
-    /// referenced, so the band runs unbroken from the first
-    /// verse's number through the last verse's text — the
-    /// reader's own join treatment (REQ-AP-20, REQ-VP-1).
+    /// with the selection blue whenever the following verse
+    /// is referenced. Between two referenced verses it joins
+    /// the band (REQ-VP-1); before the first referenced
+    /// verse it starts the band ahead of the verse's
+    /// unpainted number, so the band's first box is a
+    /// full-height one (REQ-AP-20).
     private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
         var join = AttributedString(" ")
-        if target.verses.contains(previous),
-           target.verses.contains(next) {
+        if target.verses.contains(next) {
             join.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
         }
         return join
     }
 
     /// A referenced verse wears the reader's selection blue
-    /// over the whole verse — its number, the spaces around
-    /// the number, and its text — the treatment a selected
-    /// verse gets in the reader (REQ-AP-20, REQ-VP-1), so
-    /// consecutive referenced verses read as one band.
+    /// (REQ-AP-20, REQ-VP-1), painted as one range over the
+    /// whole verse, its number included, so consecutive
+    /// referenced verses read as one band.
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        guard attr.characters.count > 0 else { return }
+        attr[attr.startIndex..<attr.endIndex].backgroundColor =
+            UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
     /// Red-letter color (REQ-RL-3): deep red on light
