@@ -2481,9 +2481,33 @@ private struct ReferenceChapterView: View {
         var out = attributedVerseNumber(number)
         out += AttributedString(" ")
         out += AttributedString(text)
+        applyVerseLink(to: &out, verse: number)
         applyRedLetters(to: &out, verse: number)
         applyReferencedHighlight(to: &out, verse: number)
         return out
+    }
+
+    /// DIAGNOSTIC 2 (diag/sheet-link-mirror): the reader's
+    /// applyVerseLink, verbatim — a verse:// link and an
+    /// empty underline style on every run, plus .primary
+    /// on any run without a color of its own. Diagnostic 1
+    /// (.primary alone) left the band's gap unchanged, so
+    /// this tests the link itself: with it, the sheet's
+    /// verse string is attribute-identical to the reader's.
+    private func applyVerseLink(to attr: inout AttributedString, verse: Int) {
+        let url = URL(string: "verse://\(verse)")
+        struct Item { let range: Range<AttributedString.Index>; let hasColor: Bool }
+        let items = attr.runs.compactMap { run -> Item? in
+            guard run.link == nil else { return nil }
+            return Item(range: run.range, hasColor: run.foregroundColor != nil)
+        }
+        for item in items {
+            attr[item.range].link = url
+            attr[item.range].underlineStyle = []
+            if !item.hasColor {
+                attr[item.range].foregroundColor = .primary
+            }
+        }
     }
 
     /// Whole chapter as one flowing paragraph (paragraph
@@ -2522,8 +2546,8 @@ private struct ReferenceChapterView: View {
         for token in tokens {
             var seg = AttributedString(token.text)
             if personalData.showRedLetters, token.isJesusSpeech {
+                // Color only, no bold — see applyRedLetters.
                 seg.foregroundColor = Self.redLetterColor
-                seg.font = .system(size: personalData.fontSize, design: .serif).weight(.bold)
             }
             out += seg
             for key in token.strongs {
@@ -2574,27 +2598,35 @@ private struct ReferenceChapterView: View {
     }
 
     /// The space joining two verses in a paragraph: painted
-    /// with the selection blue when both neighbors are
-    /// referenced, so the band runs unbroken from the first
-    /// verse's number through the last verse's text — the
-    /// reader's own join treatment (REQ-AP-20, REQ-VP-1).
+    /// with the selection blue whenever the following verse
+    /// is referenced. Between two referenced verses it joins
+    /// the band (REQ-VP-1); before the first referenced
+    /// verse it starts the band ahead of the verse's
+    /// unpainted number, so the band's first box is a
+    /// full-height one (REQ-AP-20).
     private func paragraphJoin(after previous: Int, before next: Int) -> AttributedString {
         var join = AttributedString(" ")
-        if target.verses.contains(previous),
-           target.verses.contains(next) {
+        if target.verses.contains(next) {
             join.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
         }
         return join
     }
 
-    /// A referenced verse wears the reader's selection blue
-    /// over the whole verse — its number, the spaces around
-    /// the number, and its text — the treatment a selected
-    /// verse gets in the reader (REQ-AP-20, REQ-VP-1), so
-    /// consecutive referenced verses read as one band.
+    /// DIAGNOSTIC 3 (diag/sheet-link-painted): a referenced
+    /// verse wears the reader's selection blue (REQ-AP-20,
+    /// REQ-VP-1), painted as one range over the WHOLE
+    /// verse, number included — diagnostic 2's construction
+    /// (the reader's link on every run) with the number now
+    /// painted too. Tests whether the link's merged drawing
+    /// carries the number at the band's full height,
+    /// including the first referenced verse's number when
+    /// it sits alone at a line's end (the one case that
+    /// stepped on PR #116; in-between numbers were fine).
     private func applyReferencedHighlight(to attr: inout AttributedString, verse: Int) {
         guard target.verses.contains(verse) else { return }
-        attr.backgroundColor = UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
+        guard attr.characters.count > 0 else { return }
+        attr[attr.startIndex..<attr.endIndex].backgroundColor =
+            UIColor(red: 0.53, green: 0.81, blue: 0.98, alpha: 0.55)
     }
 
     /// Red-letter color (REQ-RL-3): deep red on light
@@ -2606,7 +2638,8 @@ private struct ReferenceChapterView: View {
     })
 
     /// Paints the verse's Jesus-speech spans red and bold
-    /// (REQ-RL-3), in the reader's span coordinates.
+    /// (REQ-RL-3), in the reader's span coordinates —
+    /// reader-identical on this diagnostic branch.
     private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
         guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
         let prefix = "\(verse) ".count + 1
