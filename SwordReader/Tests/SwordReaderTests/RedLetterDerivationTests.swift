@@ -155,6 +155,69 @@ final class RedLetterDerivationTests: XCTestCase {
         XCTAssertTrue(out.isEmpty)
     }
 
+    // MARK: Nested quotations (REQ-RL-6)
+
+    func testBracketNestedRequotationPaintsOnlyTheSaying() {
+        // Acts 11:16 in ChiUns: Peter, inside his own speech
+        // (the parity seed), quotes a saying of Jesus in 『…』.
+        // The KJV truth tags only the saying ([58, 136) of its
+        // verse), so the frame must not paint for its sake.
+        let text = "我就想起主的话说：『约翰是用水施洗，但你们要受圣灵的洗。』"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(58, 136)], length: 136)],
+            startsInside: [1: true], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[9, 29]])
+    }
+
+    func testBracketFrameSpeechKeptWhenSourceStartsBeforeQuote() {
+        // Luke 4:4 in ChiUns: Jesus quotes Scripture in 『…』
+        // inside his own 「…」 reply. The NASB truth's speech
+        // begins before the quotation ("It is written"), so the
+        // whole reply is his and paints whole.
+        let text = "耶稣回答说：「经上记着说：『人活着不是单靠食物，乃是靠 神口里所出的一切话。』」"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(24, 77)], length: 77)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[6, 40]])
+    }
+
+    func testBracketUntaggedInnerQuotationCarvedOut() {
+        // The source tags the outer speech around a quotation it
+        // leaves untagged: the frame paints, the quotation does
+        // not.
+        let text = "「主說：『你要小心那假先知。』你們要謹慎儆醒。」"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(0, 4), (15, 24)], length: 24)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[0, 4], [15, 24]])
+    }
+
+    func testToggleSingleQuotedSayingPaints() {
+        // A saying delimited only by single quotes — a quotation
+        // inside the narration — is located and painted when the
+        // source attributes it.
+        let text = "Then I remembered the word of the Lord, how He said, 'John baptized with water, but you shall be baptized with the Holy Spirit.'"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(58, 136)], length: 137)],
+            startsInside: [:], mode: .toggleQuotes)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[53, 128]])
+    }
+
+    func testToggleApostrophesDoNotDelimit() {
+        // Apostrophes inside words (Don't, Lord's) open and
+        // close nothing; the double-quoted speech paints alone.
+        let text = "He said, \"Don't be afraid; the Lord's promise stands.\""
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(10, 54)], length: 54)],
+            startsInside: [:], mode: .toggleQuotes)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[9, 54]])
+    }
+
     // MARK: Merge
 
     func testMergePrimaryWinsFallbackFills() {
