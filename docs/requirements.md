@@ -1154,7 +1154,10 @@ Multiple (KJV Gen 1:1-2):
   every span audited against ChiUns's own quotation delimiters
   (Nov 4–5, 2026) — and never relies on a private version. The
   audit is strict, under the rule of REQ-RL-5: an attribution it
-  could not make with confidence is left unpainted.
+  could not make with confidence is left unpainted. Amended
+  Nov 16, 2026 under REQ-RL-6 (nested quotations): fifteen
+  verses corrected or added where a 『…』 re-quotation had
+  distorted the span; every other span unchanged.
   A module's own markup always takes precedence: the artifact
   answers only where the markup is silent, and a version with
   neither markup nor artifact coverage falls to REQ-RL-5.
@@ -1198,6 +1201,28 @@ Multiple (KJV Gen 1:1-2):
   span); 2,018 ChiUns verses ship, with Revelation's spans
   quote-aligned on the verses' own texts (pinned in
   RedLetterArtifactTests).
+- **REQ-RL-6:** A quotation inside a quotation is attributed
+  on its own (nested quotations, Nov 16, 2026). Versions
+  delimit the second level too — 『…』 inside 「…」, single
+  quotes ('…' or ‘…’) inside "…" — and the REQ-RL-5 transfer
+  segments both levels; a nested segment is judged on its own
+  fractions, like any segment. A segment containing an
+  accepted nested quotation is judged on its exclusive part
+  (its range minus the nested ranges) only when the source's
+  speech begins well inside that quotation — another
+  speaker's speech carrying a saying of Jesus (Peter in
+  Acts 11:16, Paul in Acts 20:35): the frame then paints only
+  when the source attributes at least half of the frame
+  itself. When the source's speech begins at or before the
+  quotation — Jesus quoting Scripture inside his own speech
+  (Luke 4:4) — the segment is judged whole. An accepted
+  segment paints its range minus any nested segment the
+  source attributes less than a quarter of (a quotation the
+  speech makes but the source does not tag). An apostrophe
+  inside a word never delimits. Derived tables saved by an
+  earlier transfer revision are re-derived: the revision
+  rides in the derivation signature, so a rule change never
+  serves stale spans.
 
 ## 20. Parallel view
 

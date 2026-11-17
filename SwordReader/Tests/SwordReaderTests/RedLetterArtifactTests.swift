@@ -60,6 +60,29 @@ final class RedLetterArtifactTests: XCTestCase {
         XCTAssertFalse(ch1.isEmpty)
     }
 
+    /// REQ-RL-6 (Nov 16, 2026): a saying of Jesus quoted inside
+    /// another speaker's speech paints only between its 『…』
+    /// marks — Acts 11:16 (Peter quoting the Lord; the table
+    /// formerly painted the whole verse) — and sayings the
+    /// audit had left unpainted inside a frame are covered:
+    /// Acts 20:35 (Paul), Acts 22:8 (the voice from heaven,
+    /// recounted by Paul; Paul's own question in the same verse
+    /// stays unpainted).
+    func testNestedQuotationSpans() {
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Acts",
+                                    chapter: 11, verse: 16).map { [$0.start, $0.end] },
+            [[9, 29]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Acts",
+                                    chapter: 20, verse: 35).map { [$0.start, $0.end] },
+            [[41, 51]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Acts",
+                                    chapter: 22, verse: 8).map { [$0.start, $0.end] },
+            [[17, 34]])
+    }
+
     /// Regression (Nov 6, 2026): Revelation spans must be
     /// computed on Revelation's own texts. An earlier artifact
     /// build read ChiUns's Jude + Revelation entries shifted by
