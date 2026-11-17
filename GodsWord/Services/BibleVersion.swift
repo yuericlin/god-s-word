@@ -284,7 +284,11 @@ private actor RedLetterDerivationService {
         // Jesus's speech is a New Testament record; the bundled
         // truth covers nothing elsewhere.
         guard testament == 2 else { return [:] }
-        let signature = "bundled:" + RedLetterTruth.sourceIDs.joined(separator: ",")
+        // The derivation revision rides in the signature: a
+        // transfer-rule change (REQ-RL-6, Nov 16, 2026) must
+        // re-derive books an earlier revision already saved, not
+        // serve their stale spans.
+        let signature = "bundled:rl2:" + RedLetterTruth.sourceIDs.joined(separator: ",")
         let key = "\(version.id)|\(testament).\(book)"
         // Private imports are fingerprinted from their live text
         // (already in memory); module versions key by id.
