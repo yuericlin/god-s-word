@@ -1009,6 +1009,12 @@ Multiple (KJV Gen 1:1-2):
   last reading so the next book opened uses it. A **Download a
   New Version…** button opens the Add Bible page
   (`RepositoryView`), and the list refreshes when it closes.
+  An **Import a private Bible…** row — the Library import's
+  label and icon — sits under it: it opens a file picker for
+  `.json`/`.json.gz`, validates the file and saves it into the
+  built-in Private source exactly as the Library's import
+  does, with the same "Import failed" alerts, and the list
+  refreshes so the imported version appears on this page.
 - **REQ-LG-4:** The Languages page works like the version
   pickers (REQ-LG-3): it opens on the current selection only
   and fetches nothing — a **Selected** list ("All languages"

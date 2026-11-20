@@ -475,6 +475,8 @@ struct CurrentVersionPicker: View {
     @State private var versions: [BibleVersion] = []
     @State private var currentID = ""
     @State private var showingDownload = false
+    @State private var showingImporter = false
+    @State private var importError: String?
 
     var body: some View {
         List {
@@ -507,6 +509,11 @@ struct CurrentVersionPicker: View {
             }
             Section {
                 Button("Download a New Version…") { showingDownload = true }
+                Button {
+                    showingImporter = true
+                } label: {
+                    Label("Import a private Bible…", systemImage: "square.and.arrow.down")
+                }
             } footer: {
                 Text("New versions download from the Add Bible page, the same repositories the Library uses.")
             }
@@ -522,6 +529,19 @@ struct CurrentVersionPicker: View {
             versions = BibleVersion.allInstalled(in: store)
         }) {
             RepositoryView()
+        }
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: [.json, .gzip]) { result in
+            importPrivateBible(result)
+        }
+        .alert("Import failed", isPresented: Binding(
+            get: { importError != nil },
+            set: { if !$0 { importError = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(importError ?? "")
         }
     }
 
@@ -547,6 +567,44 @@ struct CurrentVersionPicker: View {
             personalData.saveLastReading(moduleID: version.id,
                                          testament: 1, book: 1, chapter: 1)
         }
+    }
+
+    /// Import a private Bible JSON (.json or .json.gz) into the
+    /// built-in Private source — the Library import's flow
+    /// (REQ-LG-3), offered here so a private version can be added
+    /// without leaving this page.
+    private func importPrivateBible(_ result: Result<URL, Error>) {
+        let url: URL
+        switch result {
+        case .success(let u): url = u
+        case .failure(let e):
+            importError = e.localizedDescription
+            return
+        }
+        let source = BibleSourceStore.shared.source(withID: BibleSource.`private`.id)
+            ?? BibleSource.`private`
+        guard let dir = source.resolvedFolder else {
+            importError = "That source has no folder."
+            return
+        }
+        guard url.startAccessingSecurityScopedResource() else {
+            importError = "Couldn't open the file."
+            return
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let bible = PrivateBibleStore.load(from: url) else {
+            importError = "That file isn't a valid private Bible JSON."
+            return
+        }
+        let scoped = source.needsSecurityScope && dir.startAccessingSecurityScopedResource()
+        defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
+        do {
+            try PrivateBibleStore.save(bible, into: dir)
+        } catch {
+            importError = error.localizedDescription
+            return
+        }
+        versions = BibleVersion.allInstalled(in: store)
     }
 }
 
