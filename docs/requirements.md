@@ -176,7 +176,7 @@ Multiple (KJV Gen 1:1-2):
   label, and nothing under the note. The times
   travel with the notes: UserDefaults, payload v8, iCloud files, and
   manual export/import.
-- **REQ-NT-18:** The Notes tab has four sub-tabs, in this order:
+- **REQ-NT-18:** The Notes tab has three sub-tabs, in this order:
   **Recents** — every note, from any version (REQ-NT-19), from any
   book, most recently updated first (REQ-NT-17 times; notes without
   times fall back to the verse-note order); **Book** — every note
@@ -184,8 +184,8 @@ Multiple (KJV Gen 1:1-2):
   in reading order); **Chapter** — every note in the active
   chapter (the chapter note, then verse notes by verse; the legacy
   verse-1 presentation of REQ-NT-16 still applies and is not
-  repeated as a verse row); **Verse** — the note on the selected
-  verse (the first selected verse for multi-verse selections). No
+  repeated as a verse row). (The Verse sub-tab was removed on
+  Nov 21, 2026; verse notes still appear in the other lists.) No
   sub-tab is scoped to the version being read. A sub-tab is shown
   only when it
   has notes; when the selected sub-tab becomes empty (e.g. after
@@ -235,7 +235,7 @@ Multiple (KJV Gen 1:1-2):
 
 ---
 
-- **REQ-NT-21:** Tapping a note row in the Notes tab's lists — the title line (reference, source, date) or the note text alike — opens its editor; rows never navigate. The Verse sub-tab's scoped note likewise has no Add/Edit button: tapping its text (or its empty state) opens the editor. The note editor — one editor serves verse, chapter, and book notes — only edits: the reference is its title, never a jump target. Instead, an editor carries a blue **Read** button beside Cancel at the top left of its toolbar: it dismisses the editor and moves the reader to the note's chapter in the version being read — for a verse note, landing on the verse itself (the reader selects it and scrolls it into view, exactly in verse-by-verse reading, approximately in paragraph mode, per REQ-AP-20); a book note lands on its book's first chapter. The one exception: the chapter-note editor opened from the reader for the chapter already on screen shows no Read button — it is already there. (Supersedes the earlier title-line/title-tap jump design.)
+- **REQ-NT-21:** Tapping a note row in the Notes tab's lists — the title line (reference, source, date) or the note text alike — opens its editor; rows never navigate. The note editor — one editor serves verse, chapter, and book notes — only edits: the reference is its title, never a jump target. Instead, an editor carries a blue **Read** button beside Cancel at the top left of its toolbar: it dismisses the editor and moves the reader to the note's chapter in the version being read — for a verse note, landing on the verse itself (the reader selects it and scrolls it into view, exactly in verse-by-verse reading, approximately in paragraph mode, per REQ-AP-20); a book note lands on its book's first chapter. The one exception: the chapter-note editor opened from the reader for the chapter already on screen shows no Read button — it is already there. (Supersedes the earlier title-line/title-tap jump design.)
 ## 4. Bookmarks panel
 
 ### Sections
@@ -705,11 +705,9 @@ Multiple (KJV Gen 1:1-2):
   panel's total height (control row plus content) is the Panel
   height setting's share of the reader view's total height
   (REQ-AP-22), not a fixed point size.
-- **REQ-AP-2:** The Notes tab has **Book / Chapter / Verse** sub-tabs.
-  Each shows the scoped note for the book / chapter / selected verse
-  being read (REQ-NT-14) with an Add/Edit action opening the note
-  editor. The Verse sub-tab anchors at the lowest selected verse
-  (verse 1 when nothing is selected).
+- **REQ-AP-2:** (Superseded by REQ-NT-18.) The Notes tab's sub-tabs
+  are the Recents / Book / Chapter set REQ-NT-18 defines; the
+  earlier scoped-note sub-tabs (including Verse) no longer exist.
 - **REQ-AP-3:** The Commentary tab has the same **Book / Chapter /
   Verse** sub-tabs, showing the chosen commentary's content at that
   scope for the passage being read.
@@ -1099,13 +1097,12 @@ Multiple (KJV Gen 1:1-2):
   keeps the earliest entry's time and version
   (`HighlightLogic.adding`, unit-tested).
 - **REQ-HL-4:** The auxiliary panel has a **Highlights** tab
-  after Recents, with three sub-tabs in the Notes tab's
+  after Recents, with two sub-tabs in the Notes tab's
   pattern (REQ-NT-18): **Recents** lists every highlight in
   reverse creation order (newest first); **Book** shows the
   active book's highlights grouped by chapter, ordered by
-  verse within a chapter (`HighlightLogic.bookGroups`);
-  **Chapter** shows only the active chapter's highlights,
-  ordered by verse (`HighlightLogic.chapterHighlights`). A
+  verse within a chapter (`HighlightLogic.bookGroups`).
+  (The Chapter sub-tab was removed on Nov 21, 2026.) A
   sub-tab appears only when it has highlights to show
   (`HighlightsTabLogic`, unit-tested); with no highlights at
   all the tab shows its empty state. Every row shows the

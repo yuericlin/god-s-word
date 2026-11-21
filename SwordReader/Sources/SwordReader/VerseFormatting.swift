@@ -374,17 +374,6 @@ public enum HighlightLogic {
         }
     }
 
-    /// One chapter's highlights ordered by verse (REQ-HL-4) —
-    /// the Highlights tab's Chapter sub-tab.
-    public static func chapterHighlights(in list: [Highlight],
-                                         testament: Int, book: Int,
-                                         chapter: Int) -> [Highlight] {
-        list.filter { $0.isAt(testament: testament, book: book,
-                              chapter: chapter) }
-            .sorted { ($0.startVerse, $0.endVerse)
-                        < ($1.startVerse, $1.endVerse) }
-    }
-
     /// The contiguous runs of a verse set: {1, 2, 3, 5} becomes
     /// [1...3, 5...5]. A verse selection becomes one highlight
     /// per run.
@@ -410,19 +399,17 @@ public enum HighlightLogic {
 
 /// The Highlights tab's sub-tabs, in bar order (REQ-HL-4):
 /// Recents (newest first), Book (the active book's highlights
-/// grouped by chapter), Chapter (the active chapter's only).
+/// grouped by chapter).
 /// Mirrors the Notes tab's sub-tab model (NotesTabLogic).
 public enum HighlightsSubTab: Int, CaseIterable, Sendable {
     case recents = 0
     case book
-    case chapter
 
     /// Segment label in the sub-tab bar.
     public var label: String {
         switch self {
         case .recents: return "Recents"
         case .book: return "Book"
-        case .chapter: return "Chapter"
         }
     }
 }
@@ -432,19 +419,16 @@ public enum HighlightsTabLogic {
     public struct Availability: Equatable, Sendable {
         public var recents: Bool
         public var book: Bool
-        public var chapter: Bool
 
-        public init(recents: Bool, book: Bool, chapter: Bool) {
+        public init(recents: Bool, book: Bool) {
             self.recents = recents
             self.book = book
-            self.chapter = chapter
         }
 
         public func hasHighlights(for tab: HighlightsSubTab) -> Bool {
             switch tab {
             case .recents: return recents
             case .book: return book
-            case .chapter: return chapter
             }
         }
     }
