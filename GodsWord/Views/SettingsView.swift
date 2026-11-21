@@ -460,11 +460,26 @@ struct ShareSheet: UIViewControllerRepresentable {
                                 context: Context) {}
 }
 
+/// One source section on the Current Version page: its versions
+/// grouped by language — the Library's grouping (REQ-LG-3).
+private struct SourceGroup: Identifiable {
+    let source: BibleSource
+    var id: String { source.id }
+    let languages: [LanguageGroup]
+}
+
+/// One language's versions, alphabetically sorted.
+private struct LanguageGroup: Identifiable {
+    let id: String          // language code
+    let title: String       // "English" / "中文" / …
+    let versions: [BibleVersion]
+}
+
 /// Settings > Bible version > Current version (REQ-LG-3): pick
-/// the version being read from the installed versions, or
-/// download a new one. Mirrors CommentaryModulePicker —
-/// checkmarked rows plus a download button opening the
-/// repository page, the list refreshed when the page closes.
+/// the version being read from the installed versions, grouped
+/// by source and language like the Library, or download a new
+/// one. The list refreshes when the download page closes and
+/// after an import.
 struct CurrentVersionPicker: View {
     /// The live reading to switch in place; nil on a fresh
     /// launch, where the pick updates the saved last reading.
@@ -472,38 +487,40 @@ struct CurrentVersionPicker: View {
 
     @EnvironmentObject private var personalData: PersonalData
     @Environment(\.moduleStore) private var store
-    @State private var versions: [BibleVersion] = []
+    @State private var groups: [SourceGroup] = []
     @State private var currentID = ""
     @State private var showingDownload = false
+    @State private var showingImporter = false
+    @State private var importTarget: BibleSource?
+    @State private var importError: String?
 
     var body: some View {
         List {
-            Section {
-                ForEach(versions) { version in
-                    Button {
-                        pick(version)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(version.shortLabel)
-                                    .foregroundStyle(.primary)
-                                if version.displayName != version.shortLabel {
-                                    Text(version.displayName)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer()
-                            if currentID == version.id {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.tint)
-                            }
+            ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+                Section {
+                    ForEach(group.languages) { lang in
+                        Text(lang.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        ForEach(lang.versions) { version in
+                            versionRow(version)
                         }
-                        .contentShape(Rectangle())
+                    }
+                    if group.source.isLocal {
+                        Button {
+                            importTarget = group.source
+                            showingImporter = true
+                        } label: {
+                            Label("Import a private Bible…", systemImage: "square.and.arrow.down")
+                        }
+                    }
+                } header: {
+                    sourceHeader(group.source)
+                } footer: {
+                    if index == 0 {
+                        Text("The version shown in the reader. Private imports appear here too.")
                     }
                 }
-            } footer: {
-                Text("The version shown in the reader. Private imports appear here too.")
             }
             Section {
                 Button("Download a New Version…") { showingDownload = true }
@@ -513,15 +530,25 @@ struct CurrentVersionPicker: View {
         }
         .navigationTitle("Current Version")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            versions = BibleVersion.allInstalled(in: store)
-            currentID = history?.version.id
-                ?? personalData.loadLastReading()?.moduleID ?? ""
-        }
-        .sheet(isPresented: $showingDownload, onDismiss: {
-            versions = BibleVersion.allInstalled(in: store)
-        }) {
+        .onAppear(perform: refresh)
+        .sheet(isPresented: $showingDownload, onDismiss: refresh) {
             RepositoryView()
+        }
+        .fileImporter(
+            isPresented: $showingImporter,
+            allowedContentTypes: [.json, .gzip]) { result in
+            if let target = importTarget {
+                importPrivateBible(result, into: target)
+            }
+            importTarget = nil
+        }
+        .alert("Import failed", isPresented: Binding(
+            get: { importError != nil },
+            set: { if !$0 { importError = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(importError ?? "")
         }
     }
 
@@ -547,6 +574,121 @@ struct CurrentVersionPicker: View {
             personalData.saveLastReading(moduleID: version.id,
                                          testament: 1, book: 1, chapter: 1)
         }
+    }
+
+    /// Rebuild the source groups the way the Library does
+    /// (REQ-LG-3): repository sources contribute their downloaded
+    /// modules, local sources their private Bibles.
+    private func refresh() {
+        let sourceStore = BibleSourceStore.shared
+        let installed = store.installedModules()
+        var newGroups: [SourceGroup] = []
+        for source in sourceStore.allSources {
+            let versions: [BibleVersion]
+            switch source.kind {
+            case .repository:
+                versions = installed
+                    .filter { sourceStore.sourceID(forModule: $0.id) == source.id }
+                    .filter { !$0.info.isCommentary && !$0.info.isDictionary }
+                    .map(BibleVersion.sword)
+            case .appFolder, .folder:
+                versions = loadPrivateBibles(from: source).map(BibleVersion.private)
+            }
+            newGroups.append(makeGroup(source: source, versions: versions))
+        }
+        groups = newGroups
+        currentID = history?.version.id
+            ?? personalData.loadLastReading()?.moduleID ?? ""
+    }
+
+    /// Private Bibles in a local source's folder (security-scoped
+    /// when it's a user-picked folder).
+    private func loadPrivateBibles(from source: BibleSource) -> [PrivateBible] {
+        guard let dir = source.resolvedFolder else { return [] }
+        let scoped = source.needsSecurityScope && dir.startAccessingSecurityScopedResource()
+        defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
+        return PrivateBibleStore.loadAll(in: dir)
+    }
+
+    private func makeGroup(source: BibleSource, versions: [BibleVersion]) -> SourceGroup {
+        let byLang = Dictionary(grouping: versions, by: \.language)
+        let langs = byLang.keys.sorted().map { code -> LanguageGroup in
+            let vs = (byLang[code] ?? []).sorted { $0.displayName < $1.displayName }
+            return LanguageGroup(id: code,
+                                 title: vs.first?.languageTitle ?? code,
+                                 versions: vs)
+        }
+        return SourceGroup(source: source, languages: langs)
+    }
+
+    /// Source section header: name, and the public base URL when
+    /// there is one — the Library's header without its edit
+    /// button (source editing stays in the Library and Sources).
+    private func sourceHeader(_ source: BibleSource) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(source.name)
+            if let url = source.repositoryURL {
+                Text(url.absoluteString)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+            }
+        }
+    }
+
+    /// A version row as the Library shows it — display name over
+    /// ID, checkmarked when it is the version being read — except
+    /// that tapping picks it as the current version.
+    private func versionRow(_ version: BibleVersion) -> some View {
+        Button {
+            pick(version)
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(version.displayName).font(.headline)
+                    Text(version.id).font(.caption).foregroundStyle(.secondary)
+                }
+                if currentID == version.id {
+                    Spacer()
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+    }
+
+    /// Import a private Bible JSON (.json or .json.gz) into a local source's folder.
+    private func importPrivateBible(_ result: Result<URL, Error>, into source: BibleSource) {
+        let url: URL
+        switch result {
+        case .success(let u): url = u
+        case .failure(let e):
+            importError = e.localizedDescription
+            return
+        }
+        guard let dir = source.resolvedFolder else {
+            importError = "That source has no folder."
+            return
+        }
+        guard url.startAccessingSecurityScopedResource() else {
+            importError = "Couldn't open the file."
+            return
+        }
+        defer { url.stopAccessingSecurityScopedResource() }
+        guard let bible = PrivateBibleStore.load(from: url) else {
+            importError = "That file isn't a valid private Bible JSON."
+            return
+        }
+        let scoped = source.needsSecurityScope && dir.startAccessingSecurityScopedResource()
+        defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
+        do {
+            try PrivateBibleStore.save(bible, into: dir)
+        } catch {
+            importError = error.localizedDescription
+            return
+        }
+        refresh()
     }
 }
 
