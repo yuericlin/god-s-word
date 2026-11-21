@@ -11,12 +11,14 @@ import Foundation
 public enum NotesSubTab: Int, CaseIterable, Sendable {
     case recents = 0
     case book
+    case chapter
 
     /// Segment label in the sub-tab bar.
     public var label: String {
         switch self {
         case .recents: return "Recents"
         case .book: return "Book"
+        case .chapter: return "Chapter"
         }
     }
 }
@@ -26,16 +28,19 @@ public enum NotesTabLogic {
     public struct Availability: Equatable, Sendable {
         public var recents: Bool
         public var book: Bool
+        public var chapter: Bool
 
-        public init(recents: Bool, book: Bool) {
+        public init(recents: Bool, book: Bool, chapter: Bool) {
             self.recents = recents
             self.book = book
+            self.chapter = chapter
         }
 
         public func hasNotes(for tab: NotesSubTab) -> Bool {
             switch tab {
             case .recents: return recents
             case .book: return book
+            case .chapter: return chapter
             }
         }
     }

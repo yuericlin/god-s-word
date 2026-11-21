@@ -159,11 +159,11 @@ Multiple (KJV Gen 1:1-2):
   the first selected verse (REQ-NT-2). Verse notes written at verse 1
   before this change remain verse notes.
 - **REQ-NT-16:** Because a pre-REQ-NT-15 chapter note is indistinguishable
-  from a genuine verse-1 note, nothing migrates automatically, and no
-  special presentation remains: the Chapter sub-tab that once showed
-  such a note labeled as stored on verse 1 and offered "Move to
-  Chapter Note" was removed with the sub-tab (Nov 21, 2026), so a
-  pre-existing verse-1 note simply shows as an ordinary verse-1 note.
+  from a genuine verse-1 note, nothing migrates automatically. When a
+  chapter has no chapter-level note but does have a verse-1 note, the
+  panel's Chapter scope shows that note labeled as stored on verse 1 and
+  offers "Move to Chapter Note", which copies it into the chapter store
+  and removes the verse-1 note (an explicit user action only).
 - **REQ-NT-17:** Every note (verse, chapter, and book) records when it
   was created and when it was last edited, in a per-scope times store
   keyed like the notes themselves (`NoteTimes`). A first save stamps
@@ -176,14 +176,16 @@ Multiple (KJV Gen 1:1-2):
   label, and nothing under the note. The times
   travel with the notes: UserDefaults, payload v8, iCloud files, and
   manual export/import.
-- **REQ-NT-18:** The Notes tab has two sub-tabs, in this order:
+- **REQ-NT-18:** The Notes tab has three sub-tabs, in this order:
   **Recents** — every note, from any version (REQ-NT-19), from any
   book, most recently updated first (REQ-NT-17 times; notes without
   times fall back to the verse-note order); **Book** — every note
   in the active book (the book note, then chapter and verse notes
-  in reading order). (The Chapter and Verse sub-tabs were removed
-  on Nov 21, 2026; chapter and verse notes still appear in both
-  lists.) No
+  in reading order); **Chapter** — every note in the active
+  chapter (the chapter note, then verse notes by verse; the legacy
+  verse-1 presentation of REQ-NT-16 still applies and is not
+  repeated as a verse row). (The Verse sub-tab was removed on
+  Nov 21, 2026; verse notes still appear in the other lists.) No
   sub-tab is scoped to the version being read. A sub-tab is shown
   only when it
   has notes; when the selected sub-tab becomes empty (e.g. after
@@ -193,12 +195,13 @@ Multiple (KJV Gen 1:1-2):
   sub-tab bar hides and one empty state shows. One **Add Note**
   button is always available — even when there are no notes at
   all — and it follows the current context: with the Book
-  sub-tab active it edits the book note; otherwise it edits the
+  sub-tab active it edits the book note, with the Chapter
+  sub-tab active the chapter note; otherwise it edits the
   selected verses' note (anchored at the first selected verse),
   or the chapter note when no verses are selected. It always
   reads "Add Note": editing an existing note is what tapping
-  the note itself does (REQ-NT-21). The Book
-  sub-tab has no add entry of its own. (Supersedes the
+  the note itself does (REQ-NT-21). The Book and Chapter
+  sub-tabs have no add entries of their own. (Supersedes the
   Notes half of REQ-AP-9.)
 - **REQ-NT-19:** Notes belong to their book/chapter/verse, not to a
   version: a note written while reading one version is visible —
@@ -209,7 +212,8 @@ Multiple (KJV Gen 1:1-2):
   Notes list shows it as a tag on the note's title line —
   "Isaiah 53:4 · NASB - Oct 22, 2026" (before the REQ-NT-17 date).
   Sources travel with the notes: payload v10 (REQ-BK-6), iCloud
-  (`noteSources.json`), and manual export/import.
+  (`noteSources.json`), and manual export/import; a "Move to
+  Chapter Note" (REQ-NT-16) carries the note's source with it.
   Notes stored by older builds under per-version keys migrate on
   launch, and again whenever a backup, iCloud load, or import
   applies data: keys lose their module prefix, and notes that
@@ -220,13 +224,13 @@ Multiple (KJV Gen 1:1-2):
   creation and the latest edit, and the source is the newest
   merged note's version. The migration is idempotent: with no
   per-version keys present it changes nothing.
-- **REQ-NT-20:** In the Notes tab's Recents and Book
+- **REQ-NT-20:** In the Notes tab's Recents, Book, and Chapter
   lists, swiping a note row right-to-left offers **Delete** —
   the same swipe-to-delete the panel's Recents (history) list
   and the Highlights tab (REQ-HL-4) have. Deleting removes the
   note at its scope (book, chapter, or verse) together with
   its times and source, exactly as deleting in its editor
-  does. The two lists are `List`s so their rows carry the
+  does. The three lists are `List`s so their rows carry the
   swipe action.
 
 ---
@@ -702,8 +706,8 @@ Multiple (KJV Gen 1:1-2):
   height setting's share of the reader view's total height
   (REQ-AP-22), not a fixed point size.
 - **REQ-AP-2:** (Superseded by REQ-NT-18.) The Notes tab's sub-tabs
-  are the Recents / Book pair REQ-NT-18 defines; the earlier
-  Book / Chapter / Verse scoped-note sub-tabs no longer exist.
+  are the Recents / Book / Chapter set REQ-NT-18 defines; the
+  earlier scoped-note sub-tabs (including Verse) no longer exist.
 - **REQ-AP-3:** The Commentary tab has the same **Book / Chapter /
   Verse** sub-tabs, showing the chosen commentary's content at that
   scope for the passage being read.

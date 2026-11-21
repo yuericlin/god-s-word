@@ -4,7 +4,7 @@
 // and Parallel — a second chapter view, synced to the reading
 // or independent of it (REQ-PA).
 // The Notes tab
-// has Recents / Book sub-tabs (REQ-NT-18) over the
+// has Recents / Book / Chapter sub-tabs (REQ-NT-18) over the
 // scoped notes (REQ-NT-14); Commentary has Book / Chapter / Verse
 // sub-tabs (REQ-AP-1..11) showing the entries at those scopes.
 //
@@ -643,16 +643,20 @@ struct AuxiliaryPanelView: View {
     /// Whether each Notes sub-tab has notes (REQ-NT-18): Recents =
     /// any note at all — notes are shared across versions, so no
     /// sub-tab is scoped to the version being read (REQ-NT-19);
-    /// Book = any note in the active book.
+    /// Book = any note in the active book; Chapter = any note in
+    /// the active chapter.
     private var notesAvailability: NotesTabLogic.Availability {
         let bookPrefix = "\(history.testament):\(history.book):"
+        let chapterPrefix = "\(bookPrefix)\(history.chapter):"
         return NotesTabLogic.Availability(
             recents: !personalData.bookNotes.isEmpty
                 || !personalData.chapterNotes.isEmpty
                 || !personalData.verseNotes.isEmpty,
             book: personalData.bookNote(forKey: bookNoteKey) != nil
                 || personalData.chapterNotes.keys.contains { $0.hasPrefix(bookPrefix) }
-                || personalData.verseNotes.keys.contains { $0.hasPrefix(bookPrefix) })
+                || personalData.verseNotes.keys.contains { $0.hasPrefix(bookPrefix) },
+            chapter: personalData.chapterNote(forKey: chapterNoteKey) != nil
+                || personalData.verseNotes.keys.contains { $0.hasPrefix(chapterPrefix) })
     }
 
     private var visibleNotesTabs: [NotesSubTab] {
@@ -748,6 +752,32 @@ struct AuxiliaryPanelView: View {
             .sorted { ($0.chapter, $0.verse) < ($1.chapter, $1.verse) }
             .map(\.row)
         return rows
+    }
+
+    /// Every note in the active chapter, in reading order: the
+    /// chapter note, then verse notes by verse. While the legacy
+    /// verse-1 note is presented as the chapter note (REQ-NT-16) it
+    /// is not repeated as a verse row.
+    private var chapterNoteRows: [NoteRow] {
+        var rows: [NoteRow] = []
+        if personalData.chapterNote(forKey: chapterNoteKey) != nil,
+           let parsed = ChapterNoteKey.parse(chapterNoteKey) {
+            rows.append(chapterNoteRow(key: chapterNoteKey, parsed: parsed))
+        }
+        let legacyShown = personalData.chapterNote(forKey: chapterNoteKey) == nil
+            && personalData.verseNote(forKey: verse1NoteKey) != nil
+        let verseRows = personalData.verseNotes.keys
+            .compactMap { key -> (Int, NoteRow)? in
+                guard let p = NoteKey.parse(key),
+                      p.testament == history.testament, p.book == history.book,
+                      p.chapter == history.chapter,
+                      !(legacyShown && key == verse1NoteKey)
+                else { return nil }
+                return (p.verse, verseNoteRow(key: key, parsed: p))
+            }
+            .sorted { $0.0 < $1.0 }
+            .map(\.1)
+        return rows + verseRows
     }
 
     /// Every note, from every version (REQ-NT-19), most recently
@@ -899,14 +929,19 @@ struct AuxiliaryPanelView: View {
 
     /// The header's one Add Note button follows the current
     /// context (Nov 12, 2026): the Book sub-tab edits the book
-    /// note; anywhere else it edits the selected verses' note
-    /// (anchored at the first selected verse), or the chapter
-    /// note when no verses are selected. The Book sub-tab's own
-    /// add entry is gone — this button is the only one.
+    /// note, the Chapter sub-tab the chapter note; anywhere
+    /// else it edits the selected verses' note (anchored at
+    /// the first selected verse), or the chapter note when no
+    /// verses are selected. The Book and Chapter sub-tabs' own
+    /// add entries are gone — this button is the only one.
     private func openAddNote() {
         switch effectiveNotesTab {
         case .book:
             editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
+        case .chapter:
+            editorItem = .chapter(
+                key: chapterNoteKey,
+                reference: "\(history.bookTitle) \(history.chapter)")
         default:
             if selectedVerses.isEmpty {
                 editorItem = .chapter(
@@ -929,6 +964,8 @@ struct AuxiliaryPanelView: View {
                     noteList(recentNoteRows)
                 case .book:
                     bookNotesContent
+                case .chapter:
+                    chapterNotesContent
                 }
             } else {
                 VStack {
@@ -961,6 +998,71 @@ struct AuxiliaryPanelView: View {
                                   book: history.book,
                                   chapter: history.chapter,
                                   verse: anchorVerse)
+    }
+
+    /// The verse-1 note key for this chapter — where chapter notes
+    /// were stored before scoped chapter notes (REQ-NT-16).
+    private var verse1NoteKey: String {
+        personalData.verseNoteKey(testament: history.testament,
+                                  book: history.book,
+                                  chapter: history.chapter,
+                                  verse: 1)
+    }
+
+    /// The Chapter sub-tab: the legacy verse-1 presentation when it
+    /// applies (REQ-NT-16), and the chapter's notes in reading
+    /// order. (Adding the chapter note is the header Add Note
+    /// button's job — it follows the active sub-tab.)
+    private var chapterNotesContent: some View {
+        List {
+            if personalData.chapterNote(forKey: chapterNoteKey) == nil,
+               let legacy = personalData.verseNote(forKey: verse1NoteKey) {
+                legacyChapterNote(legacy)
+            }
+            ForEach(chapterNoteRows) { row in
+                noteRowView(row)
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    /// The legacy verse-1 note shown in the Chapter sub-tab
+    /// (REQ-NT-16): before scoped notes, the reader's "Take Notes"
+    /// stored chapter notes as verse-1 notes, and the two are
+    /// indistinguishable, so nothing migrates automatically — the
+    /// user moves it with one tap instead.
+    private func legacyChapterNote(_ legacy: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("This note is saved on verse 1 — before chapter notes existed, that is where chapter notes were stored"
+                 + noteDateSuffix(personalData.verseNoteTimes[verse1NoteKey]?.updatedAt) + ".")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(legacy)
+                .font(.system(size: personalData.fontSize, design: .serif))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+            HStack {
+                Button("Move to Chapter Note") {
+                    personalData.setChapterNote(
+                        legacy, forKey: chapterNoteKey,
+                        source: personalData.noteSources[verse1NoteKey])
+                    personalData.setVerseNote(nil, forKey: verse1NoteKey)
+                }
+                Spacer()
+                Button("Edit") {
+                    editorItem = .chapter(
+                        key: chapterNoteKey,
+                        reference: "\(history.bookTitle) \(history.chapter)")
+                }
+            }
+            .font(.subheadline)
+            rowHairline
+                .padding(.top, 3)
+        }
+        .listRowInsets(EdgeInsets(top: 11, leading: 16,
+                                  bottom: 0, trailing: 0))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
     }
 
     // MARK: - Commentary tab

@@ -872,54 +872,62 @@ final class ModuleSourceRequirementsTests: XCTestCase {
 // MARK: - REQ-NT-18: Notes sub-tabs
 
 final class NotesSubTabRequirementsTests: XCTestCase {
-    private func availability(_ recents: Bool, _ book: Bool)
+    private func availability(_ recents: Bool, _ book: Bool,
+                              _ chapter: Bool)
         -> NotesTabLogic.Availability
     {
-        NotesTabLogic.Availability(recents: recents, book: book)
+        NotesTabLogic.Availability(recents: recents, book: book,
+                                   chapter: chapter)
     }
 
-    // The bar has exactly two sub-tabs, Recents and Book — the
-    // Chapter and Verse sub-tabs were removed (Nov 21, 2026).
-    func testSubTabSetIsRecentsAndBook() {
-        XCTAssertEqual(NotesSubTab.allCases, [.recents, .book])
+    // The bar has exactly three sub-tabs, Recents, Book and
+    // Chapter — the Verse sub-tab was removed (Nov 21, 2026).
+    func testSubTabSetIsRecentsBookChapter() {
+        XCTAssertEqual(NotesSubTab.allCases, [.recents, .book, .chapter])
         XCTAssertEqual(NotesSubTab.allCases.map(\.label),
-                       ["Recents", "Book"])
+                       ["Recents", "Book", "Chapter"])
     }
 
     // Only sub-tabs with notes are visible, in bar order.
     func testVisibleTabsFilterAndOrder() {
-        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(true, true)),
-                       [.recents, .book])
-        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(true, false)),
-                       [.recents])
-        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(false, true)),
-                       [.book])
-        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(false, false)),
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(true, true, true)),
+                       [.recents, .book, .chapter])
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(true, false, true)),
+                       [.recents, .chapter])
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(false, false, true)),
+                       [.chapter])
+        XCTAssertEqual(NotesTabLogic.visibleTabs(availability(false, false, false)),
                        [])
     }
 
     // A visible selection resolves to itself.
     func testResolvedKeepsVisibleSelection() {
-        let a = availability(true, false)
+        let a = availability(true, false, true)
         XCTAssertEqual(NotesTabLogic.resolved(selected: .recents, availability: a), .recents)
-        let b = availability(false, true)
-        XCTAssertEqual(NotesTabLogic.resolved(selected: .book, availability: b), .book)
+        XCTAssertEqual(NotesTabLogic.resolved(selected: .chapter, availability: a), .chapter)
     }
 
     // A hidden selection falls back to the nearest visible sub-tab.
     func testResolvedFallsBackToNearest() {
+        // Chapter selected, chapter empty: book (distance 1).
+        XCTAssertEqual(NotesTabLogic.resolved(
+            selected: .chapter, availability: availability(true, true, false)), .book)
         // Book selected, the whole book is empty: recents remains.
         XCTAssertEqual(NotesTabLogic.resolved(
-            selected: .book, availability: availability(true, false)), .recents)
-        // Recents selected but not visible: the only visible
-        // sub-tab wins.
+            selected: .book, availability: availability(true, false, false)), .recents)
+    }
+
+    // Equidistant fallbacks go to the earlier sub-tab in the bar.
+    func testResolvedTieGoesToEarlierTab() {
+        // Book selected; recents and chapter visible (both
+        // distance 1): recents wins.
         XCTAssertEqual(NotesTabLogic.resolved(
-            selected: .recents, availability: availability(false, true)), .book)
+            selected: .book, availability: availability(true, false, true)), .recents)
     }
 
     // No notes at all: nothing is visible and nothing resolves.
     func testResolvedNilWhenNoNotes() {
-        let a = availability(false, false)
+        let a = availability(false, false, false)
         for tab in NotesSubTab.allCases {
             XCTAssertNil(NotesTabLogic.resolved(selected: tab, availability: a))
         }
