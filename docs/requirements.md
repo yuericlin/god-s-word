@@ -1000,21 +1000,25 @@ Multiple (KJV Gen 1:1-2):
   under Languages (section "Bible version"), mirroring the
   Commentary option (REQ-AP-6): its row shows the ID of the
   version being read (else the saved last reading's), and its
-  page lists the installed versions (`BibleVersion.allInstalled`
-  — downloaded modules plus private imports) with the current
-  one checkmarked. Picking a version switches the reading to
+  page lists the installed versions (downloaded modules plus
+  private imports) grouped as the Library groups them — a
+  section per source (header: the source's name and, for
+  repositories, its URL), language subgroups within, versions
+  sorted by display name with the ID under the name — with the
+  current one checkmarked. Picking a version switches the reading to
   it, keeping the place being read with the chapter clamped to
   the new version's range (the reader's own version-picker
   behavior); with no reading open, the pick is saved as the
   last reading so the next book opened uses it. A **Download a
   New Version…** button opens the Add Bible page
   (`RepositoryView`), and the list refreshes when it closes.
-  An **Import a private Bible…** row — the Library import's
-  label and icon — sits under it: it opens a file picker for
-  `.json`/`.json.gz`, validates the file and saves it into the
-  built-in Private source exactly as the Library's import
-  does, with the same "Import failed" alerts, and the list
-  refreshes so the imported version appears on this page.
+  Each local source's section ends with the Library's
+  **Import a private Bible…** row: it opens a file picker for
+  `.json`/`.json.gz`, validates the file and saves it into
+  that source exactly as the Library's import does, with the
+  same "Import failed" alerts, and the list refreshes so the
+  imported version appears on this page. Swipe-to-delete and
+  source editing stay Library-only.
 - **REQ-LG-4:** The Languages page works like the version
   pickers (REQ-LG-3): it opens on the current selection only
   and fetches nothing — a **Selected** list ("All languages"
