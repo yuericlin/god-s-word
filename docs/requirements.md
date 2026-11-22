@@ -584,6 +584,14 @@ Multiple (KJV Gen 1:1-2):
   sources leaves existing sources alone, and the REQ-NT-19
   migration derives sources from the payload's legacy per-version
   keys when it carries them.
+- **REQ-BK-7:** Manual export (Settings ▸ Backup ▸ Export Data)
+  writes the personal-data JSON files, a `modules/` folder with
+  one .zip per downloaded SWORD module, and a `private/` folder
+  with one plain `.json` per private version (the newest copy of
+  each). Manual import restores all three kinds: data files by
+  name, module zips unless already installed, and private-version
+  files through the private store unless that version is already
+  installed.
 
 ---
 
@@ -970,7 +978,11 @@ Multiple (KJV Gen 1:1-2):
   commentary; `isDownloadableBible` and its tests in
   `AuxiliaryPanelRequirementsTests` pin the exclusion, including
   a commentary on a zText driver, which satisfies the renderable
-  checks and is caught only by its Category.
+  checks and is caught only by its Category. On all three
+  download pages the search field belongs to the page, not the
+  list: it remains available when the filtered list is empty
+  (the "Nothing to show" state), so the query can be changed
+  or cleared without leaving the page.
 
 ## 17. Download languages and dictionaries
 

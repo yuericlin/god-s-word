@@ -2012,4 +2012,109 @@ final class WhitespaceSanitizationTests: XCTestCase {
         XCTAssertEqual(OsisPlain.plainText(from: english),
                        "In the beginning God created the heaven and the earth.")
     }
+
+    // MARK: - REQ-BK-7: manual export/import carries private versions
+
+    private func bk7Bible(id: String, name: String, verse: String) -> PrivateBible {
+        PrivateBible(id: id, name: name, language: "en",
+                     books: [PrivateBible.PrivateBook(name: "Genesis",
+                                                      chapters: [[verse]])])
+    }
+
+    private func bk7Dir(_ label: String) -> URL {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gw-bk7-\(label)-\(UUID().uuidString)",
+                                    isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir,
+                                                 withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Export writes the private version as a plain .json that loads
+    /// back with its text intact.
+    func testExportCopiesIncludePrivateVersions() throws {
+        let source = bk7Dir("src"), dest = bk7Dir("dst")
+        defer {
+            try? FileManager.default.removeItem(at: source)
+            try? FileManager.default.removeItem(at: dest)
+        }
+        try PrivateBibleStore.save(
+            bk7Bible(id: "TestVer", name: "Test Version", verse: "In the beginning"),
+            into: source)
+        let count = try PrivateBibleStore.exportCopies(from: source, to: dest)
+        XCTAssertEqual(count, 1)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: dest.appendingPathComponent("TestVer.json").path))
+        let restored = PrivateBibleStore.loadAll(in: dest)
+        XCTAssertEqual(restored.map { $0.id }, ["TestVer"])
+        XCTAssertEqual(restored.first?.verse(book: 1, chapter: 1, verse: 1),
+                       "In the beginning")
+    }
+
+    /// Restore installs a version once; a second restore of the same
+    /// file skips it as already installed.
+    func testRestoreCopiesSkipsInstalledVersions() throws {
+        let exportDir = bk7Dir("exp"), home = bk7Dir("home")
+        defer {
+            try? FileManager.default.removeItem(at: exportDir)
+            try? FileManager.default.removeItem(at: home)
+        }
+        try PrivateBibleStore.save(
+            bk7Bible(id: "TestVer", name: "Test Version", verse: "v1"),
+            into: exportDir)
+        let file = exportDir.appendingPathComponent("TestVer.json")
+        let first = PrivateBibleStore.restoreCopies(from: [file], into: home)
+        XCTAssertEqual(first.restored, 1)
+        XCTAssertEqual(first.skipped, 0)
+        XCTAssertEqual(PrivateBibleStore.loadAll(in: home).map { $0.id },
+                       ["TestVer"])
+        let second = PrivateBibleStore.restoreCopies(from: [file], into: home)
+        XCTAssertEqual(second.restored, 0)
+        XCTAssertEqual(second.skipped, 1)
+    }
+
+    /// With a stale .json.gz shadow beside a newer .json of the same
+    /// version, the export carries the newest copy, not the shadow.
+    func testExportCopiesUseNewestShadowCopy() throws {
+        let source = bk7Dir("src"), dest = bk7Dir("dst")
+        defer {
+            try? FileManager.default.removeItem(at: source)
+            try? FileManager.default.removeItem(at: dest)
+        }
+        let oldData = try JSONEncoder().encode(
+            bk7Bible(id: "TestVer", name: "Old Name", verse: "old text"))
+        let gz = try XCTUnwrap(PrivateBibleStore.zlibCompressed(oldData))
+        let gzURL = source.appendingPathComponent("TestVer.json.gz")
+        try gz.write(to: gzURL)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date(timeIntervalSinceNow: -3600)],
+            ofItemAtPath: gzURL.path)
+        try PrivateBibleStore.save(
+            bk7Bible(id: "TestVer", name: "New Name", verse: "new text"),
+            into: source)
+        let count = try PrivateBibleStore.exportCopies(from: source, to: dest)
+        XCTAssertEqual(count, 1)
+        let restored = PrivateBibleStore.loadAll(in: dest)
+        XCTAssertEqual(restored.first?.name, "New Name")
+        XCTAssertEqual(restored.first?.verse(book: 1, chapter: 1, verse: 1),
+                       "new text")
+    }
+
+    /// The zlib helpers round-trip on every platform: bytes written
+    /// by `zlibCompressed` load back through the .json.gz path. (On
+    /// Linux this exercises the stored-block writer and Inflate;
+    /// NSData's compression API does not exist there.)
+    func testZlibCompressedPrivateBibleLoadsBack() throws {
+        let dir = bk7Dir("gz")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let data = try JSONEncoder().encode(
+            bk7Bible(id: "GzVer", name: "Gz Version", verse: "gz text"))
+        let gz = try XCTUnwrap(PrivateBibleStore.zlibCompressed(data))
+        XCTAssertEqual(PrivateBibleStore.zlibDecompressed(gz), data)
+        try gz.write(to: dir.appendingPathComponent("GzVer.json.gz"))
+        let loaded = PrivateBibleStore.loadAll(in: dir)
+        XCTAssertEqual(loaded.map { $0.id }, ["GzVer"])
+        XCTAssertEqual(loaded.first?.verse(book: 1, chapter: 1, verse: 1),
+                       "gz text")
+    }
 }
