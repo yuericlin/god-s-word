@@ -117,7 +117,7 @@ public enum PrivateBibleStore: Sendable {
         guard let data = try? Data(contentsOf: url) else { return nil }
         let json: Data
         if url.pathExtension == "gz" {
-            guard let d = try? (data as NSData).decompressed(using: .zlib) as Data
+            guard let d = zlibDecompressed(data)
             else { return nil }
             json = d
         } else {
@@ -135,7 +135,7 @@ public enum PrivateBibleStore: Sendable {
         let out: Data
         if compressed {
             url = baseDir.appendingPathComponent("\(bible.id).json.gz")
-            guard let c = try? (data as NSData).compressed(using: .zlib) as Data
+            guard let c = zlibCompressed(data)
             else { throw PrivateBibleError.compressionFailed }
             out = c
         } else {
@@ -152,6 +152,55 @@ public enum PrivateBibleStore: Sendable {
         let data = try JSONEncoder().encode(bible)
         let url = dir.appendingPathComponent("\(bible.id).json")
         try data.write(to: url, options: .atomic)
+    }
+
+    /// zlib-decompresses `data`. NSData's compression API is absent
+    /// from swift-corelibs-foundation, so on Linux the package's own
+    /// `Inflate` does the work; Apple platforms keep NSData.
+    static func zlibDecompressed(_ data: Data) -> Data? {
+        #if os(Linux)
+        return (try? Inflate.decompressZlib([UInt8](data))).map { Data($0) }
+        #else
+        return (try? (data as NSData).decompressed(using: .zlib)) as Data?
+        #endif
+    }
+
+    /// zlib-compresses `data`. On Linux this writes a valid zlib
+    /// stream of stored (uncompressed) deflate blocks: larger than a
+    /// true deflate stream, but every zlib reader — NSData included —
+    /// reads it back.
+    static func zlibCompressed(_ data: Data) -> Data? {
+        #if os(Linux)
+        return Data(zlibStored([UInt8](data)))
+        #else
+        return (try? (data as NSData).compressed(using: .zlib)) as Data?
+        #endif
+    }
+
+    /// A zlib stream (RFC 1950) wrapping `bytes` in stored deflate
+    /// blocks (RFC 1951): header 0x78 0x01, then blocks of at most
+    /// 65535 bytes, then the Adler-32 of the plain bytes.
+    static func zlibStored(_ bytes: [UInt8]) -> [UInt8] {
+        var out: [UInt8] = [0x78, 0x01]
+        var offset = 0
+        repeat {
+            let chunk = Swift.min(65535, bytes.count - offset)
+            let isFinal = offset + chunk == bytes.count
+            out.append(isFinal ? 0x01 : 0x00)
+            out.append(UInt8(chunk & 0xFF))
+            out.append(UInt8((chunk >> 8) & 0xFF))
+            let nlen = ~UInt16(chunk)
+            out.append(UInt8(nlen & 0xFF))
+            out.append(UInt8((nlen >> 8) & 0xFF))
+            out.append(contentsOf: bytes[offset ..< offset + chunk])
+            offset += chunk
+        } while offset < bytes.count
+        let adler = Inflate.adler32(bytes)
+        out.append(UInt8((adler >> 24) & 0xFF))
+        out.append(UInt8((adler >> 16) & 0xFF))
+        out.append(UInt8((adler >> 8) & 0xFF))
+        out.append(UInt8(adler & 0xFF))
+        return out
     }
 
     /// Manual-export step (REQ-BK-7): writes every private Bible in

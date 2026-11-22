@@ -2083,8 +2083,7 @@ final class WhitespaceSanitizationTests: XCTestCase {
         }
         let oldData = try JSONEncoder().encode(
             bk7Bible(id: "TestVer", name: "Old Name", verse: "old text"))
-        let gz = try XCTUnwrap((oldData as NSData)
-            .compressed(using: .zlib) as Data)
+        let gz = try XCTUnwrap(PrivateBibleStore.zlibCompressed(oldData))
         let gzURL = source.appendingPathComponent("TestVer.json.gz")
         try gz.write(to: gzURL)
         try FileManager.default.setAttributes(
@@ -2099,5 +2098,23 @@ final class WhitespaceSanitizationTests: XCTestCase {
         XCTAssertEqual(restored.first?.name, "New Name")
         XCTAssertEqual(restored.first?.verse(book: 1, chapter: 1, verse: 1),
                        "new text")
+    }
+
+    /// The zlib helpers round-trip on every platform: bytes written
+    /// by `zlibCompressed` load back through the .json.gz path. (On
+    /// Linux this exercises the stored-block writer and Inflate;
+    /// NSData's compression API does not exist there.)
+    func testZlibCompressedPrivateBibleLoadsBack() throws {
+        let dir = bk7Dir("gz")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let data = try JSONEncoder().encode(
+            bk7Bible(id: "GzVer", name: "Gz Version", verse: "gz text"))
+        let gz = try XCTUnwrap(PrivateBibleStore.zlibCompressed(data))
+        XCTAssertEqual(PrivateBibleStore.zlibDecompressed(gz), data)
+        try gz.write(to: dir.appendingPathComponent("GzVer.json.gz"))
+        let loaded = PrivateBibleStore.loadAll(in: dir)
+        XCTAssertEqual(loaded.map { $0.id }, ["GzVer"])
+        XCTAssertEqual(loaded.first?.verse(book: 1, chapter: 1, verse: 1),
+                       "gz text")
     }
 }
