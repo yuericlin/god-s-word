@@ -584,6 +584,14 @@ Multiple (KJV Gen 1:1-2):
   sources leaves existing sources alone, and the REQ-NT-19
   migration derives sources from the payload's legacy per-version
   keys when it carries them.
+- **REQ-BK-7:** Manual export (Settings ▸ Backup ▸ Export Data)
+  writes the personal-data JSON files, a `modules/` folder with
+  one .zip per downloaded SWORD module, and a `private/` folder
+  with one plain `.json` per private version (the newest copy of
+  each). Manual import restores all three kinds: data files by
+  name, module zips unless already installed, and private-version
+  files through the private store unless that version is already
+  installed.
 
 ---
 
