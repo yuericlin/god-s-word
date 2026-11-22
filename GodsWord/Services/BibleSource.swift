@@ -6,6 +6,7 @@
 // delete the custom ones (deleting a source keeps its version files).
 
 import Foundation
+import SwordReader
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif

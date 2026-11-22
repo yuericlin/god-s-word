@@ -8,6 +8,7 @@
 // capability (see GodsWord.entitlements; enable in Xcode Signing & Capabilities).
 
 import Foundation
+import SwordReader
 
 /// iCloud Drive sync state and file operations.
 @MainActor

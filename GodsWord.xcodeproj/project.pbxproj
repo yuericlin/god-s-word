@@ -16,7 +16,6 @@
 		0027A6339D685FE6852157B4 /* Bookmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C66BFB778405C05A35B83D7 /* Bookmark.swift */; };
 		37F38021A4C0525599329DD4 /* StrongsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D6BA134F085C248807B712 /* StrongsService.swift */; };
 		DA194D2A04DE5E28968665C3 /* iCloudSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5E7E39E0D851BE9152E55D /* iCloudSync.swift */; };
-		4E277C5D3CE15FD48BA42019 /* PrivateBible.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C87FF5499FE535E9C0ECAED /* PrivateBible.swift */; };
 		A4D24A9A254E510CBEC00857 /* BibleVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C146451CE48510A940D37CB /* BibleVersion.swift */; };
 		7486EA7A543150EDA87B1BC6 /* BibleSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D1F2EC8951C5CADB11D9B73 /* BibleSource.swift */; };
 		356A1C366C6D572A87228DA5 /* CommentaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 262C13665D81571B85532342 /* CommentaryService.swift */; };
@@ -56,7 +55,6 @@
 		0C66BFB778405C05A35B83D7 /* Bookmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bookmark.swift"; sourceTree = "<group>"; };
 		F6D6BA134F085C248807B712 /* StrongsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "StrongsService.swift"; sourceTree = "<group>"; };
 		7E5E7E39E0D851BE9152E55D /* iCloudSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "iCloudSync.swift"; sourceTree = "<group>"; };
-		7C87FF5499FE535E9C0ECAED /* PrivateBible.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PrivateBible.swift"; sourceTree = "<group>"; };
 		7C146451CE48510A940D37CB /* BibleVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BibleVersion.swift"; sourceTree = "<group>"; };
 		4D1F2EC8951C5CADB11D9B73 /* BibleSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BibleSource.swift"; sourceTree = "<group>"; };
 		262C13665D81571B85532342 /* CommentaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CommentaryService.swift"; sourceTree = "<group>"; };
@@ -128,7 +126,6 @@
 				0C66BFB778405C05A35B83D7 /* Bookmark.swift */,
 				F6D6BA134F085C248807B712 /* StrongsService.swift */,
 				7E5E7E39E0D851BE9152E55D /* iCloudSync.swift */,
-				7C87FF5499FE535E9C0ECAED /* PrivateBible.swift */,
 				7C146451CE48510A940D37CB /* BibleVersion.swift */,
 				4D1F2EC8951C5CADB11D9B73 /* BibleSource.swift */,
 				262C13665D81571B85532342 /* CommentaryService.swift */,
@@ -246,7 +243,6 @@
 				0027A6339D685FE6852157B4 /* Bookmark.swift in Sources */,
 				37F38021A4C0525599329DD4 /* StrongsService.swift in Sources */,
 				DA194D2A04DE5E28968665C3 /* iCloudSync.swift in Sources */,
-				4E277C5D3CE15FD48BA42019 /* PrivateBible.swift in Sources */,
 				A4D24A9A254E510CBEC00857 /* BibleVersion.swift in Sources */,
 				7486EA7A543150EDA87B1BC6 /* BibleSource.swift in Sources */,
 				356A1C366C6D572A87228DA5 /* CommentaryService.swift in Sources */,

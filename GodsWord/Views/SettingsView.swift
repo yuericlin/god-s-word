@@ -315,8 +315,9 @@ struct SettingsView: View {
         (AuxiliaryPanelView.PanelTab(rawValue: personalData.panelTab) ?? .notes).rawValue
     }
 
-    /// Manual export (REQ-BK-6): the JSON data files, and every installed
-    /// module as its own package zip in `modules/`.
+    /// Manual export (REQ-BK-7): the JSON data files, every installed
+    /// module as its own package zip in `modules/`, and every private
+    /// version as a plain JSON file in `private/`.
     private func doExport() async {
         working = true; message = nil
         progressText = "Exporting your data…"
@@ -329,16 +330,26 @@ struct SettingsView: View {
             let count = try await Task.detached(priority: .userInitiated) {
                 try store.exportPackages(to: modulesFolder)
             }.value
+            progressText = "Packing private versions…"
+            let privateFolder = folder.appendingPathComponent("private", isDirectory: true)
+            let privateCount = try await Task.detached(priority: .userInitiated) {
+                try PrivateBibleStore.exportCopies(from: PrivateBibleStore.baseDir,
+                                                   to: privateFolder)
+            }.value
             exportFolder = folder
             showingExportShare = true
-            message = "Exported your data and \(count) module(s) to Documents/god-s-word-export/"
+            message = "Exported your data and \(count) module(s)"
+                + (privateCount > 0 ? " and \(privateCount) private version(s)" : "")
+                + " to Documents/god-s-word-export/"
         } catch {
             message = "Export failed: \(error.localizedDescription)"
         }
     }
 
     /// Manual import: JSON files restore data; module .zip files are
-    /// installed unless that module is already installed.
+    /// installed unless that module is already installed; files that
+    /// load as private versions restore through the private store
+    /// (REQ-BK-7).
     private func doImport(_ urls: [URL]) async {
         working = true; message = nil
         progressText = "Importing…"
@@ -348,8 +359,21 @@ struct SettingsView: View {
 
         let scoped = others.filter { $0.startAccessingSecurityScopedResource() }
         defer { scoped.forEach { $0.stopAccessingSecurityScopedResource() } }
+
+        // A picked file that loads as a private version belongs to
+        // the private store, not the personal-data importer.
+        var dataURLs: [URL] = []
+        var privateURLs: [URL] = []
+        for url in others {
+            if PrivateBibleStore.load(from: url) != nil {
+                privateURLs.append(url)
+            } else {
+                dataURLs.append(url)
+            }
+        }
+
         do {
-            if !others.isEmpty { try personalData.importFrom(urls: others) }
+            if !dataURLs.isEmpty { try personalData.importFrom(urls: dataURLs) }
         } catch {
             message = "Import failed: \(error.localizedDescription)"
             return
@@ -372,10 +396,22 @@ struct SettingsView: View {
             if ok { installed += 1 } else { failed.append(name) }
         }
 
-        var parts = ["\(others.count) data file(s)"]
+        var privateRestored = 0, privateSkipped = 0
+        if !privateURLs.isEmpty {
+            let r = PrivateBibleStore.restoreCopies(from: privateURLs,
+                                                    into: PrivateBibleStore.baseDir)
+            privateRestored = r.restored
+            privateSkipped = r.skipped
+        }
+
+        var parts = ["\(dataURLs.count) data file(s)"]
         if !zips.isEmpty {
             parts.append("\(installed) module(s) installed")
             if skipped > 0 { parts.append("\(skipped) already installed") }
+        }
+        if !privateURLs.isEmpty {
+            parts.append("\(privateRestored) private version(s) restored")
+            if privateSkipped > 0 { parts.append("\(privateSkipped) private already installed") }
         }
         var text = "Import complete: " + parts.joined(separator: ", ") + "."
         if !failed.isEmpty {
