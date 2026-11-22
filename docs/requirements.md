@@ -970,7 +970,11 @@ Multiple (KJV Gen 1:1-2):
   commentary; `isDownloadableBible` and its tests in
   `AuxiliaryPanelRequirementsTests` pin the exclusion, including
   a commentary on a zText driver, which satisfies the renderable
-  checks and is caught only by its Category.
+  checks and is caught only by its Category. On all three
+  download pages the search field belongs to the page, not the
+  list: it remains available when the filtered list is empty
+  (the "Nothing to show" state), so the query can be changed
+  or cleared without leaving the page.
 
 ## 17. Download languages and dictionaries
 

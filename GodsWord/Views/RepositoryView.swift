@@ -107,13 +107,16 @@ struct RepositoryView: View {
                                 statusView(for: mod)
                             }
                         }
-                        .searchable(text: $query, prompt: "Search versions")
                         }
                     }
                 }
             }
             .navigationTitle("Add Bible")
             .navigationBarTitleDisplayMode(.inline)
+            // On the page, not the list: the search field must stay
+            // available when the list is empty, so the query can be
+            // changed or cleared from the empty state (REQ-SRC-6).
+            .searchable(text: $query, prompt: "Search versions")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -314,13 +317,15 @@ struct CommentaryRepositoryView: View {
                                 statusView(for: mod)
                             }
                         }
-                        .searchable(text: $query, prompt: "Search commentaries")
                         }
                     }
                 }
             }
             .navigationTitle("Add Commentary")
             .navigationBarTitleDisplayMode(.inline)
+            // On the page, not the list (REQ-SRC-6): stays available
+            // in the empty state.
+            .searchable(text: $query, prompt: "Search commentaries")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
@@ -521,13 +526,15 @@ struct DictionaryRepositoryView: View {
                                 statusView(for: mod)
                             }
                         }
-                        .searchable(text: $query, prompt: "Search dictionaries")
                         }
                     }
                 }
             }
             .navigationTitle("Add Dictionary")
             .navigationBarTitleDisplayMode(.inline)
+            // On the page, not the list (REQ-SRC-6): stays available
+            // in the empty state.
+            .searchable(text: $query, prompt: "Search dictionaries")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
