@@ -31,7 +31,12 @@ one chapter at a time — nothing else.
 
 ## Install
 
-### Option A — install the .ipa from GitHub Releases (no Mac needed)
+### Option A — App Store
+
+[God's Word: Holy Bible Reader on the App Store](https://apps.apple.com/us/app/gods-word-holy-bible-reader/id6825993562)
+— install it like any other app.
+
+### Option B — install the .ipa from GitHub Releases (no Mac needed)
 
 Every push to `main` builds an unsigned `.ipa` (see Releases).
 
@@ -45,18 +50,11 @@ Every push to `main` builds an unsigned `.ipa` (see Releases).
 3. Free Apple IDs must re-sign every 7 days (Sideloadly/AltStore handle this
    with a refresh).
 
-### Option B — build from source in Xcode
+### Option C — build from source in Xcode
 
 1. Open `GodsWord.xcodeproj` in Xcode 16+.
 2. Set your development team (Signing & Capabilities) and a unique bundle ID.
 3. Run on your iPhone.
-
-### App Store (later)
-
-Publishing to the App Store needs the Apple Developer Program ($99/year) and
-App Store Connect setup: signed release builds, screenshots, privacy
-declaration (the app collects nothing; Drive backup is opt-in), and review.
-The codebase is already structured for it — no code changes needed.
 
 ## Google Drive backup setup (optional, one time)
 
