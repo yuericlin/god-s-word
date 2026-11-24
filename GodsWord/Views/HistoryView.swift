@@ -1,8 +1,9 @@
 // HistoryView.swift — full reading history log. Tapping an entry reports
 // it through onSelect. An entry combines the visits to one chapter within
-// 24 hours: it shows the earliest visit and every version read. Only the
-// latest 20 entries are listed, followed by "…". Each entry renders on
-// one line, in the Highlights row format (REQ-AP-11).
+// 24 hours: it shows the earliest visit and every version read. The
+// latest 20 entries are listed first; a Load More button at the end
+// reveals the next 20 at a time (REQ-HI-9). Each entry renders on one
+// line, in the Highlights row format (REQ-AP-11).
 
 import SwiftUI
 import SwordReader
@@ -10,6 +11,11 @@ import SwordReader
 struct HistoryView: View {
     @EnvironmentObject private var personalData: PersonalData
     var onSelect: ((HistoryEntry) -> Void)?
+
+    /// How many entries are shown: one chunk of
+    /// `ReadingHistoryLog.displayLimit`, plus one chunk per
+    /// Load More tap (REQ-HI-9).
+    @State private var shownCount = ReadingHistoryLog.displayLimit
 
     var body: some View {
         List {
@@ -19,7 +25,7 @@ struct HistoryView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             } else {
-                ForEach(ReadingHistoryLog.visible(personalData.historyLog).entries) { entry in
+                ForEach(ReadingHistoryLog.visible(personalData.historyLog, limit: shownCount).entries) { entry in
                     Button {
                         onSelect?(entry)
                     } label: {
@@ -53,17 +59,21 @@ struct HistoryView: View {
                     .listRowBackground(Color.clear)
                 }
                 .onDelete { offsets in
-                    // The visible entries are the log's first 20, so the
+                    // The visible entries are a prefix of the log, so the
                     // offsets are the log's offsets.
                     personalData.deleteHistory(at: offsets)
                 }
-                if ReadingHistoryLog.visible(personalData.historyLog).hasMore {
-                    Text("…")
-                        .foregroundStyle(.secondary)
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .accessibilityLabel("Older history not shown")
+                if ReadingHistoryLog.visible(personalData.historyLog,
+                                             limit: shownCount).hasMore {
+                    Button {
+                        shownCount += ReadingHistoryLog.displayLimit
+                    } label: {
+                        Text("Load More")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .foregroundStyle(.blue)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 }
             }
         }

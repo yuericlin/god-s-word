@@ -254,6 +254,28 @@ final class HistoryRequirementsTests: XCTestCase {
         XCTAssertEqual(log.first, "New")
         XCTAssertEqual(log.count, 3)
     }
+
+    // REQ-HI-9: the list pages through the log in chunks of
+    // `displayLimit` — the default limit shows the first chunk, each
+    // Load More limit one chunk more, and hasMore holds until the
+    // whole log is shown.
+    func testVisiblePagesInChunks() {
+        let log = (1...45).map { i in
+            ReadingHistoryEntry(bookName: "Book \(i)", testament: 1, book: i,
+                                chapter: 1, moduleIDs: ["KJV"],
+                                timestamps: [Date(timeIntervalSince1970: Double(i))])
+        }
+        let first = ReadingHistoryLog.visible(log)
+        XCTAssertEqual(first.entries.count, 20)
+        XCTAssertTrue(first.hasMore)
+        XCTAssertEqual(first.entries.map(\.book), log.prefix(20).map(\.book))
+        let second = ReadingHistoryLog.visible(log, limit: 40)
+        XCTAssertEqual(second.entries.count, 40)
+        XCTAssertTrue(second.hasMore)
+        let all = ReadingHistoryLog.visible(log, limit: 60)
+        XCTAssertEqual(all.entries.count, 45)
+        XCTAssertFalse(all.hasMore)
+    }
 }
 
 

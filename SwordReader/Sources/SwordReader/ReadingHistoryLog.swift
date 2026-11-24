@@ -117,7 +117,8 @@ public enum ReadingHistoryLog {
     public static let visitGap: TimeInterval = 60
     /// Entries kept (REQ-HI-2).
     public static let limit = 100
-    /// Entries shown before the "…" row (REQ-HI-9).
+    /// Entries shown at a time in the history list: the first chunk,
+    /// and each Load More chunk after it (REQ-HI-9).
     public static let displayLimit = 20
 
     /// Records a visit. Joins the most recent entry for the same chapter
@@ -167,11 +168,13 @@ public enum ReadingHistoryLog {
         return out.sorted { $0.lastVisit > $1.lastVisit }
     }
 
-    /// The entries to show (the most recent `displayLimit`) and whether more
-    /// exist, in which case the list ends with "…".
-    public static func visible(_ log: [ReadingHistoryEntry])
+    /// The entries to show (the most recent `limit` — one chunk unless a
+    /// larger limit is passed) and whether more exist beyond them, in
+    /// which case the list ends with a Load More button (REQ-HI-9).
+    public static func visible(_ log: [ReadingHistoryEntry],
+                               limit: Int = displayLimit)
         -> (entries: [ReadingHistoryEntry], hasMore: Bool)
     {
-        (Array(log.prefix(displayLimit)), log.count > displayLimit)
+        (Array(log.prefix(limit)), log.count > limit)
     }
 }
