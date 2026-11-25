@@ -50,6 +50,25 @@ final class CopyFormatRequirementsTests: XCTestCase {
         XCTAssertTrue(out!.hasPrefix("\"1 "))
     }
 
+    // REQ-CP-6: an ellipsis marks each gap between non-consecutive
+    // copied verses; consecutive verses join with a plain space.
+    func testCopyMarksGapsWithEllipsis() {
+        let mixed = VerseFormatting.copyString(
+            selectedVerses: [1, 2, 5], verseTexts: texts,
+            bookTitle: "Genesis", chapter: 1, version: "KJV")
+        XCTAssertEqual(mixed,
+            "\"1 In the beginning God created the heaven and the earth. " +
+            "2 And the earth was without form, and void. " +
+            "... 5 And God called the light Day.\" Genesis 1:1-2, 5 KJV")
+        let gapped = VerseFormatting.copyString(
+            selectedVerses: [1, 3, 5], verseTexts: texts,
+            bookTitle: "Genesis", chapter: 1, version: "KJV")
+        XCTAssertEqual(gapped,
+            "\"1 In the beginning God created the heaven and the earth. " +
+            "... 3 And God said, Let there be light. " +
+            "... 5 And God called the light Day.\" Genesis 1:1, 3, 5 KJV")
+    }
+
     func testCopyEmptySelectionReturnsNil() {
         XCTAssertNil(VerseFormatting.copyString(
             selectedVerses: [], verseTexts: texts,

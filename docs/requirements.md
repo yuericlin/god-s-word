@@ -81,6 +81,10 @@ outside SwiftUI).
   before its text inside the quotes (`"1 text 2 text"`).
 - **REQ-CP-5:** Verse ranges in the reference are compressed: `[1,2,3,5]` →
   `"1-3, 5"`.
+- **REQ-CP-6:** Inside the quotes, an ellipsis (`...`) stands between
+  two copied verses that are not consecutive, marking the skipped
+  verse(s): `"4 text ... 6 text"`. Consecutive verses join with a
+  plain space, as before.
 
 ### Examples
 Single (KJV Gen 1:1):
