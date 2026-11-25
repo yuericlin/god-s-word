@@ -1336,11 +1336,21 @@ struct ReaderView: View {
     private func selectionVerseText() -> String {
         let sorted = selectedVerses.sorted()
         let single = sorted.count == 1
-        let parts = sorted.compactMap { v -> String? in
+        let included = sorted.compactMap { v -> (verse: Int, text: String)? in
             guard let text = verses.first(where: { $0.verse == v })?.text else { return nil }
-            return single ? text : "\(v) \(text)"
+            return (v, single ? text : "\(v) \(text)")
         }
-        return parts.joined(separator: " ")
+        // An ellipsis marks each gap between non-consecutive
+        // verses (REQ-CP-6): "4 text ... 6 text". Copy and the
+        // note seed share this text, so both show the gaps.
+        var segments: [String] = []
+        for (index, part) in included.enumerated() {
+            if index > 0, part.verse > included[index - 1].verse + 1 {
+                segments.append("...")
+            }
+            segments.append(part.text)
+        }
+        return segments.joined(separator: " ")
     }
 
     /// The clipboard format for the current selection:
