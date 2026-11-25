@@ -112,7 +112,8 @@ Multiple (KJV Gen 1:1-2):
 
 ### Indicator
 - **REQ-NT-5:** A verse shows one blue flag (⚑, U+2691) per note covering
-  it, right after its verse number and sized and raised like it, in
+  it, right after its verse number, drawn at the full reading size and
+  raised like the number, in
   scope order: the book's note (at chapter 1 verse 1 only), the
   chapter's note (at verse 1 only), then the verse's own note
   (`NoteFlagLogic`). The Notes tab's note rows carry the same

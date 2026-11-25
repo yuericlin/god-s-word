@@ -908,12 +908,13 @@ struct ReaderView: View {
     /// flag per note covering the verse — its own note, plus the
     /// chapter's at verse 1 and the book's at chapter 1 verse 1 —
     /// each tappable to open its note (REQ-NT-6). The flags are
-    /// sized and raised like the verse number.
+    /// drawn at the full reading size and raised like the verse
+    /// number.
     private func attributedNoteFlags(for verse: Int) -> AttributedString {
         var out = AttributedString("")
         for flag in noteFlags(for: verse) {
             var run = AttributedString("⚑")
-            run.font = .system(size: personalData.fontSize * 0.65, design: .serif)
+            run.font = .system(size: personalData.fontSize, design: .serif)
             run.foregroundColor = .blue
             run.baselineOffset = personalData.fontSize * 0.25
             run.underlineStyle = []
