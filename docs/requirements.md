@@ -107,13 +107,17 @@ Multiple (KJV Gen 1:1-2):
   creates a chapter-level note (REQ-NT-15).
 
 ### Indicator
-- **REQ-NT-5:** A verse with a note shows a yellow background highlight on its
-  verse number (`UIColor(1.0, 0.9, 0.45, alpha 0.55)`). (A
-  sticky-note icon beside the number was tried on Nov 7, 2026
-  and reverted to this background the same day.)
-- **REQ-NT-6:** Tapping the highlighted verse number opens the note editor.
-  (The highlight uses `backgroundColor`, which — unlike `foregroundColor` — is
-  not overridden by link styling.)
+- **REQ-NT-5:** A verse shows one blue flag (⚑, U+2691) per note covering
+  it, right after its verse number and sized and raised like it, in
+  scope order: the book's note (at chapter 1 verse 1 only), the
+  chapter's note (at verse 1 only), then the verse's own note
+  (`NoteFlagLogic`). The Notes tab's note rows carry the same
+  flag before their title line. (A yellow background on the number carried this
+  hint until Nov 24, 2026; a sticky-note icon beside the number was
+  tried on Nov 7, 2026 and reverted the same day.)
+- **REQ-NT-6:** Tapping a flag opens the editor for that flag's note: the
+  verse flag the verse note, the chapter flag the chapter note, the
+  book flag the book note.
 
 - **REQ-NT-7:** The note editor auto-focuses on appear: cursor shows and the
   keyboard comes up (via `@FocusState` with a 0.4s delay after the sheet
@@ -1091,13 +1095,12 @@ Multiple (KJV Gen 1:1-2):
   belong to the passage, not to a version (like bookmarks,
   REQ-BM-11). The rendering applies in verse-by-verse,
   paragraph, and Strong's modes. The yellow covers the
-  whole verse — its number and the spaces around it, and
-  the space joining it to a highlighted neighbor — so
-  consecutive highlighted verses read as one band; the one
-  exception is a noted verse's number, which keeps the
-  note's pale yellow so the note stays visible. The
-  selection's sky blue covers the yellow while the verse
-  is selected. Where a highlighted verse's text is
+  whole verse — its number, its note flags (REQ-NT-5), and
+  the spaces around it, and the space joining it to a
+  highlighted neighbor — so consecutive highlighted verses
+  read as one band; the flags keep their blue foreground on
+  the band, so a noted verse stays visible. The selection's
+  sky blue covers the yellow while the verse is selected. Where a highlighted verse's text is
   Jesus's speech and red letters are on, the speech spans
   render on a blue-gray background instead of the yellow —
   red on bright yellow is low-contrast. This applies in the
