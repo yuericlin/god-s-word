@@ -421,7 +421,9 @@ Multiple (KJV Gen 1:1-2):
   a load-more control when there are more: a centered pill (capsule)
   button with a down chevron and no text label (VoiceOver announces
   "Load More"); each tap reveals the next 20 entries, until the whole
-  log is shown. The log itself still keeps up to 100 (REQ-HI-2).
+  log is shown — a centered fleuron (❧) then marks the end of the
+  list in place of the pill. The log itself still keeps up to 100
+  (REQ-HI-2).
 
 ---
 

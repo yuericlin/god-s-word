@@ -2,7 +2,8 @@
 // it through onSelect. An entry combines the visits to one chapter within
 // 24 hours: it shows the earliest visit and every version read. The
 // latest 20 entries are listed first; a pill button (down chevron)
-// at the end reveals the next 20 at a time (REQ-HI-9). Each entry
+// at the end reveals the next 20 at a time, and a fleuron (❧) marks
+// the end once the whole log is shown (REQ-HI-9). Each entry
 // renders on one line, in the Highlights row format (REQ-AP-11).
 
 import SwiftUI
@@ -83,6 +84,16 @@ struct HistoryView: View {
                     .accessibilityLabel("Load More")
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                } else {
+                    // The whole log is shown: a fleuron marks the
+                    // end of the list where the pill was (REQ-HI-9).
+                    Text("❧")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                        .accessibilityLabel("End of history")
                 }
             }
         }
