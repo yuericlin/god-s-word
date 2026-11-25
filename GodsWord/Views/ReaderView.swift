@@ -92,6 +92,17 @@ struct ReaderView: View {
         /// other way. A save from a multi-verse selection stores
         /// it as the note's scope (REQ-NT-22).
         let selectionVerses: [Int]? = nil
+
+        init(id: String, verse: Int, reference: String,
+             initialText: String, seedText: String,
+             selectionVerses: [Int]? = nil) {
+            self.id = id
+            self.verse = verse
+            self.reference = reference
+            self.initialText = initialText
+            self.seedText = seedText
+            self.selectionVerses = selectionVerses
+        }
     }
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
