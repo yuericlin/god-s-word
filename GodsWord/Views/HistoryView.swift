@@ -1,8 +1,10 @@
 // HistoryView.swift — full reading history log. Tapping an entry reports
 // it through onSelect. An entry combines the visits to one chapter within
-// 24 hours: it shows the earliest visit and every version read. Only the
-// latest 20 entries are listed, followed by "…". Each entry renders on
-// one line, in the Highlights row format (REQ-AP-11).
+// 24 hours: it shows the earliest visit and every version read. The
+// latest 20 entries are listed first; a pill button (down chevron)
+// at the end reveals the next 20 at a time, and a fleuron (❧) marks
+// the end once the whole log is shown (REQ-HI-9). Each entry
+// renders on one line, in the Highlights row format (REQ-AP-11).
 
 import SwiftUI
 import SwordReader
@@ -10,6 +12,11 @@ import SwordReader
 struct HistoryView: View {
     @EnvironmentObject private var personalData: PersonalData
     var onSelect: ((HistoryEntry) -> Void)?
+
+    /// How many entries are shown: one chunk of
+    /// `ReadingHistoryLog.displayLimit`, plus one chunk per
+    /// Load More tap (REQ-HI-9).
+    @State private var shownCount = ReadingHistoryLog.displayLimit
 
     var body: some View {
         List {
@@ -19,7 +26,7 @@ struct HistoryView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             } else {
-                ForEach(ReadingHistoryLog.visible(personalData.historyLog).entries) { entry in
+                ForEach(ReadingHistoryLog.visible(personalData.historyLog, limit: shownCount).entries) { entry in
                     Button {
                         onSelect?(entry)
                     } label: {
@@ -53,17 +60,40 @@ struct HistoryView: View {
                     .listRowBackground(Color.clear)
                 }
                 .onDelete { offsets in
-                    // The visible entries are the log's first 20, so the
+                    // The visible entries are a prefix of the log, so the
                     // offsets are the log's offsets.
                     personalData.deleteHistory(at: offsets)
                 }
-                if ReadingHistoryLog.visible(personalData.historyLog).hasMore {
-                    Text("…")
+                if ReadingHistoryLog.visible(personalData.historyLog,
+                                             limit: shownCount).hasMore {
+                    Button {
+                        shownCount += ReadingHistoryLog.displayLimit
+                    } label: {
+                        // A pill with a down chevron instead of a
+                        // text label (REQ-HI-9); VoiceOver still
+                        // announces "Load More".
+                        Image(systemName: "chevron.down")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 30)
+                            .padding(.vertical, 9)
+                            .background(Capsule().fill(
+                                Color(uiColor: .secondarySystemFill)))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                    .accessibilityLabel("Load More")
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                } else {
+                    // The whole log is shown: a fleuron marks the
+                    // end of the list where the pill was (REQ-HI-9).
+                    Text("❧")
+                        .font(.body)
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .accessibilityLabel("Older history not shown")
+                        .accessibilityLabel("End of history")
                 }
             }
         }

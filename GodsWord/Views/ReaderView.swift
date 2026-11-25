@@ -67,6 +67,7 @@ struct ReaderView: View {
     @State private var loadedChapterKey = ""
     @State private var noteEditorItem: NoteEditorItem?
     @State private var showingChapterNoteEditor = false
+    @State private var showingBookNoteEditor = false
     @State private var showingCompare = false
     @State private var showingAssignBookmark = false
     /// The verse the Assign sheet targets: nil for a chapter
@@ -178,7 +179,17 @@ struct ReaderView: View {
                 return .handled
             }
         case "note":
-            // Tapping the note icon opens the verse's note.
+            // Tapping a note flag opens its note (REQ-NT-6): the
+            // book and chapter flags name their scope; a verse
+            // flag names its verse.
+            if url.host == "book" {
+                openBookNoteEditor()
+                return .handled
+            }
+            if url.host == "chapter" {
+                openChapterNoteEditor()
+                return .handled
+            }
             if let host = url.host, let n = Int(host) {
                 openNoteEditor(for: n)
                 return .handled
@@ -587,6 +598,15 @@ struct ReaderView: View {
                                             source: history.version.id)
             }
         }
+        .sheet(isPresented: $showingBookNoteEditor) {
+            NoteEditor(
+                reference: history.bookTitle,
+                initialText: personalData.bookNote(forKey: currentBookNoteKey) ?? ""
+            ) { text in
+                personalData.setBookNote(text, forKey: currentBookNoteKey,
+                                         source: history.version.id)
+            }
+        }
     }
 
     /// One decision for every reader swipe (REQ-GS-2), fed by the
@@ -752,19 +772,12 @@ struct ReaderView: View {
 
     private func attributedVerse(number: Int, text: String) -> AttributedString {
         var out = attributedVerseNumber(number)
-        if hasNote(verse: number) {
-            // Yellow background highlights the verse number; tapping it opens the note.
-            // (backgroundColor isn't overridden by link styling, unlike foregroundColor.)
-            let numRange = out.startIndex..<out.endIndex
-            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
-            out[numRange].link = URL(string: "note://\(number)")
-            out[numRange].underlineStyle = []
-        }
+        out += attributedNoteFlags(for: number)
         out += AttributedString(" ")
         out += AttributedString(text)
         // Invisible verse:// link makes the verse tappable for selection
         // without changing how it renders. Runs that already have a link
-        // (verse number with a note) keep theirs.
+        // (the note flags) keep theirs.
         applyVerseLink(to: &out, verse: number)
         applyRedLetters(to: &out, verse: number)
         applyHighlight(to: &out, verse: number)
@@ -824,13 +837,7 @@ struct ReaderView: View {
     /// their spacing); numbers render small and raised.
     private func attributedVerseTokens(number: Int, tokens: [WordToken]) -> AttributedString {
         var out = attributedVerseNumber(number)
-        if hasNote(verse: number) {
-            // Yellow background highlights the verse number; tapping it opens the note.
-            let numRange = out.startIndex..<out.endIndex
-            out[numRange].backgroundColor = UIColor(red: 1.0, green: 0.9, blue: 0.45, alpha: 0.55)
-            out[numRange].link = URL(string: "note://\(number)")
-            out[numRange].underlineStyle = []
-        }
+        out += attributedNoteFlags(for: number)
         out += AttributedString(" ")
         // Character ranges of the Jesus-speech tokens, for the
         // blue-gray highlight background (REQ-HL-2): the Strong's
@@ -897,6 +904,51 @@ struct ReaderView: View {
         return num
     }
 
+    /// The note flags after a verse number (REQ-NT-5): one blue
+    /// flag per note covering the verse — its own note, plus the
+    /// chapter's at verse 1 and the book's at chapter 1 verse 1 —
+    /// each tappable to open its note (REQ-NT-6). The flags are
+    /// drawn at the full reading size and raised like the verse
+    /// number.
+    private func attributedNoteFlags(for verse: Int) -> AttributedString {
+        var out = AttributedString("")
+        for flag in noteFlags(for: verse) {
+            var run = AttributedString("⚑")
+            run.font = .system(size: personalData.fontSize, design: .serif)
+            run.foregroundColor = .blue
+            run.baselineOffset = personalData.fontSize * 0.25
+            run.underlineStyle = []
+            switch flag {
+            case .book:
+                run.link = URL(string: "note://book")
+            case .chapter:
+                run.link = URL(string: "note://chapter")
+            case .verse:
+                run.link = URL(string: "note://\(verse)")
+            }
+            out += run
+        }
+        return out
+    }
+
+    /// The notes covering a verse, as flags (REQ-NT-5).
+    private func noteFlags(for verse: Int) -> [NoteFlag] {
+        NoteFlagLogic.flags(
+            isBookStart: history.chapter == 1 && verse == 1,
+            isChapterStart: verse == 1,
+            hasBookNote: personalData.bookNote(forKey: currentBookNoteKey) != nil,
+            hasChapterNote: personalData.chapterNote(forKey: currentChapterNoteKey) != nil,
+            hasVerseNote: hasNote(verse: verse))
+    }
+
+    /// Characters before a verse's text: the number run
+    /// ("\(verse) "), its note flags, and one separator space.
+    /// The span-based painters (red letters, highlights) skip
+    /// exactly this prefix.
+    private func versePrefixLength(_ verse: Int) -> Int {
+        "\(verse) ".count + noteFlags(for: verse).count + 1
+    }
+
     // MARK: - Verse picker (invisible links; rendering unchanged)
 
     /// Sets an invisible verse://N link on every run without one, so the
@@ -958,7 +1010,7 @@ struct ReaderView: View {
     /// carries no speech tags for the verse (REQ-RL-1).
     private func applyRedLetters(to attr: inout AttributedString, verse: Int) {
         guard personalData.showRedLetters, let spans = jesusSpans[verse] else { return }
-        let prefix = "\(verse) ".count + 1
+        let prefix = versePrefixLength(verse)
         for span in spans {
             let start = prefix + span.start
             let end = prefix + span.end
@@ -991,31 +1043,23 @@ struct ReaderView: View {
     }
 
     /// Bright yellow background on a highlighted verse
-    /// (REQ-HL-2): the whole verse — its number, the spaces
-    /// around the number, and its text — so consecutive
-    /// highlighted verses read as one band. The one exception
-    /// is a noted verse's number, which keeps the note's pale
-    /// yellow so the note stays visible; the selection's sky
-    /// blue, applied after this, covers the yellow while the
-    /// verse is selected.
+    /// (REQ-HL-2): the whole verse — its number, its note
+    /// flags, the spaces around the number, and its text — so
+    /// consecutive highlighted verses read as one band. The
+    /// flags keep their blue foreground on the band, so a
+    /// noted verse stays visible; the selection's sky blue,
+    /// applied after this, covers the yellow while the verse
+    /// is selected.
     private func applyHighlight(to attr: inout AttributedString, verse: Int) {
         guard highlightedInChapter.contains(verse) else { return }
         let yellow = UIColor(red: 1.0, green: 0.9, blue: 0.0, alpha: 0.65)
-        // The number run ("\(verse) ", digits plus its own
-        // trailing space) heads the string; one more space
-        // separates it from the text.
-        let numberLength = "\(verse) ".count
-        let prefix = numberLength + 1
+        // The whole string joins the band: the number run, the
+        // note flags, the separator space, and the text. Only
+        // the background is painted, so the flags keep their
+        // blue foreground.
+        let prefix = versePrefixLength(verse)
         guard attr.characters.count > prefix else { return }
-        let textStart = attr.index(attr.startIndex, offsetByCharacters: prefix)
-        attr[textStart ..< attr.endIndex].backgroundColor = yellow
-        // The separator space always joins the band; the
-        // number itself joins unless a note claims it.
-        let numberEnd = attr.index(attr.startIndex, offsetByCharacters: numberLength)
-        attr[numberEnd ..< textStart].backgroundColor = yellow
-        if !hasNote(verse: verse) {
-            attr[attr.startIndex ..< numberEnd].backgroundColor = yellow
-        }
+        attr.backgroundColor = yellow
     }
 
     /// Repaints the background of a highlighted verse's
@@ -1028,7 +1072,7 @@ struct ReaderView: View {
         guard highlightedInChapter.contains(verse),
               personalData.showRedLetters,
               let spans = jesusSpans[verse] else { return }
-        let prefix = "\(verse) ".count + 1
+        let prefix = versePrefixLength(verse)
         for span in spans {
             let start = prefix + span.start
             let end = prefix + span.end
@@ -1293,11 +1337,21 @@ struct ReaderView: View {
     private func selectionVerseText() -> String {
         let sorted = selectedVerses.sorted()
         let single = sorted.count == 1
-        let parts = sorted.compactMap { v -> String? in
+        let included = sorted.compactMap { v -> (verse: Int, text: String)? in
             guard let text = verses.first(where: { $0.verse == v })?.text else { return nil }
-            return single ? text : "\(v) \(text)"
+            return (v, single ? text : "\(v) \(text)")
         }
-        return parts.joined(separator: " ")
+        // An ellipsis marks each gap between non-consecutive
+        // verses (REQ-CP-6): "4 text ... 6 text". Copy and the
+        // note seed share this text, so both show the gaps.
+        var segments: [String] = []
+        for (index, part) in included.enumerated() {
+            if index > 0, part.verse > included[index - 1].verse + 1 {
+                segments.append("...")
+            }
+            segments.append(part.text)
+        }
+        return segments.joined(separator: " ")
     }
 
     /// The clipboard format for the current selection:
@@ -1385,6 +1439,19 @@ struct ReaderView: View {
     /// lives in the chapter-notes store, not on any verse.
     private func openChapterNoteEditor() {
         showingChapterNoteEditor = true
+    }
+
+    /// The storage key of the current book's book-level note.
+    private var currentBookNoteKey: String {
+        personalData.bookNoteKey(testament: history.testament,
+                                 book: history.book)
+    }
+
+    /// A book note is scoped to the whole book: it lives in the
+    /// book-notes store, not on any verse. Its flag sits at
+    /// chapter 1 verse 1 (REQ-NT-5).
+    private func openBookNoteEditor() {
+        showingBookNoteEditor = true
     }
 
     private func load() async {

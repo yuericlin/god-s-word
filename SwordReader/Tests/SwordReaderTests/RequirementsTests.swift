@@ -50,6 +50,25 @@ final class CopyFormatRequirementsTests: XCTestCase {
         XCTAssertTrue(out!.hasPrefix("\"1 "))
     }
 
+    // REQ-CP-6: an ellipsis marks each gap between non-consecutive
+    // copied verses; consecutive verses join with a plain space.
+    func testCopyMarksGapsWithEllipsis() {
+        let mixed = VerseFormatting.copyString(
+            selectedVerses: [1, 2, 5], verseTexts: texts,
+            bookTitle: "Genesis", chapter: 1, version: "KJV")
+        XCTAssertEqual(mixed,
+            "\"1 In the beginning God created the heaven and the earth. " +
+            "2 And the earth was without form, and void. " +
+            "... 5 And God called the light Day.\" Genesis 1:1-2, 5 KJV")
+        let gapped = VerseFormatting.copyString(
+            selectedVerses: [1, 3, 5], verseTexts: texts,
+            bookTitle: "Genesis", chapter: 1, version: "KJV")
+        XCTAssertEqual(gapped,
+            "\"1 In the beginning God created the heaven and the earth. " +
+            "... 3 And God said, Let there be light. " +
+            "... 5 And God called the light Day.\" Genesis 1:1, 3, 5 KJV")
+    }
+
     func testCopyEmptySelectionReturnsNil() {
         XCTAssertNil(VerseFormatting.copyString(
             selectedVerses: [], verseTexts: texts,
@@ -91,6 +110,36 @@ final class NoteRequirementsTests: XCTestCase {
         XCTAssertNil(NoteKey.parse("1:1:1:1:extra"))
         // Legacy per-version keys no longer parse as note keys.
         XCTAssertNil(NoteKey.parse("KJV:1:1:1:1"))
+    }
+
+    // REQ-NT-5: one flag per covering note, in scope order; the
+    // chapter note flags only its verse 1, the book note only
+    // chapter 1 verse 1.
+    func testNoteFlagsPerCoveringNote() {
+        // A plain verse note.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: false,
+                                           hasBookNote: false, hasChapterNote: false,
+                                           hasVerseNote: true), [.verse])
+        // Verse 1 of a chapter: chapter + verse notes.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: true,
+                                           hasBookNote: false, hasChapterNote: true,
+                                           hasVerseNote: true), [.chapter, .verse])
+        // Chapter 1 verse 1 with all three notes.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: true, isChapterStart: true,
+                                           hasBookNote: true, hasChapterNote: true,
+                                           hasVerseNote: true), [.book, .chapter, .verse])
+        // A chapter note does not flag the chapter's other verses.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: false,
+                                           hasBookNote: false, hasChapterNote: true,
+                                           hasVerseNote: false), [])
+        // A book note does not flag verse 1 of later chapters.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: true,
+                                           hasBookNote: true, hasChapterNote: false,
+                                           hasVerseNote: false), [])
+        // No notes, no flags.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: true, isChapterStart: true,
+                                           hasBookNote: false, hasChapterNote: false,
+                                           hasVerseNote: false), [])
     }
 
     // REQ-NT-19: legacy per-version keys split into module id + the
@@ -253,6 +302,28 @@ final class HistoryRequirementsTests: XCTestCase {
         let log = HistoryLogLogic.insert("New", into: ["A", "B"])
         XCTAssertEqual(log.first, "New")
         XCTAssertEqual(log.count, 3)
+    }
+
+    // REQ-HI-9: the list pages through the log in chunks of
+    // `displayLimit` — the default limit shows the first chunk, each
+    // Load More limit one chunk more, and hasMore holds until the
+    // whole log is shown.
+    func testVisiblePagesInChunks() {
+        let log = (1...45).map { i in
+            ReadingHistoryEntry(bookName: "Book \(i)", testament: 1, book: i,
+                                chapter: 1, moduleIDs: ["KJV"],
+                                timestamps: [Date(timeIntervalSince1970: Double(i))])
+        }
+        let first = ReadingHistoryLog.visible(log)
+        XCTAssertEqual(first.entries.count, 20)
+        XCTAssertTrue(first.hasMore)
+        XCTAssertEqual(first.entries.map(\.book), log.prefix(20).map(\.book))
+        let second = ReadingHistoryLog.visible(log, limit: 40)
+        XCTAssertEqual(second.entries.count, 40)
+        XCTAssertTrue(second.hasMore)
+        let all = ReadingHistoryLog.visible(log, limit: 60)
+        XCTAssertEqual(all.entries.count, 45)
+        XCTAssertFalse(all.hasMore)
     }
 }
 

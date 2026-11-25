@@ -39,12 +39,21 @@ public enum VerseFormatting {
         guard !sorted.isEmpty else { return nil }
         let ref = "\(bookTitle) \(chapter):\(verseListString(sorted))"
         let single = sorted.count == 1
-        let parts = sorted.compactMap { v -> String? in
+        let included = sorted.compactMap { v -> (verse: Int, text: String)? in
             guard let text = verseTexts[v] else { return nil }
-            return single ? text : "\(v) \(text)"
+            return (v, single ? text : "\(v) \(text)")
         }
-        guard !parts.isEmpty else { return nil }
-        let quoted = "\"\(parts.joined(separator: " "))\""
+        guard !included.isEmpty else { return nil }
+        // An ellipsis marks each gap between non-consecutive
+        // verses (REQ-CP-6): "4 text ... 6 text".
+        var segments: [String] = []
+        for (index, part) in included.enumerated() {
+            if index > 0, part.verse > included[index - 1].verse + 1 {
+                segments.append("...")
+            }
+            segments.append(part.text)
+        }
+        let quoted = "\"\(segments.joined(separator: " "))\""
         return "\(quoted) \(ref) \(version)"
     }
 }

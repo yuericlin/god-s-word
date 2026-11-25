@@ -849,11 +849,17 @@ struct AuxiliaryPanelView: View {
             Button {
                 openNoteEditor(row)
             } label: {
-                Text(row.reference + sourceSuffix(row.source)
-                     + noteDateSuffix(row.updated))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 4) {
+                    // The reader's note flag (REQ-NT-5), in its
+                    // blue, before the title.
+                    Text("⚑")
+                        .foregroundStyle(.blue)
+                    Text(row.reference + sourceSuffix(row.source)
+                         + noteDateSuffix(row.updated))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             Button {
                 openNoteEditor(row)
