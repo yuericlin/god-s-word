@@ -1,9 +1,9 @@
 // HistoryView.swift — full reading history log. Tapping an entry reports
 // it through onSelect. An entry combines the visits to one chapter within
 // 24 hours: it shows the earliest visit and every version read. The
-// latest 20 entries are listed first; a Load More button at the end
-// reveals the next 20 at a time (REQ-HI-9). Each entry renders on one
-// line, in the Highlights row format (REQ-AP-11).
+// latest 20 entries are listed first; a pill button (down chevron)
+// at the end reveals the next 20 at a time (REQ-HI-9). Each entry
+// renders on one line, in the Highlights row format (REQ-AP-11).
 
 import SwiftUI
 import SwordReader
@@ -68,10 +68,19 @@ struct HistoryView: View {
                     Button {
                         shownCount += ReadingHistoryLog.displayLimit
                     } label: {
-                        Text("Load More")
+                        // A pill with a down chevron instead of a
+                        // text label (REQ-HI-9); VoiceOver still
+                        // announces "Load More".
+                        Image(systemName: "chevron.down")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.blue)
+                            .padding(.horizontal, 30)
+                            .padding(.vertical, 9)
+                            .background(Capsule().fill(
+                                Color(uiColor: .secondarySystemFill)))
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    .foregroundStyle(.blue)
+                    .accessibilityLabel("Load More")
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }

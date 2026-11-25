@@ -416,10 +416,11 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-HI-8:** Each history row shows the chapter, all its versions, and the
   entry's earliest timestamp as a date and time (with the year only when not
   the current year), not a time-ago.
-- **REQ-HI-9:** The history list shows the latest 20 entries, followed by a
-  "Load More" button when there are more; each tap reveals the next 20
-  entries, until the whole log is shown. The log itself still keeps up to
-  100 (REQ-HI-2).
+- **REQ-HI-9:** The history list shows the latest 20 entries, followed by
+  a load-more control when there are more: a centered pill (capsule)
+  button with a down chevron and no text label (VoiceOver announces
+  "Load More"); each tap reveals the next 20 entries, until the whole
+  log is shown. The log itself still keeps up to 100 (REQ-HI-2).
 
 ---
 
