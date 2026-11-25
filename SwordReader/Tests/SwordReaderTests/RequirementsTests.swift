@@ -115,6 +115,18 @@ final class NoteRequirementsTests: XCTestCase {
     // REQ-NT-5: one flag per covering note, in scope order; the
     // chapter note flags only its verse 1, the book note only
     // chapter 1 verse 1.
+    /// REQ-NT-22: only a save from a multi-verse selection stores
+    /// a scope; the stored scope is the selection, sorted.
+    func testNoteScopeStoredOnlyForMultiVerseSelections() {
+        XCTAssertNil(NoteScopeLogic.storedScope(selection: nil))
+        XCTAssertNil(NoteScopeLogic.storedScope(selection: []))
+        XCTAssertNil(NoteScopeLogic.storedScope(selection: [4]))
+        XCTAssertEqual(NoteScopeLogic.storedScope(selection: [6, 4]),
+                       [4, 6])
+        XCTAssertEqual(NoteScopeLogic.storedScope(selection: [4, 5, 6]),
+                       [4, 5, 6])
+    }
+
     func testNoteFlagsPerCoveringNote() {
         // A plain verse note.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: false,

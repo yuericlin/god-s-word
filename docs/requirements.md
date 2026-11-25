@@ -245,6 +245,20 @@ Multiple (KJV Gen 1:1-2):
 ---
 
 - **REQ-NT-21:** Tapping a note row in the Notes tab's lists — the title line (reference, source, date) or the note text alike — opens its editor; rows never navigate. The note editor — one editor serves verse, chapter, and book notes — only edits: the reference is its title, never a jump target. Instead, an editor carries a blue **Read** button beside Cancel at the top left of its toolbar: it dismisses the editor and moves the reader to the note's chapter in the version being read — for a verse note, landing on the verse itself (the reader selects it and scrolls it into view, exactly in verse-by-verse reading, approximately in paragraph mode, per REQ-AP-20); a book note lands on its book's first chapter. The one exception: the chapter-note editor opened from the reader for the chapter already on screen shows no Read button — it is already there. (Supersedes the earlier title-line/title-tap jump design.)
+- **REQ-NT-22:** A verse note remembers the scope it was taken with.
+  When a note is saved from an editor opened on a multi-verse
+  selection — the reader's selection bar or the Notes tab's Add
+  Note — the selection's verses are stored as the note's scope,
+  keyed by the note's anchor key (REQ-NT-2). The reader still
+  shows one flag, at the anchor verse (REQ-NT-5). Saving from a
+  single-verse selection, a flag tap, or a Notes list row never
+  changes a stored scope. The Notes list's title line and the
+  note editor's title show the scope — "Book C:4, 6", ranges
+  compressed as in REQ-CP-5 — when it covers more than one verse.
+  A note with no stored scope was taken on its anchor verse
+  alone; existing notes need no migration. Deleting a note
+  deletes its scope. Scopes ride in backups and iCloud sync
+  alongside the notes' times and sources.
 ## 4. Bookmarks panel
 
 ### Sections

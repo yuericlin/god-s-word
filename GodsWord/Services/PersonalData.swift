@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 14
+    public var version: Int = 15
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -68,6 +68,10 @@ public struct BackupPayload: Codable, Sendable {
     /// keyed like the notes. Payload v10+; older payloads decode
     /// to [:] and migration derives sources from the legacy keys.
     public var noteSources: [String: String]
+    /// The verses each verse note was taken on (REQ-NT-22), keyed
+    /// like the notes; absent = the anchor verse alone. Payload
+    /// v15+; older payloads decode to [:].
+    public var verseNoteScopes: [String: [Int]]
     /// Commentary module the auxiliary panel shows (REQ-AP-4); "" = none.
     public var commentaryModuleID: String
     /// Fallback Strong's version for the panel (REQ-AP-7); "" = automatic.
@@ -109,6 +113,7 @@ public struct BackupPayload: Codable, Sendable {
                 bookNoteTimes: [String: NoteTimes] = [:],
                 chapterNoteTimes: [String: NoteTimes] = [:],
                 noteSources: [String: String] = [:],
+                verseNoteScopes: [String: [Int]] = [:],
                 commentaryModuleID: String = "",
                 strongsFallbackVersionID: String = "",
                 interestedLanguages: [String] = [],
@@ -137,6 +142,7 @@ public struct BackupPayload: Codable, Sendable {
         self.bookNoteTimes = bookNoteTimes
         self.chapterNoteTimes = chapterNoteTimes
         self.noteSources = noteSources
+        self.verseNoteScopes = verseNoteScopes
         self.commentaryModuleID = commentaryModuleID
         self.strongsFallbackVersionID = strongsFallbackVersionID
         self.interestedLanguages = interestedLanguages
@@ -172,6 +178,7 @@ public struct BackupPayload: Codable, Sendable {
         bookNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .bookNoteTimes) ?? [:]
         chapterNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .chapterNoteTimes) ?? [:]
         noteSources = try c.decodeIfPresent([String: String].self, forKey: .noteSources) ?? [:]
+        verseNoteScopes = try c.decodeIfPresent([String: [Int]].self, forKey: .verseNoteScopes) ?? [:]
         commentaryModuleID = try c.decodeIfPresent(String.self, forKey: .commentaryModuleID) ?? ""
         strongsFallbackVersionID = try c.decodeIfPresent(String.self, forKey: .strongsFallbackVersionID) ?? ""
         interestedLanguages = try c.decodeIfPresent([String].self, forKey: .interestedLanguages) ?? []
@@ -207,6 +214,7 @@ public final class PersonalData: ObservableObject {
     private let bookNoteTimesKey = "gw.bookNoteTimes.v1"
     private let chapterNoteTimesKey = "gw.chapterNoteTimes.v1"
     private let noteSourcesKey = "gw.noteSources.v1"
+    private let verseNoteScopesKey = "gw.verseNoteScopes.v1"
     private let commentaryModuleKey = "gw.commentaryModule.v1"
     private let strongsFallbackKey = "gw.strongsFallbackVersion.v1"
     private let interestedLanguagesKey = "gw.interestedLanguages.v1"
@@ -261,6 +269,12 @@ public final class PersonalData: ObservableObject {
         self.bookNoteTimes = Self.decodeNoteTimes(defaults, bookNoteTimesKey)
         self.chapterNoteTimes = Self.decodeNoteTimes(defaults, chapterNoteTimesKey)
         self.noteSources = defaults.dictionary(forKey: noteSourcesKey) as? [String: String] ?? [:]
+        if let data = defaults.data(forKey: verseNoteScopesKey),
+           let decoded = try? JSONDecoder().decode([String: [Int]].self, from: data) {
+            self.verseNoteScopes = decoded
+        } else {
+            self.verseNoteScopes = [:]
+        }
         self.commentaryModuleID = defaults.string(forKey: commentaryModuleKey) ?? ""
         self.strongsFallbackVersionID = defaults.string(forKey: strongsFallbackKey) ?? ""
         self.interestedLanguages = defaults.stringArray(forKey: interestedLanguagesKey) ?? []
@@ -289,6 +303,8 @@ public final class PersonalData: ObservableObject {
         defaults.set(try? JSONEncoder().encode(chapterNoteTimes),
                      forKey: chapterNoteTimesKey)
         defaults.set(noteSources, forKey: noteSourcesKey)
+        defaults.set(try? JSONEncoder().encode(verseNoteScopes),
+                     forKey: verseNoteScopesKey)
     }
 
     @Published public var fontSize: Double {
@@ -526,6 +542,18 @@ public final class PersonalData: ObservableObject {
         }
     }
 
+    /// The verses each verse note was taken on (REQ-NT-22), keyed
+    /// like the notes: the note's scope when it was saved from a
+    /// multi-verse selection. A note with no entry was taken on
+    /// its anchor verse alone. Persisted in UserDefaults as JSON.
+    @Published public var verseNoteScopes: [String: [Int]] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(verseNoteScopes),
+                         forKey: verseNoteScopesKey)
+            syncVerseNoteScopesToiCloud()
+        }
+    }
+
     private static func decodeNoteTimes(_ defaults: UserDefaults,
                                         _ key: String) -> [String: NoteTimes] {
         guard let data = defaults.data(forKey: key),
@@ -671,6 +699,27 @@ public final class PersonalData: ObservableObject {
         return (note?.isEmpty ?? true) ? nil : note
     }
 
+    /// The verses a verse note was taken on (REQ-NT-22): its
+    /// stored scope, or just the key's anchor verse when the note
+    /// carries no scope.
+    public func verseNoteScope(forKey key: String) -> [Int] {
+        if let scope = verseNoteScopes[key], !scope.isEmpty {
+            return scope
+        }
+        return NoteKey.parse(key).map { [$0.verse] } ?? []
+    }
+
+    /// Stores a verse note's scope (REQ-NT-22); an empty scope
+    /// removes the entry. Only a save from a multi-verse selection
+    /// sets a scope — see `NoteScopeLogic.storedScope`.
+    public func setVerseNoteScope(_ scope: [Int], forKey key: String) {
+        if scope.isEmpty {
+            verseNoteScopes.removeValue(forKey: key)
+        } else {
+            verseNoteScopes[key] = scope
+        }
+    }
+
     /// Stores a verse note; an empty/nil text removes it (and its
     /// times and source). Saving moves the note to the front of
     /// `verseNoteOrder` (latest on top), stamps its times
@@ -690,6 +739,7 @@ public final class PersonalData: ObservableObject {
             verseNoteOrder.removeAll { $0 == key }
             verseNoteTimes.removeValue(forKey: key)
             noteSources.removeValue(forKey: key)
+            verseNoteScopes.removeValue(forKey: key)
         }
     }
 
@@ -948,6 +998,7 @@ public final class PersonalData: ObservableObject {
                       bookNoteTimes: bookNoteTimes,
                       chapterNoteTimes: chapterNoteTimes,
                       noteSources: noteSources,
+                      verseNoteScopes: verseNoteScopes,
                       commentaryModuleID: commentaryModuleID,
                       strongsFallbackVersionID: strongsFallbackVersionID,
                       interestedLanguages: interestedLanguages,
@@ -1044,6 +1095,12 @@ public final class PersonalData: ObservableObject {
         if !payload.noteSources.isEmpty {
             noteSources = payload.noteSources
         }
+        // Note scopes (payload v15+; older payloads decode to [:]
+        // and leave current scopes alone). Scopes for notes that
+        // don't exist are dropped.
+        if !payload.verseNoteScopes.isEmpty {
+            verseNoteScopes = payload.verseNoteScopes.filter { verseNotes[$0.key] != nil }
+        }
         // Highlights (payload v11+; older payloads decode to []
         // and leave current highlights alone, like bookmarks).
         if !payload.highlights.isEmpty {
@@ -1138,6 +1195,11 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(noteSources, as: .noteSources)
     }
 
+    private func syncVerseNoteScopesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(verseNoteScopes, as: .verseNoteScopes)
+    }
+
     private func syncHistoryToiCloud() {
         guard iCloudSync.shared.isEnabled else { return }
         try? iCloudSync.shared.save(historyLog, as: .history)
@@ -1159,6 +1221,7 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(bookNoteTimes, as: .bookNoteTimes)
         try? iCloudSync.shared.save(chapterNoteTimes, as: .chapterNoteTimes)
         try? iCloudSync.shared.save(noteSources, as: .noteSources)
+        try? iCloudSync.shared.save(verseNoteScopes, as: .verseNoteScopes)
         try? iCloudSync.shared.save(historyLog, as: .history)
         syncSettingsToiCloud(repositoryURL: repositoryURL,
                               installedModuleIDs: installedModuleIDs)
@@ -1231,6 +1294,10 @@ public final class PersonalData: ObservableObject {
         if let ns: [String: String] = try? iCloudSync.shared.load(
             [String: String].self, as: .noteSources), !ns.isEmpty {
             noteSources = ns
+        }
+        if let sc: [String: [Int]] = try? iCloudSync.shared.load(
+            [String: [Int]].self, as: .verseNoteScopes), !sc.isEmpty {
+            verseNoteScopes = sc
         }
         // iCloud files written by older builds still carry per-version
         // note keys; fold them into the shared keys (REQ-NT-19).
