@@ -91,7 +91,7 @@ struct ReaderView: View {
         /// from the selection bar; nil for editors opened any
         /// other way. A save from a multi-verse selection stores
         /// it as the note's scope (REQ-NT-22).
-        let selectionVerses: [Int]? = nil
+        let selectionVerses: [Int]?
 
         init(id: String, verse: Int, reference: String,
              initialText: String, seedText: String,
