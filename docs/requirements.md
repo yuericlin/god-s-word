@@ -115,7 +115,9 @@ Multiple (KJV Gen 1:1-2):
   it, right after its verse number, drawn at the full reading size and
   raised like the number, in
   scope order: the book's note (at chapter 1 verse 1 only), the
-  chapter's note (at verse 1 only), then the verse's own note
+  chapter's note (at verse 1 only), then the verse's own notes —
+  one per note anchored at the verse (a verse can carry several,
+  one per scope, REQ-NT-22), narrowest scope first
   (`NoteFlagLogic`). The Notes tab's note rows carry the same
   flag before their title line. (A yellow background on the number carried this
   hint until Nov 24, 2026; a sticky-note icon beside the number was
@@ -245,23 +247,31 @@ Multiple (KJV Gen 1:1-2):
 ---
 
 - **REQ-NT-21:** Tapping a note row in the Notes tab's lists — the title line (reference, source, date) or the note text alike — opens its editor; rows never navigate. The note editor — one editor serves verse, chapter, and book notes — only edits: the reference is its title, never a jump target. Instead, an editor carries a blue **Read** button beside Cancel at the top left of its toolbar: it dismisses the editor and moves the reader to the note's chapter in the version being read — for a verse note, landing on the verse itself (the reader selects it and scrolls it into view, exactly in verse-by-verse reading, approximately in paragraph mode, per REQ-AP-20); a book note lands on its book's first chapter. The one exception: the chapter-note editor opened from the reader for the chapter already on screen shows no Read button — it is already there. (Supersedes the earlier title-line/title-tap jump design.)
-- **REQ-NT-22:** A verse note remembers the scope it was taken with.
-  When a note is saved from an editor opened on a multi-verse
-  selection — the reader's selection bar or the Notes tab's Add
-  Note — the selection's verses are stored as the note's scope,
-  keyed by the note's anchor key (REQ-NT-2). The reader still
-  shows one flag, at the anchor verse (REQ-NT-5). Saving from a
-  single-verse selection, a flag tap, or a Notes list row never
-  changes a stored scope. The Notes list's title line and the
-  note editor's title show the scope — "Book C:4, 6", ranges
+- **REQ-NT-22:** A verse note's identity is its scope — the exact set
+  of verses it was taken on. A note taken on verses 24 and 29 is a
+  different note from one taken on verse 24 alone, though both
+  anchor at verse 24; any number of notes can share an anchor,
+  one per scope. The note's key carries the scope: a
+  single-verse note keeps the plain anchor key (REQ-NT-11); a
+  multi-verse note's key appends "@" and the scope's verse list.
+  The Note button — the reader's selection bar, the Notes tab's
+  Add Note — opens the note whose scope exactly matches the
+  current selection, and creates a new note when none does.
+  With no selection, the note is for the entire chapter (the
+  panel's Add Note, the reading area's long-press menu). Chapter
+  and book notes are separate contexts in their own stores: a
+  chapter note's flag sits at verse 1, but selecting verse 1
+  targets the verse-1 note, never the chapter note; and a book
+  note can only be created from the Book sub-tab's Add Note
+  button. Editing a note — from a flag, a Notes row, or an
+  exact-match selection — never changes its scope: a different
+  selection is a different note. The Notes list's title line and
+  the note editor's title show the scope — "Book C:4, 6", ranges
   compressed as in REQ-CP-5 — when it covers more than one verse.
-  A note with no stored scope was taken on its anchor verse
-  alone; existing notes need no migration. Deleting a note
-  deletes its scope. Scopes ride in backups and iCloud sync
-  alongside the notes' times and sources.
-## 4. Bookmarks panel
-
-### Sections
+  (The first scope build, Nov 25, 2026, kept scopes in a side
+  store keyed by anchor; those scopes fold into the keys on
+  launch, on backup apply, and on iCloud load, carrying text,
+  order, times, and source with them.)
 - **REQ-BP-1:** The panel has one section: **Bookmarks**. (It previously
   also listed notes; notes moved to the auxiliary panel below the
   reader, REQ-AP-1.)

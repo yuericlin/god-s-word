@@ -178,10 +178,6 @@ struct AuxiliaryPanelView: View {
     @State private var notesSubTab: NotesSubTab = .recents
     @State private var commentaryScope: PanelScope = .verse
     @State private var editorItem: EditorItem?
-    /// The selection the open verse-note editor was started with
-    /// (Add Note with verses selected); nil for row edits, so a
-    /// save from a row never re-scopes the note (REQ-NT-22).
-    @State private var editorSelection: [Int]?
     @State private var commentaries: [CommentaryModule] = []
     @State private var showingCommentaryDownload = false
     @State private var showingCommentaryInfo = false
@@ -592,14 +588,6 @@ struct AuxiliaryPanelView: View {
                            }) { text in
                     personalData.setVerseNote(text, forKey: key,
                                               source: history.version.id)
-                    // A save from a multi-verse selection stores
-                    // the selection as the note's scope (REQ-NT-22);
-                    // row edits (editorSelection nil) never do.
-                    if personalData.verseNote(forKey: key) != nil,
-                       let scope = NoteScopeLogic.storedScope(
-                           selection: editorSelection) {
-                        personalData.setVerseNoteScope(scope, forKey: key)
-                    }
                 }
             case .book(let key, let reference):
                 NoteEditor(reference: reference,
@@ -732,8 +720,8 @@ struct AuxiliaryPanelView: View {
 
     private func verseNoteRow(key: String, parsed: NoteKey.Parsed) -> NoteRow {
         // A note taken on several verses titles itself with its
-        // whole scope (REQ-NT-22).
-        let scope = personalData.verseNoteScopes[key] ?? []
+        // whole scope, which its key carries (REQ-NT-22).
+        let scope = parsed.scope
         let reference = scope.count > 1
             ? "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(VerseFormatting.verseListString(scope))"
             : "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)"
@@ -855,7 +843,6 @@ struct AuxiliaryPanelView: View {
     /// never navigate. Reading the note's chapter is the
     /// editor's Read button's job.
     private func openNoteEditor(_ row: NoteRow) {
-        editorSelection = nil
         switch row.kind {
         case .book: editorItem = .book(key: row.key, reference: row.reference)
         case .chapter: editorItem = .chapter(key: row.key, reference: row.reference)
@@ -960,7 +947,6 @@ struct AuxiliaryPanelView: View {
     /// verses are selected. The Book and Chapter sub-tabs' own
     /// add entries are gone — this button is the only one.
     private func openAddNote() {
-        editorSelection = nil
         switch effectiveNotesTab {
         case .book:
             editorItem = .book(key: bookNoteKey, reference: history.bookTitle)
@@ -974,12 +960,20 @@ struct AuxiliaryPanelView: View {
                     key: chapterNoteKey,
                     reference: "\(history.bookTitle) \(history.chapter)")
             } else {
+                // The selection is the note's identity
+                // (REQ-NT-22): its scope goes into the key, so
+                // Add Note opens the exact-match note or starts
+                // a new one.
                 editorItem = .verse(
-                    key: verseNoteKey,
+                    key: personalData.verseNoteKey(
+                        testament: history.testament,
+                        book: history.book,
+                        chapter: history.chapter,
+                        verse: anchorVerse,
+                        scope: selectedVerses.sorted()),
                     reference: selectedVerses.count > 1
                         ? "\(history.bookTitle) \(history.chapter):\(VerseFormatting.verseListString(selectedVerses.sorted()))"
                         : verseReference)
-                editorSelection = selectedVerses.sorted()
             }
         }
     }

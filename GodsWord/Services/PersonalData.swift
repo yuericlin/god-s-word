@@ -292,6 +292,7 @@ public final class PersonalData: ObservableObject {
         // version-less ones. didSet does not fire during init, so
         // persist the note stores explicitly afterwards.
         migrateNotesToVersionlessKeys()
+        migrateNoteScopesIntoKeys()
         defaults.set(verseNotes, forKey: verseNotesKey)
         defaults.set(verseNoteOrder, forKey: verseNoteOrderKey)
         defaults.set(bookNotes, forKey: bookNotesKey)
@@ -686,11 +687,25 @@ public final class PersonalData: ObservableObject {
         }
     }
 
-    /// Builds the storage key for a verse note.
+    /// Builds the storage key for a verse note; a multi-verse
+    /// scope becomes part of the key (REQ-NT-22).
     public func verseNoteKey(testament: Int, book: Int,
-                             chapter: Int, verse: Int) -> String {
+                             chapter: Int, verse: Int,
+                             scope: [Int] = []) -> String {
         NoteKey.make(testament: testament, book: book,
-                     chapter: chapter, verse: verse)
+                     chapter: chapter, verse: verse, scope: scope)
+    }
+
+    /// The keys of every verse note anchored at a verse
+    /// (REQ-NT-22): a verse can carry several notes, one per
+    /// scope.
+    public func verseNoteKeys(testament: Int, book: Int,
+                              chapter: Int, verse: Int) -> [String] {
+        verseNotes.keys.filter { key in
+            guard let p = NoteKey.parse(key) else { return false }
+            return p.testament == testament && p.book == book
+                && p.chapter == chapter && p.verse == verse
+        }
     }
 
     /// Returns the note for a verse, or nil when there is none.
@@ -699,25 +714,11 @@ public final class PersonalData: ObservableObject {
         return (note?.isEmpty ?? true) ? nil : note
     }
 
-    /// The verses a verse note was taken on (REQ-NT-22): its
-    /// stored scope, or just the key's anchor verse when the note
-    /// carries no scope.
+    /// The verses a verse note was taken on (REQ-NT-22): the
+    /// scope its key carries — the anchor verse alone for a
+    /// plain key.
     public func verseNoteScope(forKey key: String) -> [Int] {
-        if let scope = verseNoteScopes[key], !scope.isEmpty {
-            return scope
-        }
-        return NoteKey.parse(key).map { [$0.verse] } ?? []
-    }
-
-    /// Stores a verse note's scope (REQ-NT-22); an empty scope
-    /// removes the entry. Only a save from a multi-verse selection
-    /// sets a scope — see `NoteScopeLogic.storedScope`.
-    public func setVerseNoteScope(_ scope: [Int], forKey key: String) {
-        if scope.isEmpty {
-            verseNoteScopes.removeValue(forKey: key)
-        } else {
-            verseNoteScopes[key] = scope
-        }
+        NoteKey.parse(key)?.scope ?? []
     }
 
     /// Stores a verse note; an empty/nil text removes it (and its
@@ -741,6 +742,37 @@ public final class PersonalData: ObservableObject {
             noteSources.removeValue(forKey: key)
             verseNoteScopes.removeValue(forKey: key)
         }
+    }
+
+    /// REQ-NT-22: the first scope build kept a note's scope in
+    /// the side store (`verseNoteScopes`); the scope now lives in
+    /// the note's key. Fold any side-store scopes into the keys,
+    /// carrying text, order, times, and source, then empty the
+    /// side store.
+    private func migrateNoteScopesIntoKeys() {
+        guard !verseNoteScopes.isEmpty else { return }
+        for (key, scope) in verseNoteScopes where scope.count > 1 {
+            guard let parsed = NoteKey.parse(key),
+                  parsed.scope.count == 1,
+                  let text = verseNotes[key] else { continue }
+            let scoped = NoteKey.make(testament: parsed.testament,
+                                      book: parsed.book,
+                                      chapter: parsed.chapter,
+                                      verse: parsed.verse,
+                                      scope: scope)
+            verseNotes.removeValue(forKey: key)
+            verseNotes[scoped] = text
+            if let i = verseNoteOrder.firstIndex(of: key) {
+                verseNoteOrder[i] = scoped
+            }
+            if let times = verseNoteTimes.removeValue(forKey: key) {
+                verseNoteTimes[scoped] = times
+            }
+            if let source = noteSources.removeValue(forKey: key) {
+                noteSources[scoped] = source
+            }
+        }
+        verseNoteScopes = [:]
     }
 
     // MARK: - REQ-NT-19 migration (per-version keys -> shared keys)
@@ -1101,6 +1133,9 @@ public final class PersonalData: ObservableObject {
         if !payload.verseNoteScopes.isEmpty {
             verseNoteScopes = payload.verseNoteScopes.filter { verseNotes[$0.key] != nil }
         }
+        // Fold any side-store scopes (payloads from the first
+        // scope build) into the notes' keys (REQ-NT-22).
+        migrateNoteScopesIntoKeys()
         // Highlights (payload v11+; older payloads decode to []
         // and leave current highlights alone, like bookmarks).
         if !payload.highlights.isEmpty {
@@ -1302,6 +1337,7 @@ public final class PersonalData: ObservableObject {
         // iCloud files written by older builds still carry per-version
         // note keys; fold them into the shared keys (REQ-NT-19).
         migrateNotesToVersionlessKeys()
+        migrateNoteScopesIntoKeys()
     }
 
     // MARK: - Manual export/import (Files app)

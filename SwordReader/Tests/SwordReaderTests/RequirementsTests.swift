@@ -115,43 +115,59 @@ final class NoteRequirementsTests: XCTestCase {
     // REQ-NT-5: one flag per covering note, in scope order; the
     // chapter note flags only its verse 1, the book note only
     // chapter 1 verse 1.
-    /// REQ-NT-22: only a save from a multi-verse selection stores
-    /// a scope; the stored scope is the selection, sorted.
-    func testNoteScopeStoredOnlyForMultiVerseSelections() {
-        XCTAssertNil(NoteScopeLogic.storedScope(selection: nil))
-        XCTAssertNil(NoteScopeLogic.storedScope(selection: []))
-        XCTAssertNil(NoteScopeLogic.storedScope(selection: [4]))
-        XCTAssertEqual(NoteScopeLogic.storedScope(selection: [6, 4]),
-                       [4, 6])
-        XCTAssertEqual(NoteScopeLogic.storedScope(selection: [4, 5, 6]),
-                       [4, 5, 6])
+    /// REQ-NT-22: a multi-verse note's key carries its scope; a
+    /// plain key reads as its anchor verse alone.
+    func testNoteKeyCarriesScope() {
+        let plain = NoteKey.make(testament: 1, book: 24, chapter: 25, verse: 24)
+        XCTAssertEqual(plain, "1:24:25:24")
+        XCTAssertEqual(NoteKey.parse(plain)?.scope, [24])
+        let scoped = NoteKey.make(testament: 1, book: 24, chapter: 25,
+                                  verse: 24, scope: [24, 29])
+        XCTAssertEqual(scoped, "1:24:25:24@24,29")
+        let parsed = NoteKey.parse(scoped)
+        XCTAssertEqual(parsed?.verse, 24)
+        XCTAssertEqual(parsed?.scope, [24, 29])
+        // A one-verse scope never gets a suffix.
+        XCTAssertEqual(NoteKey.make(testament: 1, book: 24, chapter: 25,
+                                    verse: 24, scope: [24]), plain)
     }
 
     func testNoteFlagsPerCoveringNote() {
+        let single = NoteKey.make(testament: 1, book: 24, chapter: 25, verse: 24)
+        let scoped = NoteKey.make(testament: 1, book: 24, chapter: 25,
+                                  verse: 24, scope: [24, 29])
         // A plain verse note.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: false,
                                            hasBookNote: false, hasChapterNote: false,
-                                           hasVerseNote: true), [.verse])
+                                           verseNoteKeys: [single]), [.verse(key: single)])
         // Verse 1 of a chapter: chapter + verse notes.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: true,
                                            hasBookNote: false, hasChapterNote: true,
-                                           hasVerseNote: true), [.chapter, .verse])
+                                           verseNoteKeys: [single]),
+                       [.chapter, .verse(key: single)])
         // Chapter 1 verse 1 with all three notes.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: true, isChapterStart: true,
                                            hasBookNote: true, hasChapterNote: true,
-                                           hasVerseNote: true), [.book, .chapter, .verse])
+                                           verseNoteKeys: [single]),
+                       [.book, .chapter, .verse(key: single)])
         // A chapter note does not flag the chapter's other verses.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: false,
                                            hasBookNote: false, hasChapterNote: true,
-                                           hasVerseNote: false), [])
+                                           verseNoteKeys: []), [])
         // A book note does not flag verse 1 of later chapters.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: true,
                                            hasBookNote: true, hasChapterNote: false,
-                                           hasVerseNote: false), [])
+                                           verseNoteKeys: []), [])
         // No notes, no flags.
         XCTAssertEqual(NoteFlagLogic.flags(isBookStart: true, isChapterStart: true,
                                            hasBookNote: false, hasChapterNote: false,
-                                           hasVerseNote: false), [])
+                                           verseNoteKeys: []), [])
+        // Two verse notes at one anchor (REQ-NT-22): narrowest
+        // scope first.
+        XCTAssertEqual(NoteFlagLogic.flags(isBookStart: false, isChapterStart: false,
+                                           hasBookNote: false, hasChapterNote: false,
+                                           verseNoteKeys: [scoped, single]),
+                       [.verse(key: single), .verse(key: scoped)])
     }
 
     // REQ-NT-19: legacy per-version keys split into module id + the

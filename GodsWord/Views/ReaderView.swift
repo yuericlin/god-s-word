@@ -87,22 +87,6 @@ struct ReaderView: View {
         let initialText: String
         /// Pre-fill for a note that doesn't exist yet (ignored otherwise).
         let seedText: String
-        /// The selection the editor was opened with, when opened
-        /// from the selection bar; nil for editors opened any
-        /// other way. A save from a multi-verse selection stores
-        /// it as the note's scope (REQ-NT-22).
-        let selectionVerses: [Int]?
-
-        init(id: String, verse: Int, reference: String,
-             initialText: String, seedText: String,
-             selectionVerses: [Int]? = nil) {
-            self.id = id
-            self.verse = verse
-            self.reference = reference
-            self.initialText = initialText
-            self.seedText = seedText
-            self.selectionVerses = selectionVerses
-        }
     }
 
     /// Whether to render tappable Strong's numbers: the toggle is on and
@@ -197,7 +181,7 @@ struct ReaderView: View {
         case "note":
             // Tapping a note flag opens its note (REQ-NT-6): the
             // book and chapter flags name their scope; a verse
-            // flag names its verse.
+            // flag carries its note's key in the path.
             if url.host == "book" {
                 openBookNoteEditor()
                 return .handled
@@ -206,8 +190,8 @@ struct ReaderView: View {
                 openChapterNoteEditor()
                 return .handled
             }
-            if let host = url.host, let n = Int(host) {
-                openNoteEditor(for: n)
+            if url.host == "verse" {
+                openNoteEditor(forKey: String(url.path.dropFirst()))
                 return .handled
             }
         default:
@@ -603,13 +587,6 @@ struct ReaderView: View {
                        }) { text in
                 personalData.setVerseNote(text, forKey: item.id,
                                           source: history.version.id)
-                // A save from a multi-verse selection stores the
-                // selection as the note's scope (REQ-NT-22).
-                if personalData.verseNote(forKey: item.id) != nil,
-                   let scope = NoteScopeLogic.storedScope(
-                       selection: item.selectionVerses) {
-                    personalData.setVerseNoteScope(scope, forKey: item.id)
-                }
             }
         }
         .sheet(isPresented: $showingChapterNoteEditor) {
@@ -946,8 +923,8 @@ struct ReaderView: View {
                 run.link = URL(string: "note://book")
             case .chapter:
                 run.link = URL(string: "note://chapter")
-            case .verse:
-                run.link = URL(string: "note://\(verse)")
+            case .verse(let key):
+                run.link = URL(string: "note://verse/\(key)")
             }
             out += run
         }
@@ -961,7 +938,9 @@ struct ReaderView: View {
             isChapterStart: verse == 1,
             hasBookNote: personalData.bookNote(forKey: currentBookNoteKey) != nil,
             hasChapterNote: personalData.chapterNote(forKey: currentChapterNoteKey) != nil,
-            hasVerseNote: hasNote(verse: verse))
+            verseNoteKeys: personalData.verseNoteKeys(
+                testament: history.testament, book: history.book,
+                chapter: history.chapter, verse: verse))
     }
 
     /// Characters before a verse's text: the number run
@@ -1411,54 +1390,44 @@ struct ReaderView: View {
 
     // MARK: - Verse notes
 
-    private func noteKey(_ verse: Int) -> String {
-        personalData.verseNoteKey(testament: history.testament,
-                                  book: history.book,
-                                  chapter: history.chapter,
-                                  verse: verse)
-    }
-
-    private func hasNote(verse: Int) -> Bool {
-        personalData.verseNote(forKey: noteKey(verse)) != nil
-    }
-
-    private func openNoteEditor(for verse: Int) {
-        let key = noteKey(verse)
+    private func openNoteEditor(forKey key: String) {
         noteEditorItem = NoteEditorItem(
             id: key,
-            verse: verse,
-            reference: noteReference(verse),
+            verse: NoteKey.parse(key)?.verse ?? 1,
+            reference: noteReference(forKey: key),
             initialText: personalData.verseNote(forKey: key) ?? "",
             seedText: "\(history.bookTitle) \(history.chapter)\n")
     }
 
-    /// Notes from the selection bar anchor to the first selected verse,
-    /// so a multi-verse note shows its flag only there; the selection
-    /// itself is remembered as the note's scope (REQ-NT-22). A new
-    /// note is seeded with the selection in the clipboard format.
+    /// Notes from the selection bar are identified by the whole
+    /// selection (REQ-NT-22): the editor opens the note whose
+    /// scope exactly matches it — anchored at the first selected
+    /// verse — and starts a new note when none does. A new note
+    /// is seeded with the selection in the clipboard format.
     private func openNoteEditorForSelection() {
         guard let first = selectedVerses.min() else { return }
-        let key = noteKey(first)
         let sorted = selectedVerses.sorted()
+        let key = personalData.verseNoteKey(
+            testament: history.testament, book: history.book,
+            chapter: history.chapter, verse: first, scope: sorted)
         noteEditorItem = NoteEditorItem(
             id: key,
             verse: first,
-            reference: sorted.count > 1
-                ? "\(history.bookTitle) \(history.chapter):\(verseListString(sorted))"
-                : noteReference(first),
+            reference: noteReference(forKey: key),
             initialText: personalData.verseNote(forKey: key) ?? "",
-            seedText: selectionClipboardString() + "\n",
-            selectionVerses: sorted)
+            seedText: selectionClipboardString() + "\n")
     }
 
-    private func noteReference(_ verse: Int) -> String {
+    private func noteReference(forKey key: String) -> String {
         // A note taken on several verses titles itself with its
         // whole scope (REQ-NT-22).
-        let scope = personalData.verseNoteScope(forKey: noteKey(verse))
-        guard scope.count > 1 else {
-            return "\(history.bookTitle) \(history.chapter):\(verse)"
+        guard let parsed = NoteKey.parse(key) else {
+            return "\(history.bookTitle) \(history.chapter)"
         }
-        return "\(history.bookTitle) \(history.chapter):\(verseListString(scope))"
+        guard parsed.scope.count > 1 else {
+            return "\(history.bookTitle) \(history.chapter):\(parsed.verse)"
+        }
+        return "\(history.bookTitle) \(history.chapter):\(verseListString(parsed.scope))"
     }
 
     /// The storage key of the current chapter's chapter-level note

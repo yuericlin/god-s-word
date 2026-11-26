@@ -134,10 +134,18 @@ public enum CompareVersions {
 /// Format: "{testament}:{book}:{chapter}:{verse}". Notes belong to the
 /// verse, not to a version (REQ-NT-19): the key carries no module id,
 /// so a note written in one version shows in every version.
+///
+/// A note's identity is its scope (REQ-NT-22) — the exact set of
+/// verses it was taken on. A multi-verse note's key appends "@"
+/// and the scope's verses ("...:24@24,29"); a single-verse note
+/// keeps the plain key, its scope being the anchor verse alone.
 public enum NoteKey {
     public static func make(testament: Int, book: Int,
-                            chapter: Int, verse: Int) -> String {
-        "\(testament):\(book):\(chapter):\(verse)"
+                            chapter: Int, verse: Int,
+                            scope: [Int] = []) -> String {
+        let anchor = "\(testament):\(book):\(chapter):\(verse)"
+        guard scope.count > 1 else { return anchor }
+        return anchor + "@" + scope.map { "\($0)" }.joined(separator: ",")
     }
 
     public struct Parsed: Equatable {
@@ -145,17 +153,29 @@ public enum NoteKey {
         public let book: Int
         public let chapter: Int
         public let verse: Int
+        /// The note's scope (REQ-NT-22): the verses it was taken
+        /// on. A plain key's scope is its anchor verse alone.
+        public let scope: [Int]
     }
 
     public static func parse(_ key: String) -> Parsed? {
-        let parts = key.split(separator: ":")
+        let halves = key.split(separator: "@", maxSplits: 1)
+        let parts = halves[0].split(separator: ":")
         guard parts.count == 4,
               let testament = Int(parts[0]),
               let book = Int(parts[1]),
               let chapter = Int(parts[2]),
               let verse = Int(parts[3]) else { return nil }
+        var scope = [verse]
+        if halves.count == 2 {
+            let verses = halves[1].split(separator: ",").map { Int($0) }
+            guard verses.count > 1,
+                  verses.allSatisfy({ $0 != nil }) else { return nil }
+            scope = verses.map { $0! }
+        }
         return Parsed(testament: testament,
-                      book: book, chapter: chapter, verse: verse)
+                      book: book, chapter: chapter, verse: verse,
+                      scope: scope)
     }
 }
 
