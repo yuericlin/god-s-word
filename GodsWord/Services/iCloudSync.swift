@@ -88,6 +88,7 @@ public final class iCloudSync: ObservableObject {
         case bookNoteTimes = "bookNoteTimes.json"
         case chapterNoteTimes = "chapterNoteTimes.json"
         case noteSources = "noteSources.json"
+        case verseNoteScopes = "verseNoteScopes.json"
         case settings = "settings.json"
         case history = "history.json"
     }

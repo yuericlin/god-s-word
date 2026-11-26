@@ -38,7 +38,7 @@ public struct NoteTimes: Codable, Sendable {
 /// the backup records which module IDs were installed so they can be
 /// re-downloaded from the repository on restore.
 public struct BackupPayload: Codable, Sendable {
-    public var version: Int = 14
+    public var version: Int = 15
     public var fontSize: Double
     public var verseByVerse: Bool
     public var showStrongs: Bool
@@ -68,6 +68,10 @@ public struct BackupPayload: Codable, Sendable {
     /// keyed like the notes. Payload v10+; older payloads decode
     /// to [:] and migration derives sources from the legacy keys.
     public var noteSources: [String: String]
+    /// The verses each verse note was taken on (REQ-NT-22), keyed
+    /// like the notes; absent = the anchor verse alone. Payload
+    /// v15+; older payloads decode to [:].
+    public var verseNoteScopes: [String: [Int]]
     /// Commentary module the auxiliary panel shows (REQ-AP-4); "" = none.
     public var commentaryModuleID: String
     /// Fallback Strong's version for the panel (REQ-AP-7); "" = automatic.
@@ -109,6 +113,7 @@ public struct BackupPayload: Codable, Sendable {
                 bookNoteTimes: [String: NoteTimes] = [:],
                 chapterNoteTimes: [String: NoteTimes] = [:],
                 noteSources: [String: String] = [:],
+                verseNoteScopes: [String: [Int]] = [:],
                 commentaryModuleID: String = "",
                 strongsFallbackVersionID: String = "",
                 interestedLanguages: [String] = [],
@@ -137,6 +142,7 @@ public struct BackupPayload: Codable, Sendable {
         self.bookNoteTimes = bookNoteTimes
         self.chapterNoteTimes = chapterNoteTimes
         self.noteSources = noteSources
+        self.verseNoteScopes = verseNoteScopes
         self.commentaryModuleID = commentaryModuleID
         self.strongsFallbackVersionID = strongsFallbackVersionID
         self.interestedLanguages = interestedLanguages
@@ -172,6 +178,7 @@ public struct BackupPayload: Codable, Sendable {
         bookNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .bookNoteTimes) ?? [:]
         chapterNoteTimes = try c.decodeIfPresent([String: NoteTimes].self, forKey: .chapterNoteTimes) ?? [:]
         noteSources = try c.decodeIfPresent([String: String].self, forKey: .noteSources) ?? [:]
+        verseNoteScopes = try c.decodeIfPresent([String: [Int]].self, forKey: .verseNoteScopes) ?? [:]
         commentaryModuleID = try c.decodeIfPresent(String.self, forKey: .commentaryModuleID) ?? ""
         strongsFallbackVersionID = try c.decodeIfPresent(String.self, forKey: .strongsFallbackVersionID) ?? ""
         interestedLanguages = try c.decodeIfPresent([String].self, forKey: .interestedLanguages) ?? []
@@ -207,6 +214,7 @@ public final class PersonalData: ObservableObject {
     private let bookNoteTimesKey = "gw.bookNoteTimes.v1"
     private let chapterNoteTimesKey = "gw.chapterNoteTimes.v1"
     private let noteSourcesKey = "gw.noteSources.v1"
+    private let verseNoteScopesKey = "gw.verseNoteScopes.v1"
     private let commentaryModuleKey = "gw.commentaryModule.v1"
     private let strongsFallbackKey = "gw.strongsFallbackVersion.v1"
     private let interestedLanguagesKey = "gw.interestedLanguages.v1"
@@ -261,6 +269,12 @@ public final class PersonalData: ObservableObject {
         self.bookNoteTimes = Self.decodeNoteTimes(defaults, bookNoteTimesKey)
         self.chapterNoteTimes = Self.decodeNoteTimes(defaults, chapterNoteTimesKey)
         self.noteSources = defaults.dictionary(forKey: noteSourcesKey) as? [String: String] ?? [:]
+        if let data = defaults.data(forKey: verseNoteScopesKey),
+           let decoded = try? JSONDecoder().decode([String: [Int]].self, from: data) {
+            self.verseNoteScopes = decoded
+        } else {
+            self.verseNoteScopes = [:]
+        }
         self.commentaryModuleID = defaults.string(forKey: commentaryModuleKey) ?? ""
         self.strongsFallbackVersionID = defaults.string(forKey: strongsFallbackKey) ?? ""
         self.interestedLanguages = defaults.stringArray(forKey: interestedLanguagesKey) ?? []
@@ -278,6 +292,7 @@ public final class PersonalData: ObservableObject {
         // version-less ones. didSet does not fire during init, so
         // persist the note stores explicitly afterwards.
         migrateNotesToVersionlessKeys()
+        migrateNoteScopesIntoKeys()
         defaults.set(verseNotes, forKey: verseNotesKey)
         defaults.set(verseNoteOrder, forKey: verseNoteOrderKey)
         defaults.set(bookNotes, forKey: bookNotesKey)
@@ -289,6 +304,8 @@ public final class PersonalData: ObservableObject {
         defaults.set(try? JSONEncoder().encode(chapterNoteTimes),
                      forKey: chapterNoteTimesKey)
         defaults.set(noteSources, forKey: noteSourcesKey)
+        defaults.set(try? JSONEncoder().encode(verseNoteScopes),
+                     forKey: verseNoteScopesKey)
     }
 
     @Published public var fontSize: Double {
@@ -526,6 +543,18 @@ public final class PersonalData: ObservableObject {
         }
     }
 
+    /// The verses each verse note was taken on (REQ-NT-22), keyed
+    /// like the notes: the note's scope when it was saved from a
+    /// multi-verse selection. A note with no entry was taken on
+    /// its anchor verse alone. Persisted in UserDefaults as JSON.
+    @Published public var verseNoteScopes: [String: [Int]] {
+        didSet {
+            defaults.set(try? JSONEncoder().encode(verseNoteScopes),
+                         forKey: verseNoteScopesKey)
+            syncVerseNoteScopesToiCloud()
+        }
+    }
+
     private static func decodeNoteTimes(_ defaults: UserDefaults,
                                         _ key: String) -> [String: NoteTimes] {
         guard let data = defaults.data(forKey: key),
@@ -658,17 +687,38 @@ public final class PersonalData: ObservableObject {
         }
     }
 
-    /// Builds the storage key for a verse note.
+    /// Builds the storage key for a verse note; a multi-verse
+    /// scope becomes part of the key (REQ-NT-22).
     public func verseNoteKey(testament: Int, book: Int,
-                             chapter: Int, verse: Int) -> String {
+                             chapter: Int, verse: Int,
+                             scope: [Int] = []) -> String {
         NoteKey.make(testament: testament, book: book,
-                     chapter: chapter, verse: verse)
+                     chapter: chapter, verse: verse, scope: scope)
+    }
+
+    /// The keys of every verse note anchored at a verse
+    /// (REQ-NT-22): a verse can carry several notes, one per
+    /// scope.
+    public func verseNoteKeys(testament: Int, book: Int,
+                              chapter: Int, verse: Int) -> [String] {
+        verseNotes.keys.filter { key in
+            guard let p = NoteKey.parse(key) else { return false }
+            return p.testament == testament && p.book == book
+                && p.chapter == chapter && p.verse == verse
+        }
     }
 
     /// Returns the note for a verse, or nil when there is none.
     public func verseNote(forKey key: String) -> String? {
         let note = verseNotes[key]
         return (note?.isEmpty ?? true) ? nil : note
+    }
+
+    /// The verses a verse note was taken on (REQ-NT-22): the
+    /// scope its key carries — the anchor verse alone for a
+    /// plain key.
+    public func verseNoteScope(forKey key: String) -> [Int] {
+        NoteKey.parse(key)?.scope ?? []
     }
 
     /// Stores a verse note; an empty/nil text removes it (and its
@@ -690,7 +740,39 @@ public final class PersonalData: ObservableObject {
             verseNoteOrder.removeAll { $0 == key }
             verseNoteTimes.removeValue(forKey: key)
             noteSources.removeValue(forKey: key)
+            verseNoteScopes.removeValue(forKey: key)
         }
+    }
+
+    /// REQ-NT-22: the first scope build kept a note's scope in
+    /// the side store (`verseNoteScopes`); the scope now lives in
+    /// the note's key. Fold any side-store scopes into the keys,
+    /// carrying text, order, times, and source, then empty the
+    /// side store.
+    private func migrateNoteScopesIntoKeys() {
+        guard !verseNoteScopes.isEmpty else { return }
+        for (key, scope) in verseNoteScopes where scope.count > 1 {
+            guard let parsed = NoteKey.parse(key),
+                  parsed.scope.count == 1,
+                  let text = verseNotes[key] else { continue }
+            let scoped = NoteKey.make(testament: parsed.testament,
+                                      book: parsed.book,
+                                      chapter: parsed.chapter,
+                                      verse: parsed.verse,
+                                      scope: scope)
+            verseNotes.removeValue(forKey: key)
+            verseNotes[scoped] = text
+            if let i = verseNoteOrder.firstIndex(of: key) {
+                verseNoteOrder[i] = scoped
+            }
+            if let times = verseNoteTimes.removeValue(forKey: key) {
+                verseNoteTimes[scoped] = times
+            }
+            if let source = noteSources.removeValue(forKey: key) {
+                noteSources[scoped] = source
+            }
+        }
+        verseNoteScopes = [:]
     }
 
     // MARK: - REQ-NT-19 migration (per-version keys -> shared keys)
@@ -948,6 +1030,7 @@ public final class PersonalData: ObservableObject {
                       bookNoteTimes: bookNoteTimes,
                       chapterNoteTimes: chapterNoteTimes,
                       noteSources: noteSources,
+                      verseNoteScopes: verseNoteScopes,
                       commentaryModuleID: commentaryModuleID,
                       strongsFallbackVersionID: strongsFallbackVersionID,
                       interestedLanguages: interestedLanguages,
@@ -1044,6 +1127,15 @@ public final class PersonalData: ObservableObject {
         if !payload.noteSources.isEmpty {
             noteSources = payload.noteSources
         }
+        // Note scopes (payload v15+; older payloads decode to [:]
+        // and leave current scopes alone). Scopes for notes that
+        // don't exist are dropped.
+        if !payload.verseNoteScopes.isEmpty {
+            verseNoteScopes = payload.verseNoteScopes.filter { verseNotes[$0.key] != nil }
+        }
+        // Fold any side-store scopes (payloads from the first
+        // scope build) into the notes' keys (REQ-NT-22).
+        migrateNoteScopesIntoKeys()
         // Highlights (payload v11+; older payloads decode to []
         // and leave current highlights alone, like bookmarks).
         if !payload.highlights.isEmpty {
@@ -1138,6 +1230,11 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(noteSources, as: .noteSources)
     }
 
+    private func syncVerseNoteScopesToiCloud() {
+        guard iCloudSync.shared.isEnabled else { return }
+        try? iCloudSync.shared.save(verseNoteScopes, as: .verseNoteScopes)
+    }
+
     private func syncHistoryToiCloud() {
         guard iCloudSync.shared.isEnabled else { return }
         try? iCloudSync.shared.save(historyLog, as: .history)
@@ -1159,6 +1256,7 @@ public final class PersonalData: ObservableObject {
         try? iCloudSync.shared.save(bookNoteTimes, as: .bookNoteTimes)
         try? iCloudSync.shared.save(chapterNoteTimes, as: .chapterNoteTimes)
         try? iCloudSync.shared.save(noteSources, as: .noteSources)
+        try? iCloudSync.shared.save(verseNoteScopes, as: .verseNoteScopes)
         try? iCloudSync.shared.save(historyLog, as: .history)
         syncSettingsToiCloud(repositoryURL: repositoryURL,
                               installedModuleIDs: installedModuleIDs)
@@ -1232,9 +1330,14 @@ public final class PersonalData: ObservableObject {
             [String: String].self, as: .noteSources), !ns.isEmpty {
             noteSources = ns
         }
+        if let sc: [String: [Int]] = try? iCloudSync.shared.load(
+            [String: [Int]].self, as: .verseNoteScopes), !sc.isEmpty {
+            verseNoteScopes = sc
+        }
         // iCloud files written by older builds still carry per-version
         // note keys; fold them into the shared keys (REQ-NT-19).
         migrateNotesToVersionlessKeys()
+        migrateNoteScopesIntoKeys()
     }
 
     // MARK: - Manual export/import (Files app)

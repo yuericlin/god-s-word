@@ -719,8 +719,14 @@ struct AuxiliaryPanelView: View {
     }
 
     private func verseNoteRow(key: String, parsed: NoteKey.Parsed) -> NoteRow {
-        NoteRow(kind: .verse, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter, verse: parsed.verse,
-                reference: "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)",
+        // A note taken on several verses titles itself with its
+        // whole scope, which its key carries (REQ-NT-22).
+        let scope = parsed.scope
+        let reference = scope.count > 1
+            ? "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(VerseFormatting.verseListString(scope))"
+            : "\(bookName(testament: parsed.testament, book: parsed.book)) \(parsed.chapter):\(parsed.verse)"
+        return NoteRow(kind: .verse, key: key, testament: parsed.testament, book: parsed.book, chapter: parsed.chapter, verse: parsed.verse,
+                reference: reference,
                 text: personalData.verseNotes[key] ?? "",
                 source: personalData.noteSources[key],
                 updated: personalData.verseNoteTimes[key]?.updatedAt)
@@ -954,7 +960,20 @@ struct AuxiliaryPanelView: View {
                     key: chapterNoteKey,
                     reference: "\(history.bookTitle) \(history.chapter)")
             } else {
-                editorItem = .verse(key: verseNoteKey, reference: verseReference)
+                // The selection is the note's identity
+                // (REQ-NT-22): its scope goes into the key, so
+                // Add Note opens the exact-match note or starts
+                // a new one.
+                editorItem = .verse(
+                    key: personalData.verseNoteKey(
+                        testament: history.testament,
+                        book: history.book,
+                        chapter: history.chapter,
+                        verse: anchorVerse,
+                        scope: selectedVerses.sorted()),
+                    reference: selectedVerses.count > 1
+                        ? "\(history.bookTitle) \(history.chapter):\(VerseFormatting.verseListString(selectedVerses.sorted()))"
+                        : verseReference)
             }
         }
     }
@@ -1876,8 +1895,14 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The passage the parallel view shows: book and chapter.
+    /// The book name is the parallel version's own (REQ-PA-1),
+    /// in both modes — never the main view's.
     private var parallelPassageLabel: String {
         if personalData.parallelSyncMode {
+            if let overall = BookLocation.overallIndex(
+                testament: history.testament, book: history.book) {
+                return "\(parallelSyncVersion.bookName(overall: overall)) \(history.chapter)"
+            }
             return "\(history.bookTitle) \(history.chapter)"
         }
         let target = effectiveSepTarget
@@ -1892,14 +1917,17 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// The passage a settings sheet starts from.
+    /// The passage a settings sheet starts from. Switching to
+    /// separate mode (the chain in sync mode) starts from the
+    /// main view's current book and chapter; separate mode's
+    /// own settings start from its current target.
     private func initialParallelTarget(for kind: ParallelSettingsKind) -> ParallelTarget {
         switch kind {
-        case .syncVersion, .toSync:
+        case .syncVersion, .toSync, .toSeparate:
             return ParallelTarget(testament: history.testament,
                                   book: history.book,
                                   chapter: history.chapter)
-        case .separate, .toSeparate:
+        case .separate:
             return effectiveSepTarget
         }
     }
