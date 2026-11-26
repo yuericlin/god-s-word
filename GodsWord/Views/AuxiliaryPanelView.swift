@@ -1895,9 +1895,13 @@ struct AuxiliaryPanelView: View {
     }
 
     /// The passage the parallel view shows: book and chapter.
+    /// The book name is the parallel version's own (REQ-PA-1),
+    /// in both modes — never the main view's.
     private var parallelPassageLabel: String {
         if personalData.parallelSyncMode {
-            return "\(history.bookTitle) \(history.chapter)"
+            let overall = BookLocation.overallIndex(
+                testament: history.testament, book: history.book)
+            return "\(parallelSyncVersion.bookName(overall: overall)) \(history.chapter)"
         }
         let target = effectiveSepTarget
         return "\(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"

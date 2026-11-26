@@ -1291,7 +1291,9 @@ Multiple (KJV Gen 1:1-2):
   label (the module id), as the main view names the version,
   in secondary, and its book and chapter
   in the primary color (white), as the main view's title
-  shows them. The
+  shows them. The book name is the parallel version's own
+  name for the book, in both modes — never the main view's
+  book name. The
   parallel view lives in the panel only; the main reading
   text is untouched.
 - **REQ-PA-2:** **Sync mode:** the parallel view shows the
