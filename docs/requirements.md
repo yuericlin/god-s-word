@@ -283,6 +283,12 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-BP-6:** "Add Bookmark" button at the bottom opens the edit sheet on a
   new bookmark at the current chapter. The bookmark is stored only when the
   user taps Save (REQ-BM-9).
+- **REQ-BP-7:** The panel is an overlay over the whole reader — the
+  reading view and the auxiliary panel alike: it slides in over
+  them from the right, above a dim layer, and showing or hiding
+  it never changes either view's size or layout. (Until Nov 25,
+  2026 it was hosted inside the reading pane's stack, which let
+  its appearance resize both views.)
 
 ---
 
