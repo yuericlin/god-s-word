@@ -1899,9 +1899,11 @@ struct AuxiliaryPanelView: View {
     /// in both modes — never the main view's.
     private var parallelPassageLabel: String {
         if personalData.parallelSyncMode {
-            let overall = BookLocation.overallIndex(
-                testament: history.testament, book: history.book)
-            return "\(parallelSyncVersion.bookName(overall: overall)) \(history.chapter)"
+            if let overall = BookLocation.overallIndex(
+                testament: history.testament, book: history.book) {
+                return "\(parallelSyncVersion.bookName(overall: overall)) \(history.chapter)"
+            }
+            return "\(history.bookTitle) \(history.chapter)"
         }
         let target = effectiveSepTarget
         return "\(parallelSeparateVersion.bookName(overall: target.overall)) \(target.chapter)"
@@ -1915,14 +1917,17 @@ struct AuxiliaryPanelView: View {
         }
     }
 
-    /// The passage a settings sheet starts from.
+    /// The passage a settings sheet starts from. Switching to
+    /// separate mode (the chain in sync mode) starts from the
+    /// main view's current book and chapter; separate mode's
+    /// own settings start from its current target.
     private func initialParallelTarget(for kind: ParallelSettingsKind) -> ParallelTarget {
         switch kind {
-        case .syncVersion, .toSync:
+        case .syncVersion, .toSync, .toSeparate:
             return ParallelTarget(testament: history.testament,
                                   book: history.book,
                                   chapter: history.chapter)
-        case .separate, .toSeparate:
+        case .separate:
             return effectiveSepTarget
         }
     }

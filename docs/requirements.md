@@ -1313,9 +1313,10 @@ Multiple (KJV Gen 1:1-2):
   view.
 - **REQ-PA-4:** Each mode shows the same two header buttons.
   In sync mode the chain is a **yellow link**: tapping it
-  opens separate mode's settings (version, book, chapter) —
-  **Done** applies them and switches to separate mode,
-  **Cancel** dismisses and applies nothing. The gear opens
+  opens separate mode's settings (version, book, chapter),
+  pre-populated with the main view's current book and
+  chapter — **Done** applies them and switches to separate
+  mode, **Cancel** dismisses and applies nothing. The gear opens
   a version picker only (book and chapter stay the main
   view's). In separate mode the chain is a **gray broken
   link**: tapping it opens sync mode's settings — the
