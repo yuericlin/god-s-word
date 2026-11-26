@@ -160,7 +160,8 @@ public enum NoteKey {
 
     public static func parse(_ key: String) -> Parsed? {
         let halves = key.split(separator: "@", maxSplits: 1)
-        let parts = halves[0].split(separator: ":")
+        guard let anchor = halves.first else { return nil }
+        let parts = anchor.split(separator: ":")
         guard parts.count == 4,
               let testament = Int(parts[0]),
               let book = Int(parts[1]),
