@@ -117,22 +117,30 @@ struct ReaderView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            readerContent
-            // Auxiliary panel below the reading panel: Notes / Commentary /
-            // Strong's / Recents / Highlights tabs (REQ-AP-1). It reads the same history
-            // and the verse selection; the reading text above is untouched.
-            // Collapsed (the default) it renders nothing — the toggle is
-            // the arrow button in the bottom bar, next to the chapter
-            // controls.
-            AuxiliaryPanelView(history: history,
-                               selectedVerses: selectedVerses,
-                               availableVersions: availableVersions,
-                               parallelSync: parallelSync,
-                               collapsed: $panelCollapsed,
-                               totalHeight: rootHeight)
+        ZStack {
+            VStack(spacing: 0) {
+                readerContent
+                // Auxiliary panel below the reading panel: Notes / Commentary /
+                // Strong's / Recents / Highlights tabs (REQ-AP-1). It reads the same history
+                // and the verse selection; the reading text above is untouched.
+                // Collapsed (the default) it renders nothing — the toggle is
+                // the arrow button in the bottom bar, next to the chapter
+                // controls.
+                AuxiliaryPanelView(history: history,
+                                   selectedVerses: selectedVerses,
+                                   availableVersions: availableVersions,
+                                   parallelSync: parallelSync,
+                                   collapsed: $panelCollapsed,
+                                   totalHeight: rootHeight)
+            }
+            .onGeometryChange(for: CGFloat.self, of: \.size.height) { rootHeight = $0 }
+            // The bookmarks panel overlays the whole reader —
+            // reading view and auxiliary panel alike — from
+            // outside their layout stack, so showing or hiding
+            // it never resizes either view (REQ-BP-7).
+            bookmarksOverlay
         }
-        .onGeometryChange(for: CGFloat.self, of: \.size.height) { rootHeight = $0 }
+        .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
         // The swipe guard (EdgeNavigation) is permanent; the
         // reader arms its handler while it is on screen and
         // clears it when it leaves, so reports never reach a
@@ -445,11 +453,9 @@ struct ReaderView: View {
         ZStack(alignment: .leading) {
             chapterPane
             ribbonsOverlay
-            bookmarksOverlay
             settingsOverlay
         }
         .animation(.easeInOut(duration: 0.25), value: showingSettings)
-        .animation(.easeInOut(duration: 0.25), value: showingBookmarks)
         .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { readerFrame = $0 }
         .background(ReaderSwipeGesture(onSwipe: handleReaderSwipe).frame(width: 0, height: 0))
         .navigationBarTitleDisplayMode(.inline)
