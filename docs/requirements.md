@@ -544,6 +544,31 @@ Multiple (KJV Gen 1:1-2):
   otherwise; VoiceOver keeps the name "Bookmark". The reading
   area's long-press Assign Bookmark keeps targeting the
   chapter.
+- **REQ-BM-14:** The bookmarks panel's list is rearrangeable by
+  drag and drop: pressing a labeled ribbon and dragging it
+  moves its bookmark — dropping on the top half of a ribbon
+  lands it before that ribbon, on the bottom half after it,
+  and dropping below the last ribbon moves it to the end; the
+  ribbon under the drag is outlined while it is targeted. The
+  stored order is the display order everywhere (panel, reader
+  ribbons, Assign list), and a move persists like any other
+  bookmark change (REQ-BM-7) but stamps no times
+  (REQ-BM-10). A plain tap still jumps (REQ-BM-5), and
+  holding a ribbon still, without dragging, still offers
+  Assign/Edit/Delete (REQ-BM-6). The reader's mini ribbons
+  are not draggable.
+- **REQ-BM-15:** Swiping a bookmarks-panel ribbon right to
+  left deletes its bookmark, with confirmation: the ribbon
+  slides left over a red ground with a trash symbol, and
+  releasing past about half the ribbon asks for
+  confirmation — a lone Delete button, dismissed by tapping
+  outside, as in the app's other swipe-to-delete places —
+  before anything is removed; a shorter swipe springs back.
+  Only the panel's labeled ribbons swipe — the reader's mini
+  ribbons do not. The swipe is leftward and horizontal, so
+  it never triggers the panel's rightward drag-to-dismiss,
+  the vertical reorder drag (REQ-BM-14), or the hold menu
+  (REQ-BM-6).
 ## 9. Two-level book/chapter picker
 
 - **REQ-PK-1:** The reader's top book menu opens a two-level picker sheet (not

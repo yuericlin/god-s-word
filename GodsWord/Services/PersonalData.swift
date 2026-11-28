@@ -923,6 +923,15 @@ public final class PersonalData: ObservableObject {
         bookmarks.removeAll { $0.id == bookmark.id }
     }
 
+    /// Reorders the bookmarks (the panel's drag, REQ-BM-14).
+    /// The array's order is the display order everywhere —
+    /// panel, reader ribbons, Assign list — and the move
+    /// persists like any other change. Reordering is not an
+    /// edit: it stamps no times (REQ-BM-10).
+    public func moveBookmarks(fromOffsets source: IndexSet, toOffset destination: Int) {
+        bookmarks.move(fromOffsets: source, toOffset: destination)
+    }
+
     /// A new bookmark at the given location that is NOT stored yet. The
     /// ribbon color comes from the default palette in creation order. The
     /// editor stores it with `saveBookmark` when the user taps Save; cancelling
