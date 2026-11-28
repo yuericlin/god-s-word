@@ -1220,6 +1220,18 @@ Multiple (KJV Gen 1:1-2):
   Nov 16, 2026 under REQ-RL-6 (nested quotations): fifteen
   verses corrected or added where a 『…』 re-quotation had
   distorted the span; every other span unchanged.
+  The artifact is the REQ-RL-5 derivation's own output for
+  ChiUns, generated ahead of time and bundled — ChiUns
+  differs from other untagged versions only in that theirs
+  are generated on-device, by the same rules, after
+  download. It is regenerated only by re-running the
+  derivation, never edited by hand: a red-letter error is
+  an error in the rules, fixed there (policy, Nov 27, 2026).
+  Regenerated Nov 27, 2026 under the amended REQ-RL-6
+  rules: seven verses differ from the previous table —
+  John 16:17 and 16:18, John 5:12 and 7:36, John 8:22,
+  Acts 22:10, and John 16:4 (adjacent spans merged; the
+  painting unchanged); 2,031 verses ship.
   A module's own markup always takes precedence: the artifact
   answers only where the markup is silent, and a version with
   neither markup nor artifact coverage falls to REQ-RL-5.
@@ -1245,7 +1257,9 @@ Multiple (KJV Gen 1:1-2):
   attribution threshold paints nothing however alone it stands,
   and where the target has no delimiters only a verse the
   source covers essentially whole is painted, never a
-  proportional guess. A saved table is keyed to the bundled
+  proportional guess. A verse whose whole text is a single
+  character is a versification artifact, not speech, and
+  paints nothing. A saved table is keyed to the bundled
   truth it was derived from and, for private imports, to a
   fingerprint of the book's text, so a truth update or a
   re-import re-derives instead of serving stale spans.
@@ -1269,15 +1283,31 @@ Multiple (KJV Gen 1:1-2):
   quotes ('…' or ‘…’) inside "…" — and the REQ-RL-5 transfer
   segments both levels; a nested segment is judged on its own
   fractions, like any segment. A segment containing an
-  accepted nested quotation is judged on its exclusive part
-  (its range minus the nested ranges) only when the source's
-  speech begins well inside that quotation — another
-  speaker's speech carrying a saying of Jesus (Peter in
-  Acts 11:16, Paul in Acts 20:35): the frame then paints only
-  when the source attributes at least half of the frame
-  itself. When the source's speech begins at or before the
-  quotation — Jesus quoting Scripture inside his own speech
-  (Luke 4:4) — the segment is judged whole. An accepted
+  accepted nested quotation does not paint when the source's
+  speech begins well inside the earliest such quotation —
+  another speaker's speech carrying a saying of Jesus (the
+  disciples in John 16:17, Peter in Acts 11:16): the frame's
+  own words are that speaker's, however the fractions bleed
+  into them. When the source's speech begins at or before
+  the quotation — Jesus quoting Scripture inside his own
+  speech (Luke 4:4) — the segment is judged whole, on its
+  full range. A segment that exists only because a quotation
+  carried over from an earlier verse (it opens at the
+  verse's first character, with no delimiter of its own in
+  the verse) and carries an accepted quotation likewise
+  does not paint when the source attributes less than a
+  quarter of its exclusive part (its range minus the nested
+  ranges): the carry-over is a narrator's frame around the
+  saying (Paul recounting the Lord's words, Acts 22:10). A
+  carry-over whose own words the source does attribute is
+  the speech itself and is judged whole (Mark 7:11). A
+  segment carrying exactly one nested quotation, whose own
+  opening words the source leaves wholly untagged while
+  still attributing some but less than three-fifths of the
+  segment as a whole, is not the speech: the nested
+  quotation paints in its place (John 5:12; John 16:18 and
+  8:22, whose sayings the fractions place too coarsely to
+  score). An accepted
   segment paints its range minus any nested segment the
   source attributes less than a quarter of (a quotation the
   speech makes but the source does not tag). An apostrophe
