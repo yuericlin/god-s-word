@@ -136,7 +136,6 @@ struct BookmarkRibbonsRow: View {
                     personalData.deleteBookmark(b)
                 }
             }
-            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes the bookmark. There is no undo.")
         }

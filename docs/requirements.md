@@ -560,7 +560,9 @@ Multiple (KJV Gen 1:1-2):
 - **REQ-BM-15:** Swiping a bookmarks-panel ribbon right to
   left deletes its bookmark, with confirmation: the ribbon
   slides left over a red ground with a trash symbol, and
-  releasing past about half the ribbon asks Delete/Cancel
+  releasing past about half the ribbon asks for
+  confirmation — a lone Delete button, dismissed by tapping
+  outside, as in the app's other swipe-to-delete places —
   before anything is removed; a shorter swipe springs back.
   Only the panel's labeled ribbons swipe — the reader's mini
   ribbons do not. The swipe is leftward and horizontal, so
