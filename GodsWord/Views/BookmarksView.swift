@@ -43,7 +43,8 @@ struct HorizontalRibbonShape: Shape {
 /// Assign, Edit and Delete. Two styles: mini (small vertical ribbons, color
 /// only, for the reading view) and labeled (horizontal ribbons showing
 /// name plus book and chapter, for the bookmarks panel). Labeled ribbons
-/// can also be dragged to reorder the list (REQ-BM-14).
+/// can also be dragged to reorder the list (REQ-BM-14) and swiped
+/// right-to-left to delete, with a confirmation (REQ-BM-15).
 struct BookmarkRibbonsRow: View {
     enum Style { case mini, labeled }
 
@@ -59,6 +60,11 @@ struct BookmarkRibbonsRow: View {
     /// The labeled ribbon a drag is currently hovering over
     /// (REQ-BM-14 drop feedback).
     @State private var dropTargetID: UUID?
+    /// Live horizontal offsets of ribbons being swiped for
+    /// deletion (REQ-BM-15), keyed by bookmark id.
+    @State private var swipeOffsets: [UUID: CGFloat] = [:]
+    @State private var pendingDelete: Bookmark?
+    @State private var showingDeleteConfirmation = false
 
     var body: some View {
         Group {
@@ -72,7 +78,12 @@ struct BookmarkRibbonsRow: View {
             case .labeled:
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(bookmarks) { bookmark in
-                        labeledRibbon(for: bookmark)
+                        ZStack(alignment: .trailing) {
+                            deleteReveal(for: bookmark)
+                            labeledRibbon(for: bookmark)
+                                .offset(x: swipeOffsets[bookmark.id] ?? 0)
+                                .highPriorityGesture(swipeToDeleteGesture(for: bookmark))
+                        }
                             .draggable(bookmark.id.uuidString)
                             .dropDestination(for: String.self) { items, location in
                                 dropBookmark(items.first, onto: bookmark,
@@ -115,9 +126,69 @@ struct BookmarkRibbonsRow: View {
         } message: {
             Text("Assign points this bookmark at the chapter you are reading. Edit changes its name, color, book and chapter.")
         }
+        .confirmationDialog(
+            pendingDelete.map { "Delete \"\($0.name)\"?" } ?? "Delete bookmark?",
+            isPresented: $showingDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let b = pendingDelete {
+                    personalData.deleteBookmark(b)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the bookmark. There is no undo.")
+        }
         .sheet(item: $editingBookmark) { bookmark in
             BookmarkEditView(bookmark: bookmark, history: history)
         }
+    }
+
+    /// The red ground a leftward swipe uncovers (REQ-BM-15):
+    /// the ribbon's own shape in red, trash symbol at the
+    /// trailing end. Hidden unless the ribbon is mid-swipe.
+    private func deleteReveal(for bookmark: Bookmark) -> some View {
+        HorizontalRibbonShape()
+            .fill(Color.red)
+            .frame(height: 52)
+            .overlay(alignment: .trailing) {
+                Image(systemName: "trash")
+                    .foregroundStyle(.white)
+                    .padding(.trailing, 16)
+            }
+            .opacity((swipeOffsets[bookmark.id] ?? 0) < 0 ? 1 : 0)
+    }
+
+    /// Right-to-left swipe on a labeled ribbon (REQ-BM-15).
+    /// Only a leftward, horizontally dominant drag engages, so
+    /// the vertical reorder drag, the hold menu and the panel's
+    /// rightward dismiss keep their gestures; its high priority
+    /// keeps the panel's dismiss from tracking it at all.
+    /// Releasing past half the ribbon asks for confirmation —
+    /// nothing is deleted by the swipe alone; a shorter swipe
+    /// springs back.
+    private func swipeToDeleteGesture(for bookmark: Bookmark) -> some Gesture {
+        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+            .onChanged { value in
+                let t = value.translation
+                if t.width < 0, abs(t.width) > abs(t.height) {
+                    swipeOffsets[bookmark.id] = t.width
+                } else if swipeOffsets[bookmark.id] != nil {
+                    swipeOffsets[bookmark.id] = 0
+                }
+            }
+            .onEnded { value in
+                let t = value.translation
+                let dx = t.width < 0 && abs(t.width) > abs(t.height) ? t.width : 0
+                withAnimation(.easeOut(duration: 0.2)) {
+                    swipeOffsets[bookmark.id] = 0
+                }
+                if dx <= -120 {
+                    pendingDelete = bookmark
+                    showingDeleteConfirmation = true
+                }
+            }
     }
 
     /// Small vertical ribbon, color only — 80% of the original

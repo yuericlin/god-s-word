@@ -557,6 +557,16 @@ Multiple (KJV Gen 1:1-2):
   holding a ribbon still, without dragging, still offers
   Assign/Edit/Delete (REQ-BM-6). The reader's mini ribbons
   are not draggable.
+- **REQ-BM-15:** Swiping a bookmarks-panel ribbon right to
+  left deletes its bookmark, with confirmation: the ribbon
+  slides left over a red ground with a trash symbol, and
+  releasing past about half the ribbon asks Delete/Cancel
+  before anything is removed; a shorter swipe springs back.
+  Only the panel's labeled ribbons swipe — the reader's mini
+  ribbons do not. The swipe is leftward and horizontal, so
+  it never triggers the panel's rightward drag-to-dismiss,
+  the vertical reorder drag (REQ-BM-14), or the hold menu
+  (REQ-BM-6).
 ## 9. Two-level book/chapter picker
 
 - **REQ-PK-1:** The reader's top book menu opens a two-level picker sheet (not
