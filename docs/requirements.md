@@ -1275,7 +1275,11 @@ Multiple (KJV Gen 1:1-2):
   speaker's speech carrying a saying of Jesus (Peter in
   Acts 11:16, Paul in Acts 20:35): the frame then paints only
   when the source attributes at least half of the frame
-  itself. When the source's speech begins at or before the
+  itself. John 16:17–18 — the disciples quoting Jesus to
+  each other — were brought under this rule on Nov 26, 2026:
+  16:17 narrowed from the whole frame to its two 『…』
+  sayings, 16:18's 『等不多时』 added; 16:19's frame is
+  Jesus's own speech and paints whole. When the source's speech begins at or before the
   quotation — Jesus quoting Scripture inside his own speech
   (Luke 4:4) — the segment is judged whole. An accepted
   segment paints its range minus any nested segment the

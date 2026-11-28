@@ -67,7 +67,10 @@ final class RedLetterArtifactTests: XCTestCase {
     /// audit had left unpainted inside a frame are covered:
     /// Acts 20:35 (Paul), Acts 22:8 (the voice from heaven,
     /// recounted by Paul; Paul's own question in the same verse
-    /// stays unpainted).
+    /// stays unpainted). John 16:17–18 (Nov 26, 2026): the
+    /// disciples quote two sayings to each other inside their
+    /// own 「…」 conversation — only the 『…』 parts paint;
+    /// 16:19's frame is Jesus's own speech and paints whole.
     func testNestedQuotationSpans() {
         XCTAssertEqual(
             RedLetterArtifact.spans(versionID: "ChiUns", book: "Acts",
@@ -81,6 +84,18 @@ final class RedLetterArtifactTests: XCTestCase {
             RedLetterArtifact.spans(versionID: "ChiUns", book: "Acts",
                                     chapter: 22, verse: 8).map { [$0.start, $0.end] },
             [[17, 34]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 16, verse: 17).map { [$0.start, $0.end] },
+            [[17, 44], [48, 58]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 16, verse: 18).map { [$0.start, $0.end] },
+            [[9, 15]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 16, verse: 19).map { [$0.start, $0.end] },
+            [[13, 55]])
     }
 
     /// Regression (Nov 6, 2026): Revelation spans must be
