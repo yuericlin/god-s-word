@@ -42,7 +42,8 @@ struct HorizontalRibbonShape: Shape {
 /// A row of bookmark ribbons: single tap jumps, holding 1 second offers
 /// Assign, Edit and Delete. Two styles: mini (small vertical ribbons, color
 /// only, for the reading view) and labeled (horizontal ribbons showing
-/// name plus book and chapter, for the bookmarks panel).
+/// name plus book and chapter, for the bookmarks panel). Labeled ribbons
+/// can also be dragged to reorder the list (REQ-BM-14).
 struct BookmarkRibbonsRow: View {
     enum Style { case mini, labeled }
 
@@ -55,6 +56,9 @@ struct BookmarkRibbonsRow: View {
     @State private var pendingBookmark: Bookmark?
     @State private var showingOptions = false
     @State private var editingBookmark: Bookmark?
+    /// The labeled ribbon a drag is currently hovering over
+    /// (REQ-BM-14 drop feedback).
+    @State private var dropTargetID: UUID?
 
     var body: some View {
         Group {
@@ -69,7 +73,20 @@ struct BookmarkRibbonsRow: View {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(bookmarks) { bookmark in
                         labeledRibbon(for: bookmark)
+                            .draggable(bookmark.id.uuidString)
+                            .dropDestination(for: String.self) { items, location in
+                                dropBookmark(items.first, onto: bookmark,
+                                             locationY: location.y)
+                            } isTargeted: { targeted in
+                                if targeted { dropTargetID = bookmark.id }
+                                else if dropTargetID == bookmark.id { dropTargetID = nil }
+                            }
                     }
+                }
+                // Dropping in the gaps below the last ribbon
+                // moves the bookmark to the end.
+                .dropDestination(for: String.self) { items, _ in
+                    dropBookmarkAtEnd(items.first)
                 }
             }
         }
@@ -139,12 +156,50 @@ struct BookmarkRibbonsRow: View {
                 .padding(.leading, 16)
                 .padding(.trailing, 20)
             }
+            .overlay {
+                if dropTargetID == bookmark.id {
+                    HorizontalRibbonShape()
+                        .stroke(Color.accentColor, lineWidth: 2)
+                }
+            }
             .contentShape(HorizontalRibbonShape())
             .onTapGesture { onJump(bookmark) }
             .onLongPressGesture(minimumDuration: 1.0) {
                 pendingBookmark = bookmark
                 showingOptions = true
             }
+    }
+
+    /// Handles a ribbon dropped on another ribbon (REQ-BM-14):
+    /// the top half of the target lands the dragged bookmark
+    /// before it, the bottom half after it. The destination is
+    /// expressed for `move(fromOffsets:toOffset:)`, which counts
+    /// it in the array before the removal.
+    private func dropBookmark(_ idString: String?, onto target: Bookmark,
+                              locationY: CGFloat) -> Bool {
+        guard let idString, let draggedID = UUID(uuidString: idString),
+              let from = bookmarks.firstIndex(where: { $0.id == draggedID }),
+              let onto = bookmarks.firstIndex(where: { $0.id == target.id }),
+              from != onto
+        else { return false }
+        // The labeled ribbon is 52pt tall; its middle is the
+        // before/after split.
+        let destination = locationY < 26 ? onto : onto + 1
+        personalData.moveBookmarks(fromOffsets: IndexSet(integer: from),
+                                   toOffset: destination)
+        return true
+    }
+
+    /// Handles a ribbon dropped below the last one: it moves to
+    /// the end of the list (REQ-BM-14).
+    private func dropBookmarkAtEnd(_ idString: String?) -> Bool {
+        guard let idString, let draggedID = UUID(uuidString: idString),
+              let from = bookmarks.firstIndex(where: { $0.id == draggedID }),
+              from != bookmarks.count - 1
+        else { return false }
+        personalData.moveBookmarks(fromOffsets: IndexSet(integer: from),
+                                   toOffset: bookmarks.count)
+        return true
     }
 
     private func reference(for bookmark: Bookmark) -> String {
