@@ -9,10 +9,15 @@
 // when the source's fractions attribute at least half of it to
 // the speech. The rule throughout is strict — an attribution
 // that cannot be made with confidence is left unpainted: no
-// proportional guessing where the target has no delimiters, and
-// no rescue of a weakly attributed segment. Nothing is painted
-// for a verse the source leaves untagged: derivation locates
-// delimiters, it never guesses.
+// proportional guessing where the target has no delimiters.
+// The only exceptions are structural, not proportional
+// (REQ-RL-6): a frame whose own opening words the source
+// leaves wholly untagged is not the speech even when the
+// fractions pass it, and a quotation carried over from an
+// earlier verse whose own words the source attributes almost
+// nothing of is a narrator's frame, not speech. Nothing is
+// painted for a verse the source leaves untagged: derivation
+// locates delimiters, it never guesses.
 
 import Foundation
 
@@ -87,8 +92,13 @@ public enum RedLetterDerivation {
     ) -> [Int: [(start: Int, end: Int)]] {
         var out: [Int: [(start: Int, end: Int)]] = [:]
         for entry in target {
-            guard let g = truth[entry.verse], !entry.text.isEmpty else { continue }
+            guard let g = truth[entry.verse] else { continue }
             let chars = Array(entry.text)
+            // A verse whose whole text is a single character is
+            // a versification artifact (ChiUns's Luke 21:30 is
+            // the filler "a"), not speech: nothing in it can be
+            // located, and it paints nothing.
+            guard chars.count > 1 else { continue }
             let length = max(chars.count, 1)
             let denom = Double(max(g.textLength, 1))
             let kfrac: [(start: Double, end: Double)] = g.spans.map {
@@ -96,7 +106,7 @@ public enum RedLetterDerivation {
             }
             let kcov = kfrac.reduce(0.0) { $0 + $1.end - $1.start }
             let startsIn = (startsInside[entry.verse] ?? false) || g.depthIn > 0
-            let segs = mode == .brackets
+            let (segs, seeded) = mode == .brackets
                 ? segmentsBrackets(chars, startsInside: startsIn)
                 : toggleSegments(chars, kfrac: kfrac, kcov: kcov)
             var painted: [(start: Int, end: Int)] = []
@@ -110,7 +120,7 @@ public enum RedLetterDerivation {
                     painted = [(0, chars.count)]
                 }
             } else {
-                painted = selectPainted(segs, kfrac: kfrac, length: length)
+                painted = selectPainted(segs, kfrac: kfrac, length: length, seeded: seeded)
             }
             // A painted range holding no letter or digit at all is
             // a delimiter artifact, not speech; drop it.
@@ -125,32 +135,52 @@ public enum RedLetterDerivation {
 
     /// Nesting-aware segment selection (REQ-RL-6). Segments are
     /// judged innermost first. A segment with no accepted segment
-    /// nested in it is judged flat, on its whole range, exactly
-    /// as before. A segment that contains an accepted quotation
-    /// is judged on its exclusive part — its range minus every
-    /// nested segment's range — but only when the source's
-    /// speech begins well inside that quotation (its first
-    /// fraction starts after the quotation starts, allowing a
-    /// small drift): that is the signature of another speaker's
-    /// speech carrying a saying of Jesus, where the frame must
-    /// not paint for the saying's sake. When the source's speech
-    /// begins at or before the quotation, the frame is the
-    /// speaker's own (Jesus quoting Scripture inside his own
-    /// speech) and the segment is judged flat. A segment paints
-    /// when the source attributes at least half of the judged
-    /// part to the speech. The painted set is every accepted
-    /// segment's range minus the ranges of confidently rejected
-    /// segments nested in it (the source attributes less than a
-    /// quarter of such a segment — a quotation the speech makes
-    /// but the source does not tag), coalesced where pieces
-    /// touch. A nested segment the source attributes a quarter
-    /// or more of is not carved out: its rejection came from
-    /// proportional drift, not from the source's silence, and
-    /// the accepted frame keeps it covered.
+    /// nested in it is judged flat, on its whole range: it paints
+    /// when the source attributes at least half of it to the
+    /// speech. A segment that contains an accepted quotation
+    /// does not paint when the source's speech begins well
+    /// inside the earliest such quotation (its first fraction
+    /// starts after that quotation starts, allowing a small
+    /// drift): the frame is another speaker's speech carrying a
+    /// saying of Jesus, and its own words are that speaker's,
+    /// however the fractions bleed into them (the disciples'
+    /// frame in John 16:17, Peter's in Acts 11:16). When the
+    /// source's speech begins at or before the quotation, the
+    /// frame is the speaker's own (Jesus quoting Scripture
+    /// inside his own speech, Luke 4:4) and it is judged flat.
+    /// A segment that exists only because a quotation carried
+    /// over from an earlier verse — the `seeded` segment, which
+    /// opens at the verse's first character with no delimiter of
+    /// its own in the verse — and carries an accepted quotation
+    /// likewise does not paint when the source attributes less
+    /// than a quarter of its exclusive part (its range minus
+    /// every nested segment's range): the carry-over is a
+    /// narrator's frame around the saying (Paul recounting the
+    /// Lord's words, Acts 22:10). A carry-over whose own words
+    /// the source does attribute is judged flat (Mark 7:11).
+    /// After every segment is judged, one reassignment remains:
+    /// a segment carrying exactly one nested quotation, whose
+    /// own opening words (up to that quotation) the source
+    /// leaves wholly untagged while still attributing some but
+    /// less than three-fifths of the segment as a whole, is not
+    /// the speech — the saying it carries is, and the nested
+    /// quotation paints in its place (the Jews quoting Jesus's
+    /// command in John 5:12; sayings the fractions place too
+    /// coarsely to score, John 16:18 and 8:22). The painted set
+    /// is every accepted segment's range minus the ranges of
+    /// confidently rejected segments nested in it (the source
+    /// attributes less than a quarter of such a segment — a
+    /// quotation the speech makes but the source does not tag),
+    /// coalesced where pieces touch. A nested segment the
+    /// source attributes a quarter or more of is not carved
+    /// out: its rejection came from proportional drift, not
+    /// from the source's silence, and the accepted frame keeps
+    /// it covered.
     static func selectPainted(
         _ segs: [(start: Int, end: Int)],
         kfrac: [(start: Double, end: Double)],
-        length: Int
+        length: Int,
+        seeded: Int?
     ) -> [(start: Int, end: Int)] {
         func strictlyInside(_ j: Int, _ i: Int) -> Bool {
             segs[j].start >= segs[i].start && segs[j].end <= segs[i].end
@@ -172,16 +202,44 @@ public enum RedLetterDerivation {
         for i in segs.indices.sorted(by: { (segs[$0].end - segs[$0].start) < (segs[$1].end - segs[$1].start) }) {
             let inners = segs.indices.filter { $0 != i && strictlyInside($0, i) }
             let acceptedInners = inners.filter { accepted[$0] == true }
-            var judged = [segs[i]]
-            if !acceptedInners.isEmpty, let truthStart = kfrac.first?.start {
-                let demote = acceptedInners.allSatisfy {
-                    Double(segs[$0].start) / Double(length) + 0.05 < truthStart
-                }
-                if demote {
-                    for j in inners { judged = judged.flatMap { subtract($0, segs[j]) } }
+            var verdict: Bool?
+            if !acceptedInners.isEmpty, let truthStart = kfrac.first?.start,
+               let earliest = acceptedInners.map({ segs[$0].start }).min(),
+               Double(earliest) / Double(length) + 0.05 < truthStart {
+                // The source's speech begins well inside the
+                // earliest accepted quotation: this frame is
+                // another speaker's and does not paint.
+                verdict = false
+            }
+            if verdict == nil, i == seeded, !acceptedInners.isEmpty {
+                // A carry-over segment whose own exclusive words
+                // the source attributes almost nothing of is a
+                // narrator's frame, not the speech it carries.
+                var exclusive = [segs[i]]
+                for j in inners { exclusive = exclusive.flatMap { subtract($0, segs[j]) } }
+                if share(of: exclusive) < 0.25 { verdict = false }
+            }
+            accepted[i] = verdict ?? (share(of: [segs[i]]) >= 0.5)
+        }
+        // Sole-carrier reassignment (see the doc above): the
+        // frame's own opening words wholly untagged, the frame
+        // attributed weakly as a whole, exactly one quotation
+        // carried — the saying is the quotation, not the frame.
+        if !kfrac.isEmpty {
+            for i in segs.indices {
+                let nested = segs.indices.filter { $0 != i && strictlyInside($0, i) }
+                guard nested.count == 1, let j = nested.first else { continue }
+                let headUntagged = overlap(
+                    Double(segs[i].start) / Double(length),
+                    Double(segs[j].start) / Double(length), kfrac)
+                    * Double(length) <= 1e-9
+                let frameShare = share(of: [segs[i]])
+                if segs[j].start - segs[i].start >= 2, headUntagged,
+                   frameShare > 0, frameShare < 0.6 {
+                    accepted[i] = false
+                    accepted[j] = true
                 }
             }
-            accepted[i] = share(of: judged) >= 0.5
         }
         var painted: [(start: Int, end: Int)] = []
         for i in segs.indices where accepted[i] == true {
@@ -243,8 +301,11 @@ public enum RedLetterDerivation {
     /// quotation that opened in an earlier verse and closes in
     /// this one contributes its tail segment from 0; one still
     /// open at the verse end runs to the end.
+    /// Returns the segments and the index of the seeded
+    /// segment — the one that opens at 0 only because a
+    /// quotation carried over from an earlier verse — if any.
     static func segmentsBrackets(_ chars: [Character], startsInside: Bool)
-        -> [(start: Int, end: Int)]
+        -> (segments: [(start: Int, end: Int)], seeded: Int?)
     {
         var segs: [(start: Int, end: Int)] = []
         var start: Int? = startsInside ? 0 : nil
@@ -271,7 +332,8 @@ public enum RedLetterDerivation {
         }
         if let s = start { segs.append((s, chars.count)) }
         if let s = innerStart { segs.append((s, chars.count)) }
-        return segs
+        let seeded = startsInside ? segs.firstIndex(where: { $0.start == 0 }) : nil
+        return (segs, seeded)
     }
 
     /// Offset just past a leading ¶…¶ section heading, or 0.
@@ -290,11 +352,14 @@ public enum RedLetterDerivation {
     /// ‘…’) — a quotation inside a quotation (REQ-RL-6) — are
     /// collected alongside and judged separately by
     /// `selectPainted`.
+    /// Returns the segments and the index of the seeded
+    /// segment — the leading one that closes a speech the verse
+    /// opens inside of — if one was located that way.
     static func toggleSegments(
         _ chars: [Character],
         kfrac: [(start: Double, end: Double)],
         kcov: Double
-    ) -> [(start: Int, end: Int)] {
+    ) -> (segments: [(start: Int, end: Int)], seeded: Int?) {
         let pos = chars.indices.filter { chars[$0] == "\"" }
         let length = max(chars.count, 1)
         let he = headingEnd(chars)
@@ -308,12 +373,14 @@ public enum RedLetterDerivation {
                 if blank { a = q }
             }
             for q in pos where q + 1 > b && q + 1 <= b + 15 { b = q + 1 }
-            return [(a, b)]
+            return ([(a, b)], nil)
         }
         var segs: [(start: Int, end: Int)] = []
+        var seeded: Int? = nil
         var rest = pos
         if let first = kfrac.first, first.start <= 0.01, rest.count % 2 == 1 {
             segs.append((he, rest[0] + 1))
+            seeded = 0
             rest.removeFirst()
         }
         var k = 0
@@ -357,7 +424,7 @@ public enum RedLetterDerivation {
             }
         }
         if let s = openSingle { segs.append((s, chars.count)) }
-        return segs
+        return (segs, seeded)
     }
 
     /// Total overlap of [a0, a1] with the fraction spans.

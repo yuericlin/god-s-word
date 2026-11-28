@@ -83,6 +83,41 @@ final class RedLetterArtifactTests: XCTestCase {
             [[17, 34]])
     }
 
+    /// Regenerated Nov 27, 2026 from the amended derivation
+    /// rules — the artifact is the derivation's pre-generated
+    /// output for ChiUns, never hand-edited (see the policy in
+    /// RedLetterArtifact.swift). John 16:17 and 16:18 (sayings
+    /// inside the disciples' speech), John 5:12 and 7:36
+    /// (frames narrowed to the saying quoted inside them),
+    /// John 8:22 (a saying added), Acts 22:10 (a narrator's
+    /// carry-over frame removed).
+    func testRegeneratedSpans() {
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 16, verse: 17).map { [$0.start, $0.end] },
+            [[17, 44], [48, 58]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 16, verse: 18).map { [$0.start, $0.end] },
+            [[9, 15]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 5, verse: 12).map { [$0.start, $0.end] },
+            [[10, 16]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 7, verse: 36).map { [$0.start, $0.end] },
+            [[3, 28]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "John",
+                                    chapter: 8, verse: 22).map { [$0.start, $0.end] },
+            [[8, 22]])
+        XCTAssertEqual(
+            RedLetterArtifact.spans(versionID: "ChiUns", book: "Acts",
+                                    chapter: 22, verse: 10).map { [$0.start, $0.end] },
+            [[17, 47]])
+    }
+
     /// Regression (Nov 6, 2026): Revelation spans must be
     /// computed on Revelation's own texts. An earlier artifact
     /// build read ChiUns's Jude + Revelation entries shifted by

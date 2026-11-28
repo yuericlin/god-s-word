@@ -218,6 +218,105 @@ final class RedLetterDerivationTests: XCTestCase {
         XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[9, 54]])
     }
 
+    // MARK: Amended nested rules (REQ-RL-6, Nov 27, 2026)
+
+    func testBracketTwoSayingsFrameRejected() {
+        // ChiUns John 16:17: the disciples quote TWO sayings of
+        // Jesus inside one 「…」 frame. The source's speech
+        // begins well inside the earliest saying, so the frame
+        // is theirs and does not paint, however many sayings it
+        // carries. (The earlier demote test, keyed on every
+        // accepted quotation, let this frame through.)
+        let text = "有几个门徒就彼此说：「他对我们说：『等不多时，你们就不得见我；再等不多时，你们还要见我』；又说：『因我往父那里去。』这是甚么意思呢？」"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(86, 174), (181, 209)], length: 211)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[17, 44], [48, 58]])
+    }
+
+    func testBracketSoleQuotationReassignedFromFrame() {
+        // ChiUns John 5:12: the Jews quote Jesus's command
+        // 『拿褥子走』 inside their question. The source tags
+        // only the command — fractionally at its own verse's
+        // end, so the frame barely passes its flat test and the
+        // quotation fails its own; but the frame's opening
+        // words are wholly untagged, and the saying is the
+        // quotation, not the frame.
+        let text = "他们问他说：「对你说『拿褥子走』的是甚么人？」"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(49, 79)], length: 81)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[10, 16]])
+    }
+
+    func testBracketSoleQuotationCarriedWhenFractionsMiss() {
+        // ChiUns John 16:18: the disciples quote 『等不多时』;
+        // the source tags exactly that fragment, but at 45–60%
+        // of its verse against the fragment's 25–42% here, so
+        // the fractions never touch it. The frame carries no
+        // other quotation and its opening words are untagged:
+        // the fragment is the saying.
+        let text = "门徒彼此说：「他说『等不多时』到底是甚么意思呢？我们不明白他所说的话。」"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(49, 65)], length: 108)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[9, 15]])
+    }
+
+    func testBracketSoleQuotationAddedJohnEight() {
+        // ChiUns John 8:22: the same shape as 16:18 — the Jews
+        // quote Jesus's saying, the source tags it, and the
+        // fractions place it past the quotation's end.
+        let text = "犹太人说：「他说『我所去的地方，你们不能到』，难道他要自尽吗？」"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(83, 118)], length: 120)],
+            startsInside: [:], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[8, 22]])
+    }
+
+    func testBracketCarryOverFrameVetoed() {
+        // ChiUns Acts 22:10: Paul's narration carries over from
+        // the verses before (the parity seed), holding his own
+        // question and the Lord's answer. The source attributes
+        // none of the carry-over's own words — only the answer
+        // paints.
+        let text = "我说：『主啊，我当做甚么？』主说：『起来，进大马士革去，在那里，要将所派你做的一切事告诉你。』"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(62, 168)], length: 168)],
+            startsInside: [1: true], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[17, 47]])
+    }
+
+    func testBracketCarryOverSpeechKept() {
+        // ChiUns Mark 7:11: Jesus's own speech carries over,
+        // quoting the Pharisees' Corban formula. The source
+        // attributes over two-fifths of the carry-over's own
+        // exclusive words, so it is his speech and paints whole.
+        let text = "你们倒说：『人若对父母说：我所当奉给你的，已经作了各耳板』（各耳板就是供献的意思），"
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: text)],
+            truth: [1: truth([(0, 102)], length: 135)],
+            startsInside: [1: true], mode: .brackets)
+        XCTAssertEqual(out[1]?.map { [$0.start, $0.end] }, [[0, 42]])
+    }
+
+    func testOneCharacterVersePaintsNothing() {
+        // A one-character verse (ChiUns's Luke 21:30 is the
+        // filler "a" in the module data) is a versification
+        // artifact, not speech, however fully the source
+        // covers its own verse.
+        let out = RedLetterDerivation.deriveChapter(
+            target: [(verse: 1, text: "a")],
+            truth: [1: truth([(0, 10)], length: 10)],
+            startsInside: [1: true], mode: .brackets)
+        XCTAssertTrue(out.isEmpty)
+    }
+
     // MARK: Merge
 
     func testMergePrimaryWinsFallbackFills() {
